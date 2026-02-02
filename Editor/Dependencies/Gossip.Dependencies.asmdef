@@ -1,0 +1,27 @@
+{
+    "name": "Gossip.Dependencies",
+    "rootNamespace": "",
+    "references": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.itisnajim.socketiounity",
+            "expression": "1.1.4",
+            "define": "SOCKET_IO_UNITY"
+        },
+        {
+            "name": "com.cysharp.unitask",
+            "expression": "2.5.10",
+            "define": "UNITASK"
+        }
+    ],
+    "noEngineReferences": false
+}

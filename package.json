@@ -1,0 +1,43 @@
+{
+  "name": "com.gossip.core",
+  "version": "1.0.0",
+  "displayName": "Gossip Analytics SDK",
+  "description": "SDK for immersive analytics in XR, VR, AR and 2D/3D games. Track user paths, gaze and object views with unique heatmaps. Powered by AI insights and environment switching for clean data. Fast integration. No per-user fees.",
+  "samples":
+  {
+    "displayName": "Gossip Analytics – Demos",
+    "description": "Demo scenes, prefabs and example usage of Gossip Analytics SDK",
+    "path": "Samples~"
+  },
+  "unity": "2022.3",
+  "documentationUrl": "https://github.com/GossipAnalyticsXR/UnitySDK",
+  "changelogUrl": "https://github.com/GossipAnalyticsXR/UnitySDK",
+  "licensesUrl": "https://github.com/GossipAnalyticsXR/UnitySDK",
+  "keywords": [
+    "gossip",
+    "gossip analytics",
+    "immersive analytics",
+    "xr analytics",
+    "vr analytics",
+    "ar analytics",
+    "unity sdk",
+    "heatmaps",
+    "gaze tracking",
+    "user behavior",
+    "3d games",
+    "ai insights",
+    "training"
+    ],
+  "_upm": {
+    "changelog": "### Added\n- Initial release\n\n### Removed\n\n### Changed\n\n### Fixed\n\n### Known Issues"
+  },
+  "category": "utilities",
+  "author": {
+    "name": "Gossip Analytics",
+    "email": "support@gossipanalytics.com",
+    "url": "https://gossipanalytics.com"
+  },
+  "contributors": [
+    "Gossip Analytics"
+  ]
+}

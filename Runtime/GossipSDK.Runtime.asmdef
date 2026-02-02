@@ -1,0 +1,20 @@
+{
+    "name": "GossipSDK.Runtime",
+    "rootNamespace": "",
+    "references": [
+        "GUID:75469ad4d38634e559750d17036d5f7c",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23",
+        "GUID:ac740251aebda49e8bf622aa1652e9e3",
+        "GUID:e40ba710768534012815d3193fa296cb",
+        "GUID:f64c9ebcd7899c3448a08dc9f9ddbe30"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

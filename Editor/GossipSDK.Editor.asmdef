@@ -1,0 +1,35 @@
+{
+    "name": "GossipSDK.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:7891f34ab44834499ab0ea522fbe8090",
+        "GUID:75469ad4d38634e559750d17036d5f7c"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.itisnajim.socketiounity",
+            "expression": "1.1.4",
+            "define": "SOCKET_IO_UNITY"
+        },
+        {
+            "name": "com.cysharp.unitask",
+            "expression": "2.5.10",
+            "define": "UNITASK"
+        },
+        {
+            "name": "com.meta.xr.sdk.core",
+            "expression": "67.0.0",
+            "define": "META_CORE"
+        }
+    ],
+    "noEngineReferences": false
+}
