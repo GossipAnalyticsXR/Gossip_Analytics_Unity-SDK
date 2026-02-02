@@ -80,7 +80,7 @@ Trackers are primarily provided as Unity **Components**.
 If a tracker is a component, it must be present in the scene to run.
 
 Full list and setup:
-- `docs/trackers.md`
+- [Trackers reference](docs/trackers.md)
 
 ---
 
