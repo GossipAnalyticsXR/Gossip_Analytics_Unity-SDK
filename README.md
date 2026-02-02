@@ -9,7 +9,7 @@ Unity SDK to send XR analytics (VR/AR/MR) telemetry to Gossip Analytics:
 ---
 
 ## Requirements
-- Unity: **[SET MIN UNITY VERSION HERE]**
+- Unity: **[2.5.10]**
 - OpenXR-first: **XR Bootstrap is required** (see Quickstart)
 
 ---
