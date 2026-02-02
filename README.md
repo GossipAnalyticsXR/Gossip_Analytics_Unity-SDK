@@ -107,5 +107,10 @@ Full list and setup:
 
 ---
 
+## Changelog
+See [CHANGELOG](CHANGELOG.md).
+
+---
+
 ## License
 See [LICENSE](LICENSE.md)
