@@ -75,15 +75,6 @@ Add to your scene:
 
 ---
 
-## Trackers
-Trackers are primarily provided as Unity **Components**.
-If a tracker is a component, it must be present in the scene to run.
-
-Full list and setup:
-- [Trackers reference](docs/trackers.md)
-
----
-
 ## Heatmaps & Production-only images
 - Enable heatmaps: set `enableHeatmaps` in Settings
 - Image heatmaps are sent **only in Production**:
@@ -107,9 +98,15 @@ Full list and setup:
 
 ---
 
+## Documentation
+- [Trackers reference](docs/trackers.md)
+- [Security policy](SECURITY.md)
+- [Third-party notices](THIRD_PARTY_NOTICES.md)
+
+---
+
 ## Changelog
 See [CHANGELOG](CHANGELOG).
-
 
 ---
 
