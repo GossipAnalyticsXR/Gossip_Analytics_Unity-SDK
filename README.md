@@ -108,4 +108,4 @@ Full list and setup:
 ---
 
 ## License
-See `LICENSE`.
+See [LICENSE](LICENSE.md)
