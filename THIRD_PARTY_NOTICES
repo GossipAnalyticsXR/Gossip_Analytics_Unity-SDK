@@ -1,0 +1,14 @@
+# Third-Party Notices
+
+This SDK includes or depends on third-party software. Each component is subject to its own license.
+
+- UniTask (Cysharp) — MIT License  
+  https://github.com/Cysharp/UniTask
+
+- SocketIOUnity (itisnajim) — License in repository  
+  https://github.com/itisnajim/SocketIOUnity
+
+- Unity Input System — Unity Companion License / Unity Terms  
+  https://docs.unity3d.com/Packages/com.unity.inputsystem
+
+Other XR dependencies are installed via Unity packages as required by your project and platform.
