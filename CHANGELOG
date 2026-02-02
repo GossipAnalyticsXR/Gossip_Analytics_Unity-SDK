@@ -1,0 +1,39 @@
+# Changelog
+
+All notable changes to the **Gossip Analytics Unity SDK** will be documented in this file.
+
+This project follows **Semantic Versioning** (MAJOR.MINOR.PATCH):
+- MAJOR: breaking changes
+- MINOR: new functionality (backward compatible)
+- PATCH: bug fixes / documentation / internal improvements (backward compatible)
+
+---
+
+## [Unreleased]
+### Added
+- N/A
+
+### Changed
+- N/A
+
+### Fixed
+- N/A
+
+---
+
+## [1.0.0] - 2026-02-02
+### Added
+- Initial public release of the Gossip Analytics Unity SDK.
+- Core SDK runtime via `GossipManager`.
+- Settings asset workflow (`GossipAnalyticsSettings`) for environment configuration (Dev/Beta/Production).
+- OpenXR-first support via `XR Bootstrap`.
+- Public integration documentation:
+  - `README.md`
+  - `docs/trackers.md`
+- Trackers (public reference): accessories, ads, audio reaction/volume, avatar, battery, connectivity, difficulty, distance, experience info, eye tracking, hand controller, input usage, interaction, memory/performance, mistakes, multiplayer, passthrough, pause, peripherals, platform, playable area, position, reality mode, rotation/velocity, server status, session, user balance, user posture, custom user events.
+
+### Changed
+- N/A
+
+### Fixed
+- N/A
