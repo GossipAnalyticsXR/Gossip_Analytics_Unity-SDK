@@ -1,6 +1,14 @@
 # Security Policy
 
-If you believe you have found a security issue, please report it to:
+## Reporting a vulnerability
+If you believe you have found a security issue or vulnerability in the Gossip Analytics Unity SDK, please report it to:
+
 privacy@gossipanalytics.com
+
+Please include:
+- A clear description of the issue
+- Steps to reproduce (if possible)
+- Affected versions/commit
+- Any relevant logs or screenshots (redact API keys and sensitive data)
 
 Please do not open public GitHub issues for security reports.
