@@ -112,3 +112,8 @@ See [CHANGELOG](CHANGELOG).
 
 ## License
 See [LICENSE](LICENSE.md)
+
+---
+
+## Notes:
+The full documentation lives inside the Gossip Analytics dashboard, in the Guide section, where you’ll find deeper explanations, advanced setup instructions and support from the AI Guide built into the platform.
