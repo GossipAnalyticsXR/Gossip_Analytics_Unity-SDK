@@ -32,7 +32,7 @@ Then install via **NuGet → Manage NuGet Packages**:
 
 	> Input System - en "Project Settings > Player > Other Settings", recuerda tener la opción seleccionada "Both" en la variable "Active Input Handling"
 	
-	> Mata XR Core SDK
+	> Meta XR Core SDK
 
 	> Meta MR Utility Kit
 
