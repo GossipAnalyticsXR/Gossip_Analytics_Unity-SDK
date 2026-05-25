@@ -29,7 +29,7 @@
     "training"
   ],
   "_upm": {
-    "changelog": "### Fixed\n- EyeTrackingTracker.cs and InputUsageTracker.cs: removed invalid [SerializeField] attributes from EntityData auto-properties. [SerializeField] only works on instance fields, not auto-properties. Unity was silently ignoring them, causing EntityData values to never serialize correctly.\n- Gossip.cs: EyeTrackingTracker and InputUsageTracker were missing from the RunResendLoopAsync resend worker list. Both trackers now share the same automatic retry resilience as all other trackers.\n\n### Changed\n\n### Added\n\n### Removed\n\n### Known Issues"
+    "changelog": "### Fixed\n- Gossip.cs: EyeTrackingTracker and InputUsageTracker were missing from the RunResendLoopAsync resend worker list. Both trackers now share the same automatic retry resilience as all other trackers.\n\n### Changed\n\n### Added\n\n### Removed\n\n### Known Issues"
   },
   "category": "utilities",
   "author": {

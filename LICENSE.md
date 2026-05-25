@@ -1,61 +1,127 @@
-Usage License — Gossip Analytics SDK (v1.0)
-Last updated: 2026
-Owner: Gossip Analytics
+**Gossip SDK – Immersive Analytics Toolkit for Unity - Asset Store**
 
-IMPORTANT: This repository is publicly accessible. Viewing, cloning, forking, and using this SDK for integration into authorized Unity projects is permitted under this license. Any other redistribution or repackaging as a standalone product is prohibited.
 
-1. Ownership
-The Gossip Analytics SDK is the exclusive intellectual property of Gossip Analytics.
-All code, structure, and functionality of the SDK are protected by copyright laws.
-This license does not transfer ownership of the SDK or any of its components.
 
-2. License Grant
-Gossip Analytics grants a limited, non-exclusive, non-transferable, and revocable license to:
-- Integrate the SDK into applications developed with Unity.
-- Collect and send data to the Gossip Analytics platform.
-- Use the SDK solely for development, testing, and operation of projects authorized by Gossip Analytics.
+Product Name
 
-3. Permitted Use (Public Repository)
-Because this SDK is distributed via a public repository, the following is explicitly permitted:
-- Viewing, cloning, downloading, and forking this repository.
-- Keeping copies of the SDK within your own source control (including private repositories) as required to build and ship your Unity application.
-- Modifying the SDK only as necessary to integrate it into an authorized Unity project.
+gossip analytics SDK – Immersive Analytics Toolkit for Unity
 
-4. Usage Requirements
-Use of the SDK to send data to Gossip Analytics requires:
-- An active account with Gossip Analytics.
-- A valid subscription (if applicable to your plan).
-- A valid API key provided by Gossip Analytics.
-Without a valid API key, the SDK will not send data to the platform.
 
-5. Restrictions
-The following actions are expressly prohibited:
-- Redistributing, selling, sublicensing, or republishing the SDK as a standalone product (in whole or in part), including bundling it into SDK collections, templates, or frameworks not owned by Gossip Analytics.
-- Using the SDK outside projects authorized by Gossip Analytics.
-- Attempting to decompile, reverse engineer, or extract internal logic from the SDK, except to the extent such restriction is prohibited by applicable law.
-- Using the SDK to replicate, compete with, or create derivative products that substitute for Gossip Analytics’ platform, services, algorithms, AI models, or dashboard.
-- Removing or obscuring copyright, ownership, or attribution notices included in the SDK.
 
-6. Relationship with the Unity Asset Store
-When the SDK is distributed through the Unity Asset Store, it is provided solely as an integration client.
-The SDK does not include the Gossip Analytics platform, services, algorithms, AI models, or dashboard.
-Use of the service is subject to Gossip Analytics’ terms and conditions, regardless of how the SDK is distributed.
+Short Description
 
-7. Termination
-Gossip Analytics may revoke this license in the event of:
-- Misuse of the SDK.
-- Violation of this license.
-- Lack of an active subscription/account required for your usage.
-Upon termination, use of the SDK must immediately cease.
+SDK for immersive analytics in XR, VR, AR and 2D/3D games. Track user paths, gaze, and object views with unique heatmaps. Powered by AI insights and environment switching for clean data. Fast integration. No per-user fees.
 
-8. Limitation of Liability
-The SDK is provided “as is”, without any express or implied warranties.
-Gossip Analytics shall not be liable for damages arising from use of the SDK outside its authorized purposes.
 
-9. Governing Law
-This license shall be governed by the applicable laws of the country in which Gossip Analytics has its legal headquarters.
 
-10. Contact
-For questions regarding this license or use of the SDK:
-support@gossipanalytics.com
+Support Links
+
+Website: https://gossipanalytics.com
+
+Email: support@gossipanalytics.com
+
+
+Keywords (SEO)
+
+XR analytics, VR, AR, Unity SDK, immersive analytics, heatmaps, user behavior, eye tracking, non-intrusive, game analytics, 3D games, gaze tracking, AI insights, user journey, testing environments, clean data, beta tools, production, data visualization, training apps, Gossip Analytics
+
+
+
+Full Description
+
+gossip analytics SDK – Immersive Analytics Toolkit for Unity
+
+
+
+Understand how your users truly behave inside immersive environments. gossip analytics SDK gives you advanced, visual, and AI-powered analytics for XR, VR, AR and 2D/3D games.
+
+
+
+Key Features
+
+\- Unique Heatmaps
+
+&nbsp; Track user movement paths, gaze points, and object views with three proprietary heatmaps designed for immersive experiences.
+
+\- AI-Powered Insights
+
+&nbsp; Don’t just collect data—interpret it. Gossip’s backend turns behavioral data into clear, actionable insights for better decision-making.
+
+\- Environment Modes
+
+&nbsp; Switch between Development, Beta and Production to keep your data clean and avoid mixing test sessions with real usage.
+
+\- Privacy \& Security Built-in
+
+&nbsp; All events are handled securely, with full support for GDPR practices and no tracking per user or session limit.
+
+\- Fast \& Frictionless Integration
+
+&nbsp; Built for Unity in C#, the SDK installs in minutes. Use token-based app registration and start seeing results right away.
+
+\- No Hidden Costs
+
+&nbsp; Gossip analytics does not charge per user or per session. Flat and transparent pricing so you can scale freely.
+
+
+
+Use Cases
+
+\- VR training \& simulation
+
+\- AR onboarding and tutorials
+
+\- 3D/2D game analytics
+
+\- Educational XR platforms
+
+\- Product demos and virtual stores
+
+\- User testing in immersive prototypes
+
+
+
+Who is it for?
+
+\- Product Managers and UX Designers: Understand user journeys, friction points and drop-offs.
+
+\- Tech Leads and CTOs: Integrate analytics securely without compromising performance.
+
+\- Insight \& Strategy Teams: Validate business hypotheses and optimize engagement.
+
+
+
+Why Choose gossip analytics?
+
+Unlike traditional analytics, gossip analytics was born for immersive experiences. Our AI-enhanced engine, visual insights and flexible environments set us apart from tools like Cognitive3D or InformXR.
+
+
+
+“From headset to insight — Gossip captures what really happens inside your app.”
+
+
+
+Technical Details
+
+\- Unity 2021.3+ compatible
+
+\- Supports Oculus Quest, HTC Vive and Android-based XR devices
+
+\- Written in C#
+
+\- AWS-hosted backend
+
+\- Lightweight footprint, non-intrusive
+
+\- Full documentation and support included
+
+
+
+
+
+
+
+Website: https://gossipanalytics.com
+
+Support: support@gossipanalytics.com
 
