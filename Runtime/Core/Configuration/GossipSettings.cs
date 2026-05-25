@@ -46,7 +46,7 @@ namespace GossipSDK.Core.Configuration
 
 
         [Header("Heatmaps")]
-        [SerializeField] private bool enableHeatmaps;
+        public bool enableHeatmaps = true;
         public bool EnableHeatmaps => enableHeatmaps;
 
         [SerializeField] private string heatmapSceneUploadPath = "/heatmaps/scenes";
@@ -93,7 +93,12 @@ namespace GossipSDK.Core.Configuration
 
                 return $"{ServerURL}{heatmapSceneUploadPath}";
             }
+        private void Reset()
+        {
+            enableHeatmaps = true;
         }
+
+                }
 
 #if META_CORE
         [SerializeField] private bool trackMetaUserID = false;
