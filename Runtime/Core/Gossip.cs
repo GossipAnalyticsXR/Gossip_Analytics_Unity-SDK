@@ -306,7 +306,9 @@ namespace GossipSDK.Core
                     ConnectivityTracker,
                     AudioReactionTracker,
                     HandControllerTracker,
-                    A11yTracker
+                    A11yTracker,
+                    EyeTrackingTracker,
+                    InputUsageTracker
                 };
 
                         foreach (var t in trackers)
