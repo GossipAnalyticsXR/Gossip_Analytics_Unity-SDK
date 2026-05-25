@@ -1,6 +1,6 @@
 {
   "name": "com.gossip.core",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "displayName": "Gossip Analytics SDK",
   "description": "SDK for immersive analytics in XR, VR, AR and 2D/3D games. Track user paths, gaze and object views with unique heatmaps. Powered by AI insights and environment switching for clean data. Fast integration. No per-user fees.",
   "samples":
@@ -29,7 +29,7 @@
     "training"
   ],
   "_upm": {
-    "changelog": "### Fixed\n- Gossip.cs: EyeTrackingTracker and InputUsageTracker were missing from the RunResendLoopAsync resend worker list. Both trackers now share the same automatic retry resilience as all other trackers.\n\n### Changed\n\n### Added\n\n### Removed\n\n### Known Issues"
+    "changelog": "### Fixed\n- Removed NuGetForUnity label from all bundled DLL .meta files (LiteDB, R3, Microsoft.Bcl.TimeProvider, System.Threading.Channels, System.ComponentModel.Annotations). These plugins now work as standard Unity plugins without requiring NuGetForUnity to be installed.\n- Gossip.cs: EyeTrackingTracker and InputUsageTracker were missing from the RunResendLoopAsync resend worker list. Both trackers now share the same automatic retry resilience as all other trackers.\n\n### Changed\n- Updated README with corrected Dependencies section reflecting bundled DLLs and required external packages.\n\n### Added\n\n### Removed\n\n### Known Issues"
   },
   "category": "utilities",
   "author": {
