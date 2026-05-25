@@ -2,7 +2,6 @@ using System;
 using GossipSDK.Core.Connection;
 using GossipSDK.Core.Data;
 using GossipSDK.Core.Messaging;
-using UnityEngine;
 
 namespace GossipSDK.Tracking.GameplayMetrics
 {
@@ -20,17 +19,17 @@ namespace GossipSDK.Tracking.GameplayMetrics
         [Serializable]
         public class EntityData : Data
         {
-            [SerializeField] public string HitObjectName { get; set; }
-            [SerializeField] public string HitObjectTag { get; set; }
+            public string HitObjectName { get; set; }
+            public string HitObjectTag { get; set; }
 
-            [SerializeField] public float HitX { get; set; }
-            [SerializeField] public float HitY { get; set; }
-            [SerializeField] public float HitZ { get; set; }
+            public float HitX { get; set; }
+            public float HitY { get; set; }
+            public float HitZ { get; set; }
 
-            [SerializeField] public float FixationDurationSeconds { get; set; }
-            [SerializeField] public string SceneName { get; set; }
-            [SerializeField] public string TrackingSource { get; set; }
-            [SerializeField] public string TimestampUtc { get; set; }
+            public float FixationDurationSeconds { get; set; }
+            public string SceneName { get; set; }
+            public string TrackingSource { get; set; }
+            public string TimestampUtc { get; set; }
         }
 
         [Serializable]
