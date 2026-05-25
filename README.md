@@ -4,25 +4,28 @@
 
 Before using this SDK, make sure the following packages are installed in your Unity project:
 
-### Via Package Manager (Git URL)
+### Required — Via Package Manager (Git URL)
 
-- **R3 (Cysharp):** `https://github.com/Cysharp/R3.git?path=src/R3.Unity/Assets/R3.Unity`
+- **UniTask (Cysharp):** `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask#2.5.10`
+- **SocketIOUnity:** `https://github.com/itisnajim/SocketIOUnity.git#v1.1.4`
 
-### Via NuGet for Unity
-
-First install NuGetForUnity: `https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity`
-
-Then install via **NuGet → Manage NuGet Packages**:
-
-- R3 by Cysharp
-- LiteDB by Mauricio David
-
-### Via Asset Store
+### Required — Via Asset Store
 
 - Meta XR Core SDK (free)
 
-> ⚠️ After installing all dependencies, Unity may show warnings about missing .meta files in immutable folders — these are harmless and can be ignored.
+### Bundled (included in the SDK — no installation needed)
 
+R3 (v1.2.9) and LiteDB (v5.0.21) are already included as DLLs inside the `Plugins/` folder of this SDK.
+
+> ⚠️ If you experience **DLL conflicts** (e.g. you already have R3 or LiteDB installed in your project), you can remove the bundled DLLs from `Plugins/` and install them manually instead:
+>
+> First install NuGetForUnity: `https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity`
+>
+> Then install via **NuGet → Manage NuGet Packages**:
+> - R3 by Cysharp
+> - LiteDB by Mauricio David
+
+> ⚠️ After installing all dependencies, Unity may show warnings about missing .meta files in immutable folders — these are harmless and can be ignored.
 
 **\*-> Dependencias Principales (Package Manager Unity) <-\***
 
