@@ -2,7 +2,6 @@ using System;
 using GossipSDK.Core.Connection;
 using GossipSDK.Core.Data;
 using GossipSDK.Core.Messaging;
-using UnityEngine;
 
 namespace GossipSDK.Tracking.GameplayMetrics
 {
@@ -45,10 +44,10 @@ namespace GossipSDK.Tracking.GameplayMetrics
         [Serializable]
         public class EntityData : Data
         {
-            [SerializeField] public float ControllerUsagePercent { get; set; }
-            [SerializeField] public float HandUsagePercent { get; set; }
-            [SerializeField] public float SampleDurationSeconds { get; set; }
-            [SerializeField] public string PrimaryInput { get; set; }
+            public float ControllerUsagePercent { get; set; }
+            public float HandUsagePercent { get; set; }
+            public float SampleDurationSeconds { get; set; }
+            public string PrimaryInput { get; set; }
         }
 
         [Serializable]
