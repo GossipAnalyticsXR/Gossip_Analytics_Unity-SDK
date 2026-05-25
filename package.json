@@ -1,6 +1,6 @@
 {
   "name": "com.gossip.core",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "displayName": "Gossip Analytics SDK",
   "description": "SDK for immersive analytics in XR, VR, AR and 2D/3D games. Track user paths, gaze and object views with unique heatmaps. Powered by AI insights and environment switching for clean data. Fast integration. No per-user fees.",
   "samples":
@@ -27,9 +27,9 @@
     "3d games",
     "ai insights",
     "training"
-    ],
+  ],
   "_upm": {
-    "changelog": "### Added\n- Initial release\n\n### Removed\n\n### Changed\n\n### Fixed\n\n### Known Issues"
+    "changelog": "### Fixed\n- EyeTrackingTracker.cs and InputUsageTracker.cs: removed invalid [SerializeField] attributes from EntityData auto-properties. [SerializeField] only works on instance fields, not auto-properties. Unity was silently ignoring them, causing EntityData values to never serialize correctly.\n- Gossip.cs: EyeTrackingTracker and InputUsageTracker were missing from the RunResendLoopAsync resend worker list. Both trackers now share the same automatic retry resilience as all other trackers.\n\n### Changed\n\n### Added\n\n### Removed\n\n### Known Issues"
   },
   "category": "utilities",
   "author": {
