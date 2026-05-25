@@ -1,25 +1,6 @@
 ***/\*-> Gossip SDK <-\*/***
 
-## Dependencies
 
-Before using this SDK, make sure the following packages are installed in your Unity project:
-
-### Required — Via Package Manager (Git URL)
-
-- **UniTask (Cysharp):** `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask#2.5.10`
-- **SocketIOUnity:** `https://github.com/itisnajim/SocketIOUnity.git#v1.1.4`
-
-### Required — Via Asset Store
-
-- Meta XR Core SDK (free)
-
-### Bundled (included in the SDK — no installation needed)
-
-R3 (v1.2.9) and LiteDB (v5.0.21) are already included as DLLs inside the `Plugins/` folder and are configured as standard Unity plugins — no NuGetForUnity required.
-
-> ⚠️ If you experience **DLL conflicts** (e.g. you already have R3 or LiteDB installed in your project via NuGet), remove the bundled DLLs from `Plugins/` to avoid duplicates.
-
-> ⚠️ After installing all dependencies, Unity may show warnings about missing .meta files in immutable folders — these are harmless and can be ignored.
 **\*-> Dependencias Principales (Package Manager Unity) <-\***
 
 	> UniTask : https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask#2.5.10
@@ -28,7 +9,7 @@ R3 (v1.2.9) and LiteDB (v5.0.21) are already included as DLLs inside the `Plugin
 
 	> Input System - en "Project Settings > Player > Other Settings", recuerda tener la opción seleccionada "Both" en la variable "Active Input Handling"
 	
-	> Meta XR Core SDK
+	> Mata XR Core SDK
 
 	> Meta MR Utility Kit
 
