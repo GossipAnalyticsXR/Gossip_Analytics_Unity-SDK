@@ -1,5 +1,28 @@
 ***/\*-> Gossip SDK <-\*/***
 
+## Dependencies
+
+Before using this SDK, make sure the following packages are installed in your Unity project:
+
+### Via Package Manager (Git URL)
+
+- **R3 (Cysharp):** `https://github.com/Cysharp/R3.git?path=src/R3.Unity/Assets/R3.Unity`
+
+### Via NuGet for Unity
+
+First install NuGetForUnity: `https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity`
+
+Then install via **NuGet → Manage NuGet Packages**:
+
+- R3 by Cysharp
+- LiteDB by Mauricio David
+
+### Via Asset Store
+
+- Meta XR Core SDK (free)
+
+> ⚠️ After installing all dependencies, Unity may show warnings about missing .meta files in immutable folders — these are harmless and can be ignored.
+
 
 **\*-> Dependencias Principales (Package Manager Unity) <-\***
 
