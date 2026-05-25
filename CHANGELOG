@@ -21,6 +21,13 @@ This project follows **Semantic Versioning** (MAJOR.MINOR.PATCH):
 
 ---
 
+## [1.1.1] - 2026-05-24
+### Fixed
+- **EyeTrackingTracker.cs** and **InputUsageTracker.cs**: Removed invalid `[SerializeField]` attributes from `EntityData` auto-properties. `[SerializeField]` only works on instance fields, not auto-properties — Unity silently ignored them, causing `EntityData` values to never serialize correctly.
+- **Gossip.cs**: `EyeTrackingTracker` and `InputUsageTracker` were missing from the `RunResendLoopAsync` resend worker list. Both trackers now share the same automatic retry resilience as all other trackers.
+
+---
+
 ## [1.0.0] - 2026-02-02
 ### Added
 - Initial public release of the Gossip Analytics Unity SDK.
