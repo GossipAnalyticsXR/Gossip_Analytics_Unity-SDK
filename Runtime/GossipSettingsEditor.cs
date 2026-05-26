@@ -86,7 +86,6 @@ namespace Editor.InspectorViews
             {
                 EditorGUILayout.Space();
                 EditorGUILayout.LabelField("Effective (based on Environment)", EditorStyles.boldLabel);
-                EditorGUILayout.LabelField("Server URL", settingsTarget.ServerURL);
                 EditorGUILayout.LabelField("API Key (value)", settingsTarget.ApiKeyValue);
                 EditorGUILayout.Space();
             }
