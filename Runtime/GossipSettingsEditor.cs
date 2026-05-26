@@ -72,7 +72,7 @@ namespace Editor.InspectorViews
             EditorGUILayout.Space(10);
 
             EditorStyles.wordWrappedLabel.fontStyle = FontStyle.Bold;
-            EditorGUILayout.LabelField("Get your API Keys from the gossip analytics Dashboard, paste them here and choose an Environment.", EditorStyles.wordWrappedLabel);
+            EditorGUILayout.LabelField("Get your API Keys from the Gossip Analytics Dashboard, paste them here and choose an Environment.", EditorStyles.wordWrappedLabel);
             EditorGUILayout.Space(5);
 
 
@@ -90,8 +90,6 @@ namespace Editor.InspectorViews
                 EditorGUILayout.Space();
             }
 
-            if (endPoint != null)
-                EditorGUILayout.PropertyField(endPoint, new GUIContent("Use EndPoint"));
 
             EditorGUILayout.Space();
 
@@ -108,8 +106,6 @@ namespace Editor.InspectorViews
             EditorGUILayout.Space();
 
 
-            if (apiKeyHeaderProp != null)
-                EditorGUILayout.PropertyField(apiKeyHeaderProp, new GUIContent("API Key Header"));
             if (apiKeyValueProp != null)
                 EditorGUILayout.PropertyField(apiKeyValueProp, new GUIContent("API Key Value"));
 
