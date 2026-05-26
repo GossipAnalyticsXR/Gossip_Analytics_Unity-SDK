@@ -16,14 +16,14 @@ namespace GossipSDK.Core.Configuration
         [SerializeField] private Environment environment = Environment.Dev;
         public Environment SelectedEnvironment => environment;
 
-        [SerializeField] private bool useHttpEndpoint = true;
+        [HideInInspector] [SerializeField] private bool useHttpEndpoint = true;
         public bool UseHttpEndpoint => useHttpEndpoint;
 
         [SerializeField] private string ingestPath = "/ingest";
         public string IngestPath => ingestPath;
 
         [Header("API Key Header (same for all envs)")]
-        [SerializeField] private string apiKeyHeader = "x-api-key";
+        [HideInInspector] [SerializeField] private string apiKeyHeader = "x-api-key";
         public string ApiKeyHeader => apiKeyHeader;
 
         // Server URLs are hardcoded — users should never need to change these.
