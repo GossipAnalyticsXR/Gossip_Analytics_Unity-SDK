@@ -29,11 +29,11 @@ namespace GossipSDK.Core.Configuration
         // Server URLs are hardcoded — users should never need to change these.
         [HideInInspector] public string devServerUrl    = "https://service-a-unity-sdk.onrender.com";
         [HideInInspector] public string betaServerUrl   = "https://service-a-unity-sdk.onrender.com";
-        [HideInInspector] public string prodServerUrl   = "https://service-a-unity-sdk.onrender.com";
+        [HideInInspector] public string productionServerUrl   = "https://service-a-unity-sdk.onrender.com";
 
         public string DevServerUrl  => devServerUrl;
         public string BetaServerUrl => betaServerUrl;
-        public string ProdServerUrl => prodServerUrl;
+        public string ProductionServerUrl => productionServerUrl;
 
         [Header("API Key per environment")]
         [SerializeField] private string devApiKey  = "dev-key";
@@ -59,7 +59,7 @@ namespace GossipSDK.Core.Configuration
                 {
                     Environment.Dev        => devServerUrl,
                     Environment.Beta       => betaServerUrl,
-                    Environment.Production => prodServerUrl,
+                    Environment.Production => productionServerUrl,
                     _                      => devServerUrl
                 };
             }
