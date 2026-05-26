@@ -14,9 +14,6 @@ namespace Editor.InspectorViews
 
         private SerializedProperty environmentProp;
 
-        private SerializedProperty devServerUrlProp;
-        private SerializedProperty betaServerUrlProp;
-        private SerializedProperty prodServerUrlProp;
 
         private SerializedProperty devApiKeyProp;
         private SerializedProperty betaApiKeyProp;
@@ -45,9 +42,6 @@ namespace Editor.InspectorViews
             header = LoadImage(headerPath);
 
             environmentProp = serializedObject.FindProperty("environment");
-            devServerUrlProp = serializedObject.FindProperty("devServerUrl");
-            betaServerUrlProp = serializedObject.FindProperty("betaServerUrl");
-            prodServerUrlProp = serializedObject.FindProperty("prodServerUrl");
             devApiKeyProp = serializedObject.FindProperty("devApiKey");
             betaApiKeyProp = serializedObject.FindProperty("betaApiKey");
             prodApiKeyProp = serializedObject.FindProperty("prodApiKey");
@@ -102,14 +96,7 @@ namespace Editor.InspectorViews
 
             EditorGUILayout.Space();
 
-            if (devServerUrlProp != null)
-                EditorGUILayout.PropertyField(devServerUrlProp, new GUIContent("Dev Server URL"));
-            if (betaServerUrlProp != null)
-                EditorGUILayout.PropertyField(betaServerUrlProp, new GUIContent("Beta Server URL"));
-            if (prodServerUrlProp != null)
-                EditorGUILayout.PropertyField(prodServerUrlProp, new GUIContent("Production Server URL"));
 
-            EditorGUILayout.Space();
 
             if (devApiKeyProp != null)
                 EditorGUILayout.PropertyField(devApiKeyProp, new GUIContent("Dev API Key"));
