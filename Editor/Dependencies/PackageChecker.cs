@@ -14,43 +14,42 @@ namespace GossipAnalytics.Editor.Dependencies
     {
         static PackageChecker()
         {
-            bool missingSocketIO = !System.Type.GetType("SocketIOClient.SocketIO, SocketIOUnity") is object;
-            bool missingUniTask  = !System.Type.GetType("Cysharp.Threading.Tasks.UniTask, UniTask") is object;
-
+            bool missingSocektIO = System.Type.GetType("SocketIOClient.SocketIO, SocketIOUnity") == null;
+            bool missingUniTask = System.Type.GetType("Cysharp.Threading.Tasks.UniTask, UniTask") == null;
 #if !SOCKET_IO_UNITY
-            missingSocketIO = true;
+            missingSocektIO = true;
 #endif
 #if !UNITASK
             missingUniTask = true;
 #endif
 
-            if (!missingSocketIO && !missingUniTask)
+            if (!missingSocektIO && !missingUniTask)
                 return; // All dependencies present — nothing to do.
 
-            const string dialogTitle   = "Missing Package Dependencies";
+            const string dialogTitle  = "Missing Package Dependencies";
             const string dialogMessage = "GossipSDK is missing one or more required dependencies.\n\nClick Install to add them automatically via the Package Manager.";
-            const string okButton      = "Install";
-            const string cancelButton  = "Ignore";
+            const string okButton     = "Install";
+            const string cancelButton = "Ignore";
 
             bool install = EditorUtility.DisplayDialog(dialogTitle, dialogMessage, okButton, cancelButton);
 
             if (install)
             {
 #if !SOCKET_IO_UNITY
-                Client.Add(Constants.SocketIOUnity);
+                Client.Add("https://github.com/itisnajim/SocketIOUnity.git#v1.1.4");
 #endif
 #if !UNITASK
-                Client.Add(Constants.UniTask);
+                Client.Add("https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask#2.5.10");
 #endif
             }
             else
             {
                 string msg = "GossipSDK: Please install the required dependencies via the Package Manager:";
 #if !SOCKET_IO_UNITY
-                msg += $"\n\t- {Constants.SocketIOUnity}";
+                msg += $"\n\t- https://github.com/itisnajim/SocketIOUnity.git#v1.1.4";
 #endif
 #if !UNITASK
-                msg += $"\n\t- {Constants.UniTask}";
+                msg += $"\n\t- https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask#2.5.10";
 #endif
                 Debug.LogWarning(msg);
             }
