@@ -1,307 +1,247 @@
-***/\*-> Gossip SDK <-\*/***
+# Gossip Analytics SDK
 
+Unity SDK for immersive analytics in XR, VR, AR, and 2D/3D games.
 
-**\*-> Dependencias Principales (Package Manager Unity) <-\***
+**Website:** https://gossipanalytics.com  
+**Support:** support@gossipanalytics.com
 
-	> UniTask : https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask#2.5.10
+---
 
-	> SocketIOUnity : https://github.com/itisnajim/SocketIOUnity.git#v1.1.4
+## Quick Start
 
-	> Input System - en "Project Settings > Player > Other Settings", recuerda tener la opción seleccionada "Both" en la variable "Active Input Handling"
-	
-	> Mata XR Core SDK
+### 1. Dependencies (Unity Package Manager)
 
-	> Meta MR Utility Kit
+Install the following packages before using the SDK:
 
-	> Oculus XR Plugin
+| Package | Install via |
+|---|---|
+| **UniTask** | Git URL: `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask#2.5.10` |
+| **SocketIOUnity** | Git URL: `https://github.com/itisnajim/SocketIOUnity.git#v1.1.4` |
+| **Input System** | Unity Package Manager (search by name) |
+| **Meta XR Core SDK** | Unity Package Manager |
+| **Meta MR Utility Kit** | Unity Package Manager |
+| **Oculus XR Plugin** | Unity Package Manager |
+| **XR Core Utilities** | Unity Package Manager |
+| **XR Legacy Input Helpers** | Unity Package Manager |
+| **XR Plugin Management** | Unity Package Manager |
 
-	> XR Core Utilities
+> **Input System note:** Go to **Project Settings > Player > Other Settings** and set **Active Input Handling** to **Both**.
 
-	> XR Legacy Input Helpers
+After installing all dependencies, restart Unity.
 
-	> XR Plugin Management
+### 2. Initialization
 
+1. Import the GossipSDK package into your **Assets** folder. It will create:
+   > `Assets / Gossip Analytics`
 
+2. Install the dependencies listed above. If you cannot find a package by name in the Package Manager, use the Git URL to add it, then restart Unity.
 
+3. Create the Gossip settings asset: **Create > GossipAnalytics > Settings**. This creates a `GossipAnalyticsSettings` asset in your `Resources` folder.
+   > **Important: do not rename the `GossipAnalyticsSettings` asset.**
 
+4. Enter the **API Keys** provided by Gossip Analytics in the corresponding environment fields (Dev / Beta / Production).
 
-**\*-> Inicialización <-\***
+5. Select the **Environment** you want to use. All data will be sent to that environment.
 
-1\. Importar GossipSDK en "Assets", este creará la siguiente carpeta:
+6. Do not modify **Ingest Path**.
 
-	> Assets / GossipSDK
+7. To set up the scene, add the **GossipManager** prefab from the `Samples` folder. It includes the core manager components required for the SDK to run.
 
-2\. Instala las dependencias que se encuentran arriba, si no las encuentras por nombre en unity "packagemanager", utiliza los links de url para agregarlos, después de instalarlos reinicia Unity.
+---
 
-3\. Crear en tu carpeta "Resources" settings de Gossip "Create > Gossip > Settings".
+## Trackers
 
-4\. Ingresar las "URL" y "ApiKeys" que Gossip le proporcione en sus respectivos campos:
+### User Trackers
 
-	> Dev
+**User Info**  
+Fires automatically when the session starts. Records: device language, user age, username, city code, device brand, device model, OS name, OS version, battery status.
 
-	> Beta
+**User Posture**  
+Records the player's posture. Attach `UserPostureComponent` to the player's head. Configure: `Sit Threshold`, `Crouch Threshold`, `Head Transform`.  
+Records: posture state, head position (X, Y, Z), scene name.
 
-	> Production
+**User Events**  
+Records UI events or any important custom events triggered from script:
+```csharp
+Gossip.Instance.UserEventTracker?.CaptureEvent(
+    string eventName,
+    string category,
+    string text,              // optional
+    Vector3 position,         // optional
+    Dictionary<string,object> properties  // optional
+);
+```
 
-5\. Selecciona el "Envrioment" que quieras ocupar, al cuál llegaran los datos.
+**User Balance**  
+Records player body stability. Attach `UserBalanceTrackerComponent` to the player's head.  
+Records: position (X, Y, Z), oscillation magnitude, oscillation frequency, posture state.
 
-6\. No modifiques "Ingest Path". 
+---
 
-7\. Para montar en escena, ya contamos con un prefab llamado "GossipManager" en la carpeta "Samples" de nuestro SDK, este lleva los componentes primordiales del Manager para que pueda funcionar
+### Gameplay / Monetization / Content Trackers
 
+**Accessories**  
+Records in-game accessory sales, modifications, and purchases. Use `AccessoriesComponent`.  
+Call: `ReportPurchased(name, price, brand, totalPurchase)`
 
+**Ads**  
+Records ad lifecycle events (start, end, impressions, interactions, rewards). Use `AdComponent`.  
+Configurable fields: `adId`, `adNetwork`, `placementId`.  
+Voids: `StartAd`, `EndAd`, `RecordImpression`, `RecordInteraction`, `RecordReward`.
 
-**\*-> Trackers <-\***
+**Audio Reaction**  
+Records audio snippets when the player has a strong vocal reaction. Use `AudioReactionTrackerComponent`.  
+Records: audio clip, event severity, voice change, voice quality, movement intensity, emotion score, trigger mode.  
+Requires microphone permission in Project Settings.
 
+**Audio Volume**  
+Records current game volume or volume changes. Use `AudioVolumeTrackerComponent`.  
+Assign an Audio Mixer; set parameter names: `masterParam`, `musicParam`, `sfxParam`.
 
+**Avatar**  
+Records avatar events (found, modified, added, created). Use `AvatarTrackerComponent`.  
+Call: `NotifyAvatar(id, name, variant, brand, price, color)`
+
+**Battery Monitor**  
+Records battery level and status. Use `BatteryMonitorComponent`.
+
+**Connectivity**  
+Records device connection speed and state. Use `ConnectivityMonitorComponent`.  
+Records: connection type, online status, download MB, reachability, scene name.  
+Configurable: detection URL.
+
+**Difficulty**  
+Records the current game difficulty. Use `DifficultyComponent`.  
+Records: scene name, difficulty label, numeric difficulty, reason (optional).
+
+**Distance**  
+Records the distance between a specific object and the player. Use `DistanceTrackerComponent`.  
+Assign `playerTransform`. Records: object position (X, Y, Z), player position (X, Y, Z), scene name.
+
+**Experience Info**  
+Records experience load time and basic app info. Use `ExperienceInfoComponent`.  
+Set `autoReportOnStart = true` to fire automatically, or call `SendLoadInfo()` manually.  
+Records: load time, app version, hardware info.
+
+**Eye Tracking**  
+Records gaze collisions with objects. Attach `EyeTrackingComponent` to the player's camera/view.  
+Records: object name, object tag, hit position (X, Y, Z), fixation duration, scene name, tracking source.  
+Also feeds heatmaps. Configuration required:
+- OVR Manager > General > Eye Tracking Support: **Required**
+- Edit > Project Settings > XR Plug-in Management: enable **Oculus**
+- Foveated Rendering Method: **Eye Tracked Foveated Rendering**
+
+**Heatmap**  
+Creates heatmaps from trackers that support it (position, eye tracking, interactions).  
+Do not place this in the scene manually — the compatible components handle it automatically.
 
--> User Trackers <-
-
-	> User Info <
-
-Este tracker se invocará automáticamente cuando la sesión se inicie, este registra lo siguientes datos: lenguaje del dispositivo, edad del usuario, nombre del usuario, código de ciudad, marca del dispositivo, modelo del dispositivo, nombre de OS, versión de OS, estatus de la batería del dispositivo y lenguaje.
-
-
-	> User Posture <
-
-Este se encarga de registrar la postura del jugador, este tracker se asigna en la cabeza del jugador, el tracker registra la siguiente información: estado de postura, posición de cabeza en los ejes "X", "Y" y "Z" y nombre de escena.
-
-Este tracker se llama con el componente "UserPostureComponent", en este puede modificar lo posición mínima en la registrará el cambio a estado sentado o agachado, con las variables "Sit Threshold", "Crouch Threshold", al igual que podrás asignar el Transform de la cabeza en la variable "Head Transform".
-
-
-	> User Events <
-
-Este se encarga de registrar eventos ya sean de UI o eventos importantes que se pueden llamar y describir desde Script.
-
-Este tracker se llama con la siguiente línea de código:
-
-	Gossip.Instance.UserEventTracker?.CaptureEvent(string "nombre del evento", string "categoría", string "texto", Vector 3 "posición", Directory<string, object> "propiedades");
-
-Tanto la posición como las propiedades son opcionales.
-
-
-	> User Balance <
-
-Este se encarga de registar el balance del jugador, este tracker se asigna en la cabeza del jugador, el tracker registra la siguiente información: posición en ejes "X", "Y" y "Z", magnitud de osiclación, frecuencia de osilación y estado de postura.
-
-Este tracker se llama con el componente "UserBalanceTrackerComponent", deberá asignarse en el jugador.
-
---------------------------------------
-
-
-
--> GameplayMetrics Tracker <-
-
-	> Accessories <
-
-Este se encarga de registrar los accesorios que se vendan, modifiquen o compren dentro del juego, el tracker registra la siguiente información: nombre del producto, precio, marca y compra total.
-
-Este tracker se llama con el componente "AccessoriesComponent", puedes registrar el accesorio con el void ReportPurchased("nombre", "precio", "marca", "compra total").
-
-
-	> Ads <
-
-Este se encarga de registrar cualquier movimiento de anuncios dentro del juego, desde cuánto dura el anuncio, cuando termina, si da algún tipo recompensa.
-
-Este tracker se llama con el componente "AdComponent", en este se encuentran los siguientes void "StartAd" para registrar el inicio del anuncio, "EndAd" para registrar el fin del anuncio, "RecordImpression" para registrar las veces que se ha reproducido el anuncio, "RecordInteraction" cuántas veces se ha interactuado con este anuncio, "RecordReward" para registar si se ha otorgado alguna recompensa, se pueden modificar las variables de este componente "adId", "adNetwork" y "placementId".
-
-
-	> Audio Reaction <
-
-Este se encarga de registrar "snippets" cuando detecte que el jugador ha tenido una reacción grotesca o algún grito por parte del usuario, este tracker registra: audio, severidad del evento, cambio de voz, calidad de voz, intensidad de movimiento, puntuación de emoción y modo del trigger.
-
-Este se llama con el componente "AudioReactionTrackerComponent", automáticamente detectará la voz del jugador, solo asegúrate de asignar que la aplicación requiere el micrófono en los configuraciones del proyecto.
-
-
-	> Audio Volume <
-
-Este se encarga de registar el volumen actual del juego o cuando el volumen cambia, este tracker se llama con el componente "AudioVolumeTrackerComponent", se deberán asignar un Mixer en la variable "audioMixer", en las variables "masterParam", "musicParam" y "sfxParam" se asignarán los nombres de los parámetros a detectar en el Mixer.
-
-
-	> Avatar <
-
-Este se encarga de registar los avatares que se encuentren, modifiquen, añadan o hagan en el juego, este registra las variables: id del avatar, nombre del avatar, variante, marca, precio y color.
-
-Este tracker se llama con el componente "AvatarTrackerComponent", con el void "NotifyAvatar" podrás registrar la acción del avatar.
-
-
-	> Battery Monitor <
-
-Este se encarga de registar la batería del dispositivo, el tracker registra los siguientes datos: nivel de batería y estatus de la batería. Este tracker se llama con el componente "BatteryMonitorComponent".
-
-
-	> Connectivity <
-
-Este se encarga de registrar la velocidad de conexión con la que cuenta el dispositivo, el tracker registra: el tipo de conexión, si está en línea, cantidad de megas de descarga, accesibilidad y nombre de la escena. Este tracker se llama con el componente "ConnectivityMonitorComponent", dentro de este componente se puede modificar la url con la cuál se está detectando la velocidad de la conexión del dispositivo.
-
-	> Difficulty <
-
-Este se encarga de registrar la dificultad con la que cuenta el juego, el tracker registra los siguientes datos: nombre de la escena, dificultad, dificultad numérica, la razón (opcional). Este tracker se llama con el componente "DifficultyComponent".
-
-
-	> Distance <
-
-Este se encarga de registrar la distancia que hay entre un objeto en específico del jugador, el tracker registra: posición de objeto en "x,y,z" y posición del jugador en "x,y,z", al igual que el nombre de la escena.
-
-Este tracker se llama con el componente "DistanceTrackerComponent" se deberá asignar el player en la variable "playerTransform" para que el update de este funcione.
-
-
-	> Experience Info <
-
-Este se encarga de registrar la información sobre la experiencia que se está llevando acabo, el tracker registra: tiempo de carga de la experiencia, versión de la aplicación y hardware en el que se encuentra.
-
-Este tracker se llama con el componente "ExperienceInfoComponent", este podrá lanzar la información automatica mente al iniciar si se tiene la variable "autoReportOnStart" active, si no se puede llamar manualmente con la función "SendLoadInfo".
-
-
-	> Eye Tracking <
-
-Este se encarga de registrar con que objetos esta chocando la mirada del jugador, el tracker registra: nombre del objeto con el que choca, tag del objeto con el choca, posición del choque en "X,Y,Z", duración del choque, nombre de escena y fuente de seguimiento.
-
-Este tracker se llama con el componente "EyeTrackingComponent", este se deberá asignar en la vista del jugador, las variables que se pueden modificar para ajuste de choque son: la distancia máxima del hit y el umbral de fijación. Además este componente también registra en Heatmap, podrás ajustar los valores del Heatmap al que se registra el EyeTracking.
-
-Este tracker contiene una función especial, este tracker detecta si el dispositivo cuenta con eye real / eye simulate. Para poder hacer funcionar recuerda tener la sigueinte configuración:
-
-	> En tu objeto en Escena: OVR Manager > General > Eye Tracking Support > Seleccionar "Requiered"
-	> Pestaña Edit > Project Settings > XR-Plug-in Management > Habilitar Bool "Oculus"
-	> Pestaña Edit > Project Settings > XR-Plug-in Management > Oculus > Foveated Rendering Method > Seleccionar "Eye Tracked Fovated Rendering"
-
-
-
-	> Heatmap <
-
-Este se encarga de crear los Heatmaps de ciertos Trackers que ya están preparados para almacenar esta información, como vendría siendo posición, eye tracking e interacciones. Este tracker no se deberá colocar en escena ya que los componentes con Heatmap disponible lo hará.
-
-
-	> Hand Controller <
-
-Este se encarga de registrar el movimiento y angulo de las manos durante la experiencia del jugador. Este tracker se llama con el componente "HandControllerTrackingComponent", este automáticamente detectará el uso de cada mano, se debe colocar en cualquier objeto Global, no se sugiere colocar uno por mano ya que provacaría la clonación de datos.
-
-
-	> Input Usage <
-
-Este se encarga de registrar el tiempo de uso de control o mano que ha hecho el jugador durante toda la experiencia. Este tracker se llama con el componente "InputUsageTrackerComponent", este automáticamente registrará el tiempo de cada uno, al terminar la experiencia enviará el reporte de tiempo de cada uno.
-
-
-	> Interaction <
-
-Este se encarga de registrar la interacción que ha tenido el jugador con objetos, ya sea que sean interacciones con tiempo ("OnInteractStart" / "OnInteractEnd") o interacciones instantáneas ("OnInteractInstant"), el tracker registra: nombre del objeto, tag del objeto, tipo de interacción, posición y escena.
-
-Este tracker se llama con el componente "InteractableComponent". Además este componente también registra en Heatmap, podrás ajustar los valores del Heatmap al que se registra la interacción.
-
-
-	> Mistake <
-
-Este se encarga de registrar errores que ocurran al jugar, no reporta automáticamente los errores, deberás llamarlo para los errores que quieras que se reporten, el tracker registra: nombre de objeto, tag de objeto, el error ocurrido, severidad del error, posición y escena. Este tracker se llama con el componente "MistakeReporter", con la función "ReportMistake".
-
-
-	> Multiplayer <
-
-Este se encarga de registrar datos de usuarios en juegos multijugador, el tracker registra: jugadores que entran y salen de la sala y cuantos jugadores hay activos en la sala. 
-
-Este tracker se llama con el componente "MultiplayerTrackerComponent", dentro vienen las funciones "OnPlayerJoined" / "OnPlayerLeft" para registrar entradas y salidas de usuario y "StartTracking" / "StopTracking" para iniciar o detner captura de datos de la sesión.
-
-
-	> Memory <
-
-Este se encarga de registrar la cantidad de memoria que está ocupando el programa, el tracker registra: total de bytes asignados, total de bytes reservados, únicos bytes de uso, "GcCollectionsGen0", "GcCollectionsGen1", "GcCollectionsGen2" y cantidad de fps.
-
-Este tracker se llama con el componente "PerformanceMonitorComponent", aquí podrás modificar cada cuánto tiempo se registra la información.
-
-
-	> Passthrough <
-
-Este se encarga de registrar el passthrough del programa si que está activo, el tracker registra: si está activo, el modo de Passthrough, la exposición y la métrica de calidad. Este tracker se llama con el componente "PassthroughComponent", si la variable activa es verdadera se detectará automáticamente.
-
-
-	> Pause <
-
-Este se encarga de registrar el momento en que el jugador coloque pausa en el juego, el tracker registra: si el juego está en pausa o se reanudo y cuanto tiempo duró. Este tracker se llama con el componente "PauseComponent" con las funciones "OnPause" o "OnResume".
-
-
-	> Peripherals <
-
-Este se encarga de registrar que periféricos se están utilizando durante la experiencia, el tracker registra: nombre del periférico, marca, tipo de periférico, si es háptico, tiempo de uso y nombre de escena. Este tracker se llama con el componente "PeripheralAutoTrackerComponent", para este tracker se requiere tener instalada la paquetería "InputSystem".
-
-
-	> Position <
-
-Este se encarga de registrar la posición actual del jugador, el tracker registra: posición en "X,Y,Z" y el nombre de la escena. Este trakcer se llama con el componente "PositionTrackerComponent", este debe de colocarse en el jugador.
-
-
-	> Player Movement Heatmap <
-
-Este se encarga de crear el heatmap de la posición del jugador. Este tracker se llama con el componente "PlayerMovementHeatmapComponent", podrás modificar las variables del heatmap dentro de este mismo componente.
-
-
-	> Reality Mode <
-
-Este se encarga de registrar en que modo de realidad se está utilizando la aplicación, al igual cuántas veces cambia de realidad, el tracker registra: en que modo está, a qué modo cambia, duración del modo previo y nombre de la escena. El tracker se llama con el componente "RealityModeMonitor", el componente detectará automáticamente cuando cambie de realidad.
-
-
-	> Rotation and Velocity <
-
-Este se encarga de registrar la rotación y velocidad actual del jugador, el tracker registra: rotación en los ejes "X,Y,Z", velocidad, velocidad angular, tiempo y nombre del objeto. Este tracker se llama con el componente "RotationAndVelocityTrackerComponent" y se deberá de colocar en el jugador u objeto del que se necesiten registrar estos datos.
-
-
-	> Server Status <
-
-Este se encarga de mostrar a nosotros como desarrolladores el estado del servidor de Gossip, el tracker registra: nombre del servidor, estatus, ping ms, porcentaje de carga y meta. Este tracker se llama con el componente "ServerStatusComponent".
-
-
-	> Session <
-
-Este se encarga de registrar cuando la sesión inicia y termina dentro del servidor, con esto también se detecta cuando el jugador empieza y termina la experiencia. Este tracker registra: nombre del evento, tiempo, duración del evento, id del jugador, id de la sesión. Este tracker se llama con el componente "SessionManager", este se encargará de crear automáticamente el registra cuando la sesión inicie, termine o esté en pausa.
-
-
-
-
-
-
-**\*-> Otros Componentes <-\***
-
-
-	> VR Permissions Handler <
-Este script cumple con la función de solicitar permisos como: Datos espaciales, cámara, micrófono, y eyeHead. Para que el SDK pueda cumplir su función, si tu ya cuentas con un script que cumpla con esta función no es necesario que lo coloques en escena,
-
-	> XR Bootstrap <
-Ya que nuestro SDK es OpenXR-first, ocupamos este script para poder hacer el llamado de los datos necesarios de "OpenXR", recuerda colocar este script en escena para que nuestro SDK pueda cumplir su función y evitar errores.
-
-
-
-
-
-**\*-> Image Heatmap <-\***
-
-
-	> Heatmap Ortographic Image <
-
-Este se disparará una vez por versión caundo el SDK se encuentre en modo "Production", lo que hará será tomar un cálculo del tamaño de la escena y enviará la información de la imagen a sevidor. Solo se enviará la información si se encuentram en modo "Production".
-
-	> Interaction Image <
-
-Este se disparará automaticamente, este se enviará gracias al componente de "Interaction". Solo se enviará la información si se encuentram en modo "Production".
-
-	> Eye Gaze Image <
-
-Este se disparará automaticamente en el componente "EyeTrackingComponent", solo se enviará la información si se encuentra en el modo "Production".
-
-Gossip Analytics
-Contacto de soporte: "support@gossipanalytics.com"
-
-
-
-
-
-**\*-> Notas importantes <-\***
-
-		> Este SDK está diseñado para ser OpenXR-first, por lo tanto es necesario colocar en escena el componente "XR Bootstrap"
-		> Para que los heatmaps se habiliten, recuerda marcar "enableHeatmaps" en los settings.
-		> Todos los tracker que se llamen con "Componentes" deberán colocarse en escena para que estos funcionen.
-		> Verifica que ingresaste bein tus "apiKey" y "Url" para que funcione el SDK.
-		> Mantente al tanto de pagar tu servicio con Gossip para que el SDK funcione.
-		> Recuerda que la imágenes solo se enviarán en el "Envrioment" "Production".
-		> Este SDK requiere permisos de uso de "micrófono" y "cámara".
-		> No cambiar el nombre de "GossipAnalyticsSettings" en el asset de "Settings".
-
-
-> .Gossip Analytics SDK. <
+**Hand Controller**  
+Records hand/controller movement and angle during the experience. Use `HandControllerTrackingComponent`.  
+Place on any global object. Do not use one per hand (causes data duplication).
+
+**Input Usage**  
+Records total controller vs. hands usage time. Use `InputUsageTrackerComponent`.  
+Sends a report automatically when the session ends.
+
+**Interaction**  
+Records player interactions with objects. Use `InteractableComponent`.  
+- Timed interactions: `OnInteractStart` / `OnInteractEnd`
+- Instant interactions: `OnInteractInstant`  
+Records: object name, tag, interaction type, position, scene name. Also feeds heatmaps.
+
+**Mistake**  
+Records developer-defined errors (not automatic). Use `MistakeReporter`.  
+Call: `ReportMistake(objectName, tag, error, severity, position, scene)`
+
+**Multiplayer**  
+Records multiplayer room events. Use `MultiplayerTrackerComponent`.  
+Voids: `OnPlayerJoined`, `OnPlayerLeft`, `StartTracking`, `StopTracking`.  
+Records: players joining/leaving, active player count.
+
+**Memory / Performance**  
+Records memory and FPS metrics at configurable intervals. Use `PerformanceMonitorComponent`.  
+Records: allocated bytes, reserved bytes, unique usage, GC collections (Gen0/1/2), FPS.
+
+**Passthrough**  
+Records passthrough state and mode. Use `PassthroughComponent`.  
+Set `active = true` to detect automatically.  
+Records: active state, passthrough mode, exposure, quality metric.
+
+**Pause**  
+Records pause and resume events and duration. Use `PauseComponent`.  
+Call: `OnPause()` / `OnResume()`
+
+**Peripherals**  
+Records active peripherals and usage time. Use `PeripheralAutoTrackerComponent`.  
+Requires the **Input System** package.  
+Records: peripheral name, brand, type, haptic support, usage time, scene name.
+
+**Position**  
+Records the player's position over time. Use `PositionTrackerComponent` on the player.  
+Records: position (X, Y, Z), scene name. Feeds heatmaps.
+
+**Player Movement Heatmap**  
+Creates a heatmap of the player's movement path. Use `PlayerMovementHeatmapComponent`.  
+Configure heatmap parameters inside the component.
+
+**Reality Mode**  
+Records reality mode state and changes (VR/MR/etc.). Use `RealityModeMonitor`.  
+Detects mode changes automatically.  
+Records: current mode, new mode, previous mode duration, scene name.
+
+**Rotation and Velocity**  
+Records player rotation and velocity. Attach `RotationAndVelocityTrackerComponent` to the player.  
+Records: rotation (X, Y, Z), speed, angular velocity, timestamp, object name.
+
+**Server Status**  
+Shows Gossip server diagnostics for developers. Use `ServerStatusComponent`.  
+Records: server name, status, ping (ms), load percentage, metadata.
+
+**Session**  
+Records session start, end, and lifecycle events automatically. Use `SessionManager` (included in GossipManager).  
+Records: event name, timestamp, duration, player ID, session ID.
+
+---
+
+## Other Components
+
+**VR Permissions Handler**  
+Requests required permissions: spatial data, camera, microphone, eye/head tracking.  
+If you already have a permission script, you do not need to add this to the scene.
+
+**XR Bootstrap**  
+Initializes the OpenXR system. Required in every scene since the SDK is OpenXR-first.  
+Add to the scene to avoid XR-related errors.
+
+---
+
+## Image Heatmaps
+
+**Heatmap Orthographic Image**  
+Fires once per app version when the environment is **Production**.  
+Calculates the scene bounds and sends a heatmap image to the server.
+
+**Interaction Image**  
+Fires automatically via the `InteractableComponent` when interactions are recorded.  
+Only sends in **Production** mode.
+
+**Eye Gaze Image**  
+Fires automatically via `EyeTrackingComponent`.  
+Only sends in **Production** mode.
+
+---
+
+## Important Notes
+
+- This SDK is **OpenXR-first**. You must add **XR Bootstrap** to every scene.
+- To enable heatmaps, check **enableHeatmaps** in the GossipAnalyticsSettings asset.
+- All component-based trackers must be present in the scene to function.
+- Verify your **API Keys** and **Environment** are set correctly in GossipAnalyticsSettings.
+- Keep your Gossip Analytics subscription active for the SDK to send data.
+- Images (heatmaps) are only sent in **Production** environment.
+- The SDK requires **microphone** and **camera** permissions.
+- **Do not rename the `GossipAnalyticsSettings` asset.**
+
+---
+
+*Gossip Analytics — support@gossipanalytics.com*
