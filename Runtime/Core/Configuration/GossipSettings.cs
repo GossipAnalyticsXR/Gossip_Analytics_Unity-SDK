@@ -26,24 +26,23 @@ namespace GossipSDK.Core.Configuration
         [SerializeField] private string apiKeyHeader = "x-api-key";
         public string ApiKeyHeader => apiKeyHeader;
 
-        [Header("Server URLs per environment")]
-        [SerializeField] private string devServerUrl = "https://gossip-url.com";
-        [SerializeField] private string betaServerUrl = "https://gossip-url.com";
-        [SerializeField] private string prodServerUrl = "https://gossip-url.com";
+        // Server URLs are hardcoded — users should never need to change these.
+        [HideInInspector] public string devServerUrl    = "https://service-a-unity-sdk.onrender.com";
+        [HideInInspector] public string betaServerUrl   = "https://service-a-unity-sdk.onrender.com";
+        [HideInInspector] public string prodServerUrl   = "https://service-a-unity-sdk.onrender.com";
 
-        public string DevServerUrl => devServerUrl;
+        public string DevServerUrl  => devServerUrl;
         public string BetaServerUrl => betaServerUrl;
         public string ProdServerUrl => prodServerUrl;
 
         [Header("API Key per environment")]
-        [SerializeField] private string devApiKey = "dev-key";
+        [SerializeField] private string devApiKey  = "dev-key";
         [SerializeField] private string betaApiKey = "beta-key";
         [SerializeField] private string prodApiKey = "prod-key";
 
-        public string DevApiKey => devApiKey;
+        public string DevApiKey  => devApiKey;
         public string BetaApiKey => betaApiKey;
         public string ProdApiKey => prodApiKey;
-
 
         [Header("Heatmaps")]
         public bool enableHeatmaps = true;
@@ -58,10 +57,10 @@ namespace GossipSDK.Core.Configuration
             {
                 return environment switch
                 {
-                    Environment.Dev => string.IsNullOrWhiteSpace(devServerUrl) ? devServerUrl : devServerUrl,
-                    Environment.Beta => string.IsNullOrWhiteSpace(betaServerUrl) ? betaServerUrl : betaServerUrl,
-                    Environment.Production => string.IsNullOrWhiteSpace(prodServerUrl) ? prodServerUrl : prodServerUrl,
-                    _ => devServerUrl
+                    Environment.Dev        => devServerUrl,
+                    Environment.Beta       => betaServerUrl,
+                    Environment.Production => prodServerUrl,
+                    _                      => devServerUrl
                 };
             }
         }
@@ -72,10 +71,10 @@ namespace GossipSDK.Core.Configuration
             {
                 return environment switch
                 {
-                    Environment.Dev => devApiKey,
-                    Environment.Beta => betaApiKey,
+                    Environment.Dev        => devApiKey,
+                    Environment.Beta       => betaApiKey,
                     Environment.Production => prodApiKey,
-                    _ => devApiKey
+                    _                      => devApiKey
                 };
             }
         }
@@ -93,12 +92,12 @@ namespace GossipSDK.Core.Configuration
 
                 return $"{ServerURL}{heatmapSceneUploadPath}";
             }
+        }
+
         private void Reset()
         {
             enableHeatmaps = true;
         }
-
-                }
 
 #if META_CORE
         [SerializeField] private bool trackMetaUserID = false;
