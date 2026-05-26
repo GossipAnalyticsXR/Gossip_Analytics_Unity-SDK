@@ -1,50 +1,59 @@
-#if !SOCKET_IO_UNITY || !UNITASK
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.PackageManager;
 
-namespace Editor.Dependencies
+namespace GossipAnalytics.Editor.Dependencies
 {
+    /// <summary>
+    /// Automatically prompts the developer to install missing package dependencies
+    /// when the project is loaded in Unity Editor. Runs unconditionally so the dialog
+    /// always appears even when none of the scripting-define symbols are set yet.
+    /// </summary>
     [InitializeOnLoad]
     public class PackageChecker
     {
         static PackageChecker()
         {
-            const string dialogTitle = "Missing Package Dependencies";
-            const string dialogMessage = "GossipSDK is missing one or more dependencies required for proper functionality.";
+            bool missingSocketIO = !System.Type.GetType("SocketIOClient.SocketIO, SocketIOUnity") is object;
+            bool missingUniTask  = !System.Type.GetType("Cysharp.Threading.Tasks.UniTask, UniTask") is object;
 
 #if !SOCKET_IO_UNITY
-            const string okButton = "Install SocketIOUnity";
-#elif !UNITASK
-            const string okButton = "Install UniTask";
+            missingSocketIO = true;
+#endif
+#if !UNITASK
+            missingUniTask = true;
 #endif
 
-            const string cancelButton = "Ignore";
-            
-            bool installPackage = EditorUtility.DisplayDialog(dialogTitle, dialogMessage, okButton, cancelButton);
-            
-            if (installPackage)
+            if (!missingSocketIO && !missingUniTask)
+                return; // All dependencies present — nothing to do.
+
+            const string dialogTitle   = "Missing Package Dependencies";
+            const string dialogMessage = "GossipSDK is missing one or more required dependencies.\n\nClick Install to add them automatically via the Package Manager.";
+            const string okButton      = "Install";
+            const string cancelButton  = "Ignore";
+
+            bool install = EditorUtility.DisplayDialog(dialogTitle, dialogMessage, okButton, cancelButton);
+
+            if (install)
             {
 #if !SOCKET_IO_UNITY
                 Client.Add(Constants.SocketIOUnity);
-#elif !UNITASK
+#endif
+#if !UNITASK
                 Client.Add(Constants.UniTask);
 #endif
             }
             else
             {
-                string dependencies = "Please install the required dependencies via the Package Manager in order to properly use GossipSDK:";
-                
+                string msg = "GossipSDK: Please install the required dependencies via the Package Manager:";
 #if !SOCKET_IO_UNITY
-                dependencies += $"\n\t- {Constants.SocketIOUnity}";
+                msg += $"\n\t- {Constants.SocketIOUnity}";
 #endif
 #if !UNITASK
-                dependencies += $"\n\t- {Constants.UniTask}";
+                msg += $"\n\t- {Constants.UniTask}";
 #endif
-                
-                Debug.LogWarning($"{dialogMessage}\n{dependencies}");
+                Debug.LogWarning(msg);
             }
         }
     }
 }
-#endif
