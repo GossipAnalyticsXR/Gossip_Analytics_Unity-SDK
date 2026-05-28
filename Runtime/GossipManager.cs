@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using GossipSDK.Core;
 using GossipSDK.Components;
+using GossipSDK.XR;
 using GossipSDK.Tracking.GameplayMetrics;
 using Cysharp.Threading.Tasks;
 using UnityEngine.Android;
@@ -12,6 +13,7 @@ using UnityEngine.Android;
 namespace GossipSDK
 {
     [DisallowMultipleComponent]
+    [RequireComponent(typeof(XRBootstrap))]
     public class GossipManager : MonoBehaviour
     {
         [Header("Tick Intervals")]
