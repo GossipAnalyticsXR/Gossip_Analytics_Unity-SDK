@@ -41,7 +41,7 @@ namespace GossipSDK.Tracking.Conectivity
             try
             {
                 var gossip = Gossip.Instance;
-                serverUrl ??= gossip?.Settings?.ServerURL;
+                serverUrl ??= gossip?.Settings?.GetActiveServerUrl();
 
                 if (string.IsNullOrWhiteSpace(serverUrl))
                 {
