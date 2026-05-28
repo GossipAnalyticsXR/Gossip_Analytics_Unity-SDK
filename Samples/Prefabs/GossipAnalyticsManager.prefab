@@ -48,6 +48,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: GossipSDK::GossipSDK.GossipManager
   trackInterval: 2
   deployInterval: 5
+  settings: {fileID: 11400000, guid: 5d858798fded9934fb9c614f2b277b98, type: 2}
 --- !u!114 &5566356771077645657
 MonoBehaviour:
   m_ObjectHideFlags: 0
