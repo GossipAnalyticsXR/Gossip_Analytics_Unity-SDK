@@ -65,6 +65,20 @@ namespace GossipSDK.Core.Configuration
             }
         }
 
+        public string GetActiveServerUrl()
+        {
+            string stored = environment switch
+            {
+                Environment.Dev        => devServerUrl,
+                Environment.Beta       => betaServerUrl,
+                Environment.Production => productionServerUrl,
+                _                      => devServerUrl
+            };
+
+            const string fallback = "https://service-a-unity-sdk.onrender.com";
+            return string.IsNullOrEmpty(stored) ? fallback : stored;
+        }
+
         public string ApiKeyValue
         {
             get
