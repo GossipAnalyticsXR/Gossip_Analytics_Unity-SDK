@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 544464847063307283}
   - component: {fileID: 5566356771077645657}
   - component: {fileID: 6471546689041684736}
-  - component: {fileID: 6324784511563215615}
   m_Layer: 0
   m_Name: GossipAnalyticsManager
   m_TagString: Untagged
@@ -72,17 +71,5 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 654a582720377574b8837353208a30f6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &6324784511563215615
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3663736585120154276}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8d11bc897b90dfd44bce395a8d601103, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
