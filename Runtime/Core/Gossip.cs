@@ -79,10 +79,6 @@ namespace GossipSDK.Core
 
         private void Awake()
         {
-            if (settings == null)
-            {
-                Debug.LogWarning($"Gossip: GossipSettings not found in Resources. Please create one at Assets/Resources/{nameof(GossipSettings)}.asset");
-            }
 
             try
             {
