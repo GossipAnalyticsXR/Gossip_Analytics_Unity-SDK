@@ -23,6 +23,11 @@ namespace GossipSDK.Core
         private GossipSettings settings;
         public GossipSettings Settings => settings;
 
+        public static void Initialize(GossipSettings injectedSettings)
+        {
+            if (Instance != null) Instance.settings = injectedSettings;
+        }
+
         public ITransport Transport { get; private set; }
 
         public EndpointConnection EndpointClient { get; private set; }
@@ -74,11 +79,6 @@ namespace GossipSDK.Core
 
         private void Awake()
         {
-            if (settings == null)
-            {
-                settings = Resources.Load<GossipSettings>("GossipAnalyticsSettings");
-            }
-
             if (settings == null)
             {
                 Debug.LogWarning($"Gossip: GossipSettings not found in Resources. Please create one at Assets/Resources/{nameof(GossipSettings)}.asset");
