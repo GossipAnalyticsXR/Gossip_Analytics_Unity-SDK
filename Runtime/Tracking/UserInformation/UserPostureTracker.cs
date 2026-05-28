@@ -72,7 +72,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
         public async void CaptureAndSendNow(string state, Vector3 headPosition)
         {
             CapturePosture(state, headPosition);
-            var serverURL = Gossip.Instance?.Settings?.ServerURL;
+            var serverURL = Gossip.Instance?.Settings?.GetActiveServerUrl();
             if (!string.IsNullOrWhiteSpace(serverURL))
             {
                 await SendDataToSocketAsync(serverURL);
