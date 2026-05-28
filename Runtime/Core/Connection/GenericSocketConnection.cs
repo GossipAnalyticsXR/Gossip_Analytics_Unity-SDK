@@ -130,7 +130,7 @@ namespace GossipSDK.Core.Connection
 
         public void SendDataToSocket()
         {
-            var serverURL = Gossip.Instance?.Settings?.ServerURL;
+            var serverURL = Gossip.Instance?.Settings?.GetActiveServerUrl();
             if (string.IsNullOrWhiteSpace(serverURL))
             {
                 Debug.LogError("[GenericSocketConnection] ServerURL is null or empty. Cannot send.");
