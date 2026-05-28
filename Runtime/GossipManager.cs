@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using GossipSDK.Core;
+using GossipSDK.Core.Configuration;
 using GossipSDK.Components;
 using GossipSDK.XR;
 using GossipSDK.Tracking.GameplayMetrics;
@@ -20,6 +21,9 @@ namespace GossipSDK
         [SerializeField] private float trackInterval = 2f;
         [SerializeField] private float deployInterval = 5f;
 
+        [Header("Settings")]
+        [SerializeField] private GossipSettings settings;
+
         private readonly List<GossipBasicComponent> gossipComponents = new List<GossipBasicComponent>();
         private readonly CompositeDisposable disposables = new CompositeDisposable();
 
@@ -31,6 +35,12 @@ namespace GossipSDK
 
         private void OnEnable()
         {
+            if (settings == null)
+            {
+                Debug.LogError("[GossipManager] GossipSettings not assigned. Please drag your GossipAnalyticsSettings asset into the Settings field on GossipManager.");
+                return;
+            }
+            Gossip.Initialize(settings);
             StartCoroutine(WaitForPermissionsBeforeStart());
         }
 
