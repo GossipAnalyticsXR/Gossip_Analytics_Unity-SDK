@@ -135,10 +135,10 @@ public class AudioVolumeDemoUI : MonoBehaviour
     }
 
     // ── Slider builder ────────────────────────────────────────────────────────
-    Slider BuildSlider(Transform parent)
+    Slider BuildSlider(Component parent)
     {
         var sliderGO = new GameObject("Slider", typeof(RectTransform));
-        sliderGO.transform.SetParent(parent, false);
+        sliderGO.transform.SetParent(parent.transform, false);
         SetLayoutElement(sliderGO, preferredHeight: 20);
 
         var sliderRT = sliderGO.GetComponent<RectTransform>();
@@ -248,7 +248,7 @@ public class AudioVolumeDemoUI : MonoBehaviour
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-    void BuildTopBar(Transform parent)
+    void BuildTopBar(Component parent)
     {
         var topBar = MakePanel("TopBar", parent, TopBarBg, height: 36);
         var hl = topBar.gameObject.AddComponent<HorizontalLayoutGroup>();
