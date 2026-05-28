@@ -3,7 +3,7 @@
   "version": "1.1.4",
   "displayName": "Gossip Analytics SDK",
   "organization": "Gossip Analytics",
-  "description": "SDK for immersive analytics in XR, VR, AR and 2D/3D games. Track user paths, gaze and object views with unique heatmaps. Powered by AI insights and environment switching for clean data. Fast integration. No per-user fees.",
+  "description": "Unity SDK for immersive XR and VR analytics, tracking user position, eye gaze, hand/controller input, interactions, session lifecycle, and gameplay metrics in real time. Features component-based tracker architecture, spatial heatmaps for movement and gaze, and multi-environment support (Dev/Beta/Production) to keep production data clean.",
   "samples":
   {
     "displayName": "Gossip Analytics – Demos",
