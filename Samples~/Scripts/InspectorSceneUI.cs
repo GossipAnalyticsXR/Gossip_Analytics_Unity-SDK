@@ -173,14 +173,14 @@ public class InspectorSceneUI : MonoBehaviour
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-    static RectTransform MakeRect(string name, Transform parent)
+    static RectTransform MakeRect(string name, Component parent)
     {
         var go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
+        go.transform.SetParent(parent.transform, false);
         return go.GetComponent<RectTransform>();
     }
 
-    static Image MakePanel(string name, Transform parent, Color color,
+    static Image MakePanel(string name, Component parent, Color color,
         float width = -1, float height = -1,
         float flexibleWidth = -1, float flexibleHeight = -1)
     {
@@ -198,7 +198,7 @@ public class InspectorSceneUI : MonoBehaviour
         return img;
     }
 
-    static TextMeshProUGUI MakeTMP(string name, Transform parent, string text, float size, Color color)
+    static TextMeshProUGUI MakeTMP(string name, Component parent, string text, float size, Color color)
     {
         var rt  = MakeRect(name, parent);
         var tmp = rt.gameObject.AddComponent<TextMeshProUGUI>();
