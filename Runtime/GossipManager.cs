@@ -15,6 +15,7 @@ namespace GossipSDK
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(XRBootstrap))]
+    [DefaultExecutionOrder(-100)]
     public class GossipManager : MonoBehaviour
     {
         [Header("Tick Intervals")]
