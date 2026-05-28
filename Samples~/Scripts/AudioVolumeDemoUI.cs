@@ -321,5 +321,4 @@ public class AudioVolumeDemoUI : MonoBehaviour
 
     static Color Hex(string hex) { ColorUtility.TryParseHtmlString(hex, out Color c); return c; }
 
-    static Color AccentBlue => Hex("#6899F8");
 }
