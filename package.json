@@ -3,7 +3,7 @@
   "version": "1.1.4",
   "displayName": "Gossip Analytics SDK",
   "organization": "Gossip Analytics",
-  "description": "Unity SDK for immersive XR and VR analytics, tracking user position, eye gaze, hand/controller input, interactions, session lifecycle, and gameplay metrics in real time. Features component-based tracker architecture, spatial heatmaps for movement and gaze, and multi-environment support (Dev/Beta/Production) to keep production data clean.",
+  "description": "OpenXR-first Unity SDK for XR analytics — capturing high-signal spatial telemetry from immersive experiences and turning it into AI-driven decisions. Tracks session lifecycle, user/device context, movement, eye/hand signals, interactions, and gameplay metrics in real time, with minimal performance impact.\n\nBuilt around a component-based tracker architecture, the SDK ships with 4 next-gen spatial heatmaps (paths, gaze, object focus, and spatial movement) that adapt to static, procedural, and swappable environments. Supports Dev, Beta, and Production environments natively — keeping production data clean and isolated with 2-click switching.",
   "samples":
   {
     "displayName": "Gossip Analytics – Demos",
