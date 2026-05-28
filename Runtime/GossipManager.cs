@@ -33,6 +33,19 @@ namespace GossipSDK
         private bool isTrackRoutineRunning = false;
         private bool isDeployRoutineRunning = false;
 
+        private static GossipManager _instance;
+
+        private void Awake()
+        {
+            if (_instance != null && _instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            _instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+
         private void OnEnable()
         {
             if (settings == null)
