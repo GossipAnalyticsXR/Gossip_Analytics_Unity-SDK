@@ -86,7 +86,7 @@ namespace GossipSDK.Core
 
             try
             {
-                string effectiveServer = settings?.ServerURL;
+                string effectiveServer = settings?.GetActiveServerUrl();
                 string effectiveApiKey = settings?.ApiKeyValue;
 
                 if (settings != null && settings.UseHttpEndpoint)
