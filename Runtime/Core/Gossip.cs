@@ -250,6 +250,7 @@ namespace GossipSDK.Core
 
         public void StartResendWorker()
         {
+            if (string.IsNullOrEmpty(Settings?.GetActiveServerUrl())) return;
             StopResendWorker();
 
             resendCts = new CancellationTokenSource();
@@ -313,6 +314,7 @@ namespace GossipSDK.Core
                         foreach (var t in trackers)
                         {
                             if (t == null) continue;
+                            if (string.IsNullOrEmpty(Settings?.GetActiveServerUrl())) continue;
 
                             try
                             {
