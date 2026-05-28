@@ -141,7 +141,7 @@ namespace GossipSDK.Core
 
             if (UserInfoTracker == null) UserInfoTracker = new UserInfoTracker();
             UserInfoTracker.CaptureOnce();
-            if (!string.IsNullOrEmpty(GetActiveServerUrl()))
+            if (!string.IsNullOrEmpty(Settings?.GetActiveServerUrl()))
             {
                 UserInfoTracker.SendDataToSocket();
             }
