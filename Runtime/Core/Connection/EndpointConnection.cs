@@ -24,7 +24,7 @@ namespace GossipSDK.Core.Connection
         private string GetUploadUrl()
         {
             var settings = Gossip.Instance.Settings;
-            string baseUrl = settings.ServerURL.TrimEnd('/');
+            string baseUrl = settings.GetActiveServerUrl().TrimEnd('/');
             string path = settings.IngestPath.StartsWith("/") ? settings.IngestPath : "/" + settings.IngestPath;
             return baseUrl + path;
         }
