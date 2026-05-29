@@ -251,7 +251,7 @@ namespace Editor.InspectorViews
 
         private static string GetSDKVersion()
         {
-            var info = UnityEditor.PackageManager.PackageInfo.FindForAssetPath("Assets/Gossip Analytics");
+            var info = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(GossipSettingsEditor).Assembly);
             return info != null ? info.version : "Unknown";
         }
     }
