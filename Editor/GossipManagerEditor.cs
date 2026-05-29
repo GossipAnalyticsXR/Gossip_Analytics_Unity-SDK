@@ -12,6 +12,15 @@ namespace GossipSDK.Editor
     {
         public override void OnInspectorGUI()
         {
+            var version = GetSDKVersion();
+            var versionStyle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                alignment = TextAnchor.MiddleRight,
+                normal = { textColor = new Color(0.5f, 0.5f, 0.5f) }
+            };
+            EditorGUILayout.LabelField("Gossip Analytics SDK v" + version, versionStyle);
+            EditorGUILayout.Space(4);
+
             base.OnInspectorGUI();
 
             var manager = (GossipManager)target;
@@ -67,6 +76,12 @@ namespace GossipSDK.Editor
                     }
                 }
             }
+        }
+
+        private static string GetSDKVersion()
+        {
+            var info = UnityEditor.PackageManager.PackageInfo.FindForAssetPath("Assets/Gossip Analytics");
+            return info != null ? info.version : "Unknown";
         }
     }
 
