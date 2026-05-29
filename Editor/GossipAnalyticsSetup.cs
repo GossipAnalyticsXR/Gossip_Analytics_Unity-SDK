@@ -89,15 +89,15 @@ namespace GossipSDK.Editor
             }
 
             // STEP 4 — Select and focus the GossipManager in the editor
-            Selection.activeGameObject = manager.gameObject;
-            EditorGUIUtility.PingObject(manager.gameObject);
+            Selection.activeObject = settingsAsset;
+            EditorGUIUtility.PingObject(settingsAsset);
 
             // STEP 5 — Mark scene dirty and show completion dialog
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
 
             EditorUtility.DisplayDialog(
                 "Gossip Analytics — Setup Complete ✅",
-                "GossipAnalyticsManager is ready in your scene.\n\nNext step: enter your 3 API Keys (Dev, Beta, Production) in the Inspector that just opened, then press Play.\n\nGet your API Keys inside the Gossip Analytics dashboard → Company Overview section.",
+                "GossipAnalyticsManager is ready in your scene.\n\nThe Inspector now shows your GossipAnalyticsSettings — enter your 3 API Keys (Dev, Beta, Production) and press Play.\n\nGet your API Keys inside the Gossip Analytics dashboard → Company Overview section.",
                 "OK");
         }
     }
