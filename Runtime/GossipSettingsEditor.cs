@@ -1,5 +1,7 @@
 #if UNITY_EDITOR
 using System.IO;
+using System.Net.Http;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 using GossipSDK.Core.Configuration;
@@ -11,6 +13,10 @@ namespace Editor.InspectorViews
     {
         private Texture2D logo;
         private Texture2D header;
+
+        private string _connectionStatus = "";
+        private bool _isTesting = false;
+        private Color _statusColor = Color.gray;
 
         private SerializedProperty environmentProp;
 
@@ -111,6 +117,32 @@ namespace Editor.InspectorViews
 
             EditorGUILayout.Space();
 
+            // --- Check Connection ---
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Connection Test", EditorStyles.boldLabel);
+            GUI.enabled = !_isTesting;
+            if (GUILayout.Button("Check Connection"))
+            {
+                CheckConnectionAsync();
+            }
+            GUI.enabled = true;
+
+            if (!string.IsNullOrEmpty(_connectionStatus))
+            {
+                var msgType = _isTesting ? MessageType.Info : (_statusColor == Color.green ? MessageType.None : MessageType.Error);
+                if (_statusColor == Color.green)
+                {
+                    var prevColor = GUI.color;
+                    GUI.color = Color.green;
+                    EditorGUILayout.HelpBox(_connectionStatus, MessageType.None);
+                    GUI.color = prevColor;
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox(_connectionStatus, msgType);
+                }
+            }
+
             if (enableHeatmaps != null)
                 EditorGUILayout.PropertyField(enableHeatmaps, new GUIContent("Enable Heatmaps"));
 
@@ -123,6 +155,64 @@ namespace Editor.InspectorViews
 
             EditorGUILayout.Space();
             serializedObject.ApplyModifiedProperties();
+        }
+
+        private async void CheckConnectionAsync()
+        {
+            _isTesting = true;
+            _connectionStatus = "Testing connection...";
+            _statusColor = Color.gray;
+            Repaint();
+
+            var st = target as GossipSDK.Core.Configuration.GossipSettings;
+            if (st == null)
+            {
+                _connectionStatus = "\u274C No GossipSettings target found.";
+                _statusColor = Color.red;
+                _isTesting = false;
+                Repaint();
+                return;
+            }
+
+            string serverUrl = st.GetActiveServerUrl();
+            if (string.IsNullOrEmpty(serverUrl))
+            {
+                _connectionStatus = "\u274C Server URL is not configured.";
+                _statusColor = Color.red;
+                _isTesting = false;
+                Repaint();
+                return;
+            }
+
+            string testUrl = serverUrl.TrimEnd('/') + "/health";
+            try
+            {
+                using (var client = new HttpClient())
+                {
+                    client.Timeout = TimeSpan.FromSeconds(15);
+                    var response = await client.GetAsync(testUrl);
+                    if ((int)response.StatusCode >= 200 && (int)response.StatusCode < 300)
+                    {
+                        _connectionStatus = "\u2705 Connected \u2014 server is reachable";
+                        _statusColor = Color.green;
+                    }
+                    else
+                    {
+                        _connectionStatus = "\u274C Server returned: " + (int)response.StatusCode;
+                        _statusColor = Color.red;
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                _connectionStatus = "\u274C Connection failed: " + ex.Message;
+                _statusColor = Color.red;
+            }
+            finally
+            {
+                _isTesting = false;
+                Repaint();
+            }
         }
 
         private void DrawTexture(Texture2D texture)
