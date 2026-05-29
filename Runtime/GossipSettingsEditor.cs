@@ -71,6 +71,15 @@ namespace Editor.InspectorViews
         {
             serializedObject.Update();
 
+            var version = GetSDKVersion();
+            var versionStyle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                alignment = TextAnchor.MiddleRight,
+                normal = { textColor = new Color(0.5f, 0.5f, 0.5f) }
+            };
+            EditorGUILayout.LabelField("Gossip Analytics SDK v" + version, versionStyle);
+            EditorGUILayout.Space(4);
+
             EditorGUILayout.Space();
             DrawTexture(logo);
             EditorGUILayout.Space(10);
@@ -237,6 +246,12 @@ namespace Editor.InspectorViews
         private Texture2D LoadImage(string relativePath)
         {
             return AssetDatabase.LoadAssetAtPath<Texture2D>(relativePath);
+        }
+
+        private static string GetSDKVersion()
+        {
+            var info = UnityEditor.PackageManager.PackageInfo.FindForAssetPath("Assets/Gossip Analytics");
+            return info != null ? info.version : "Unknown";
         }
     }
 }
