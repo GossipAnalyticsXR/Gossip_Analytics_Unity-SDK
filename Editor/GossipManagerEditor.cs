@@ -76,22 +76,65 @@ namespace GossipSDK.Editor
 
         public void OnPreprocessBuild(BuildReport report)
         {
-            var managers = Object.FindObjectsByType<GossipManager>(FindObjectsSortMode.None);
-            foreach (var manager in managers)
+            int managerCount = 0;
+            GossipManager foundManager = null;
+            
+            var buildScenes = UnityEditor.EditorBuildSettings.scenes;
+            var activeScenePath = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene().path;
+            
+            foreach (var buildScene in buildScenes)
             {
-                var serializedObj = new UnityEditor.SerializedObject(manager);
-                var settingsProp = serializedObj.FindProperty("settings");
-                if (settingsProp != null && settingsProp.objectReferenceValue == null)
+                if (!buildScene.enabled) continue;
+                
+                var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(
+                    buildScene.path, UnityEditor.SceneManagement.OpenSceneMode.Additive);
+                
+                var managers = UnityEngine.Object.FindObjectsByType<GossipManager>(
+                    UnityEngine.FindObjectsSortMode.None);
+                
+                if (managers.Length > 0)
                 {
-                    Debug.LogError("[GossipManager] Build aborted: GossipManager in scene '" +
-                        manager.gameObject.scene.name + "' has no GossipSettings assigned. " +
-                        "Assign the GossipAnalyticsSettings asset before building.");
-                    throw new BuildFailedException(
-                        "[GossipManager] GossipSettings is not assigned on GossipManager in scene '" +
-                        manager.gameObject.scene.name + "'. Assign it before building."
-                    );
+                    managerCount++;
+                    foundManager = managers[0];
+                }
+                
+                if (scene.path != activeScenePath)
+                {
+                    UnityEditor.SceneManagement.EditorSceneManager.CloseScene(scene, true);
                 }
             }
+            
+            if (managerCount == 0)
+            {
+                UnityEngine.Debug.LogError(
+                    "[Gossip Analytics] Build aborted: GossipManager was not found in any enabled build scene.");
+                throw new BuildFailedException(
+                    "Gossip Analytics: GossipAnalyticsManager prefab was not found in any build scene. Add it to your first/main scene before building.");
+            }
+            
+            if (managerCount > 1)
+            {
+                UnityEngine.Debug.LogWarning(
+                    "[Gossip Analytics] GossipAnalyticsManager was found in multiple scenes. It uses DontDestroyOnLoad — add it to the first scene only.");
+            }
+            
+            if (foundManager != null)
+            {
+                var settingsField = typeof(GossipManager).GetField(
+                    "settings", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var settingsValue = settingsField?.GetValue(foundManager);
+                if (settingsValue == null)
+                {
+                    UnityEngine.Debug.LogError(
+                        "[GossipManager] Build aborted: GossipManager in scene '" +
+                        foundManager.gameObject.scene.name + "' has no GossipSettings assigned. " +
+                        "Assign the GossipAnalyticsSettings asset before building.");
+                    throw new BuildFailedException(
+                        "[GossipManager] " + foundManager.gameObject.scene.name +
+                        ": GossipManager has no Settings assigned. Assign before building.");
+                }
+            }
+        }
         }
     }
 }
