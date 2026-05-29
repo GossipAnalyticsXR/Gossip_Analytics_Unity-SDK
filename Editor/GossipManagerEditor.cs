@@ -152,5 +152,4 @@ namespace GossipSDK.Editor
         }
         }
     }
-}
 #endif
