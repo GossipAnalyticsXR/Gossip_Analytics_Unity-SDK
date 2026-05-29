@@ -81,7 +81,7 @@ namespace GossipSDK.Editor
 
         private static string GetSDKVersion()
         {
-            var info = UnityEditor.PackageManager.PackageInfo.FindForAssetPath("Assets/Gossip Analytics");
+            var info = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(GossipManagerEditor).Assembly);
             return info != null ? info.version : "Unknown";
         }
     }
