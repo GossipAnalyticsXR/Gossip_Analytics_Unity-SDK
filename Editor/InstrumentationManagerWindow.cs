@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -18,6 +19,8 @@ namespace GossipSDK.Editor
         private bool _hasNewObjects = false;
         private Vector2 _scrollPos;
         private bool _isScanning = false;
+        private int _selectedTab = 0;
+        private readonly string[] _tabLabels = new string[] { "🎯 Interactables", "📡 Trackers" };
 
         private static readonly string[] InteractableKeywords = new[]
         {
@@ -40,6 +43,37 @@ namespace GossipSDK.Editor
             public bool hasInteractable;
             public bool isNew;
         }
+
+        // ─── Tracker types ────────────────────────────────────────────────────────
+        public enum TrackerTarget { Player, Camera, AnyObject, Automatic }
+
+        [System.Serializable]
+        public class TrackerInfo
+        {
+            public string componentTypeName;
+            public string displayName;
+            public string description;
+            public string category;
+            public TrackerTarget target;
+            public bool requiresConfiguration;
+        }
+
+        private static readonly List<TrackerInfo> _recommendedTrackers = new List<TrackerInfo>
+        {
+            // SPATIAL
+            new TrackerInfo { componentTypeName = "PositionTrackerComponent",            displayName = "Position Tracker",           description = "Tracks player position (X,Y,Z) over time. Feeds heatmaps.",                                    category = "Spatial", target = TrackerTarget.Player,    requiresConfiguration = false },
+            new TrackerInfo { componentTypeName = "RotationAndVelocityTrackerComponent", displayName = "Rotation & Velocity",         description = "Tracks player rotation, speed, and angular velocity.",                                        category = "Spatial", target = TrackerTarget.Player,    requiresConfiguration = false },
+            new TrackerInfo { componentTypeName = "UserPostureTrackerComponent",         displayName = "Posture Tracker",             description = "Detects standing/sitting/crouching. Requires sit and crouch thresholds in Inspector.",         category = "Spatial", target = TrackerTarget.Player,    requiresConfiguration = true  },
+            new TrackerInfo { componentTypeName = "UserBalanceTrackerComponent",         displayName = "Balance Tracker",             description = "Records body stability and oscillation. Attach to player head.",                               category = "Spatial", target = TrackerTarget.Player,    requiresConfiguration = false },
+            // DEVICE & PERFORMANCE
+            new TrackerInfo { componentTypeName = "PerformanceMonitorComponent",         displayName = "Performance Monitor",         description = "Tracks FPS and memory usage automatically.",                                                   category = "Device",  target = TrackerTarget.AnyObject, requiresConfiguration = false },
+            new TrackerInfo { componentTypeName = "BatteryMonitorComponent",             displayName = "Battery Monitor",             description = "Tracks battery level and charging status automatically.",                                     category = "Device",  target = TrackerTarget.AnyObject, requiresConfiguration = false },
+            new TrackerInfo { componentTypeName = "ConnectivityMonitorComponent",        displayName = "Connectivity Monitor",        description = "Tracks network connection type and speed automatically.",                                     category = "Device",  target = TrackerTarget.AnyObject, requiresConfiguration = false },
+            new TrackerInfo { componentTypeName = "HandControllerTrackingComponent",     displayName = "Hand & Controller Tracking",  description = "Tracks hand and controller movement. Place once anywhere in scene.",                          category = "Device",  target = TrackerTarget.AnyObject, requiresConfiguration = false },
+            new TrackerInfo { componentTypeName = "InputUsageTrackerComponent",          displayName = "Input Usage Tracker",         description = "Tracks time using controllers vs hand tracking. Reports on session end.",                     category = "Device",  target = TrackerTarget.AnyObject, requiresConfiguration = false },
+            // XR SPECIFIC
+            new TrackerInfo { componentTypeName = "EyeTrackingComponent",               displayName = "Eye Tracking",                description = "Tracks gaze hits and fixation. Requires OVR Manager + Eye Tracked Foveated Rendering. Attach to camera.", category = "XR", target = TrackerTarget.Camera, requiresConfiguration = true },
+        };
 
         // ─── Menu entry ──────────────────────────────────────────────────────
         [MenuItem("Window/Gossip Analytics/Instrumentation Manager")]
@@ -106,91 +140,102 @@ namespace GossipSDK.Editor
         // ─── GUI ─────────────────────────────────────────────────────────────
         private void OnGUI()
         {
-            // ── Header ──
-            EditorGUILayout.Space(6);
-            EditorGUILayout.LabelField("Gossip Analytics \u2014 Instrumentation Manager", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField(
-                "Select which objects to track interactions on. Click Apply to add InteractableComponent.",
-                EditorStyles.wordWrappedMiniLabel);
+            // ── Tab toolbar ──
+            _selectedTab = GUILayout.Toolbar(_selectedTab, _tabLabels, GUILayout.Height(30));
             EditorGUILayout.Space(4);
 
-            // ── New-objects warning ──
-            if (_hasNewObjects)
+            if (_selectedTab == 0)
             {
-                EditorGUILayout.HelpBox(
-                    "\u26a0 New interactable objects detected. Click Refresh to review them.",
-                    MessageType.Warning);
+                // ── Header ──
+                EditorGUILayout.Space(6);
+                EditorGUILayout.LabelField("Gossip Analytics \u2014 Instrumentation Manager", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField(
+                    "Select which objects to track interactions on. Click Apply to add InteractableComponent.",
+                    EditorStyles.wordWrappedMiniLabel);
                 EditorGUILayout.Space(4);
-            }
-
-            // ── Toolbar ──
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Refresh", GUILayout.Width(70)))
-            {
-                ScanAllScenes();
-                _hasNewObjects = false;
-                titleContent.text = "\ud83c\udfaf Instrumentation Manager";
-            }
-            if (GUILayout.Button("Select All Scenes", GUILayout.Width(120)))
-                SetAllChecked(true);
-            if (GUILayout.Button("Deselect All", GUILayout.Width(90)))
-                SetAllChecked(false);
-            GUILayout.FlexibleSpace();
-            GUI.backgroundColor = new Color(0.4f, 0.8f, 0.4f);
-            if (GUILayout.Button("Apply Selected", GUILayout.Width(110)))
-                ApplyInstrumentation();
-            GUI.backgroundColor = Color.white;
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.Space(6);
-
-            // ── Scene list ──
-            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
-
-            foreach (var kvp in _sceneObjects)
-            {
-                string sceneName = kvp.Key;
-                var objects = kvp.Value;
-
-                int instrumentedCount = objects.Count(o => o.hasInteractable);
-                int totalCount = objects.Count;
-
-                if (!_sceneFoldouts.ContainsKey(sceneName))
-                    _sceneFoldouts[sceneName] = true;
-
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-
-                // ── Scene header row ──
-                EditorGUILayout.BeginHorizontal();
-                _sceneFoldouts[sceneName] = EditorGUILayout.Foldout(
-                    _sceneFoldouts[sceneName],
-                    $"  {sceneName}   ({instrumentedCount} instrumented / {totalCount} total)",
-                    true,
-                    EditorStyles.foldoutHeader);
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button("Select All in Scene", GUILayout.Width(130)))
-                    foreach (var o in objects) o.isChecked = true;
-                EditorGUILayout.EndHorizontal();
-
-                if (_sceneFoldouts[sceneName])
+    
+                // ── New-objects warning ──
+                if (_hasNewObjects)
                 {
-                    EditorGUILayout.Space(2);
-                    foreach (var obj in objects)
-                        DrawObjectRow(obj);
-                    EditorGUILayout.Space(2);
+                    EditorGUILayout.HelpBox(
+                        "\u26a0 New interactable objects detected. Click Refresh to review them.",
+                        MessageType.Warning);
+                    EditorGUILayout.Space(4);
                 }
-
-                EditorGUILayout.EndVertical();
+    
+                // ── Toolbar ──
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Refresh", GUILayout.Width(70)))
+                {
+                    ScanAllScenes();
+                    _hasNewObjects = false;
+                    titleContent.text = "\ud83c\udfaf Instrumentation Manager";
+                }
+                if (GUILayout.Button("Select All Scenes", GUILayout.Width(120)))
+                    SetAllChecked(true);
+                if (GUILayout.Button("Deselect All", GUILayout.Width(90)))
+                    SetAllChecked(false);
+                GUILayout.FlexibleSpace();
+                GUI.backgroundColor = new Color(0.4f, 0.8f, 0.4f);
+                if (GUILayout.Button("Apply Selected", GUILayout.Width(110)))
+                    ApplyInstrumentation();
+                GUI.backgroundColor = Color.white;
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.Space(6);
+    
+                // ── Scene list ──
+                _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
+    
+                foreach (var kvp in _sceneObjects)
+                {
+                    string sceneName = kvp.Key;
+                    var objects = kvp.Value;
+    
+                    int instrumentedCount = objects.Count(o => o.hasInteractable);
+                    int totalCount = objects.Count;
+    
+                    if (!_sceneFoldouts.ContainsKey(sceneName))
+                        _sceneFoldouts[sceneName] = true;
+    
+                    EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+    
+                    // ── Scene header row ──
+                    EditorGUILayout.BeginHorizontal();
+                    _sceneFoldouts[sceneName] = EditorGUILayout.Foldout(
+                        _sceneFoldouts[sceneName],
+                        $"  {sceneName}   ({instrumentedCount} instrumented / {totalCount} total)",
+                        true,
+                        EditorStyles.foldoutHeader);
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button("Select All in Scene", GUILayout.Width(130)))
+                        foreach (var o in objects) o.isChecked = true;
+                    EditorGUILayout.EndHorizontal();
+    
+                    if (_sceneFoldouts[sceneName])
+                    {
+                        EditorGUILayout.Space(2);
+                        foreach (var obj in objects)
+                            DrawObjectRow(obj);
+                        EditorGUILayout.Space(2);
+                    }
+    
+                    EditorGUILayout.EndVertical();
+                    EditorGUILayout.Space(4);
+                }
+    
+                EditorGUILayout.EndScrollView();
+    
+                // ── Bottom help ──
                 EditorGUILayout.Space(4);
+                EditorGUILayout.HelpBox(
+                    "After applying, call OnInteractInstant(\"grab\") or OnInteractStart/End from your input handler " +
+                    "on each instrumented object, or use autoTriggerOnStart for testing.",
+                    MessageType.Info);
             }
-
-            EditorGUILayout.EndScrollView();
-
-            // ── Bottom help ──
-            EditorGUILayout.Space(4);
-            EditorGUILayout.HelpBox(
-                "After applying, call OnInteractInstant(\"grab\") or OnInteractStart/End from your input handler " +
-                "on each instrumented object, or use autoTriggerOnStart for testing.",
-                MessageType.Info);
+            else if (_selectedTab == 1)
+            {
+                DrawTrackersTab();
+            }
         }
 
         private void DrawObjectRow(ScannedObject obj)
@@ -553,6 +598,97 @@ namespace GossipSDK.Editor
             foreach (var kvp in _sceneObjects)
                 foreach (var obj in kvp.Value)
                     obj.isChecked = value;
+        }
+
+        // ─── Trackers tab ───────────────────────────────────────────────────────
+        private void DrawTrackersTab()
+        {
+            EditorGUILayout.HelpBox("Add recommended tracker components to your scene. Spatial trackers go on your player, Device trackers can go on any object.", MessageType.Info);
+            EditorGUILayout.Space(6);
+
+            // Auto-detect player and camera
+            GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
+            if (playerObject == null)
+            {
+                try
+                {
+                    var xrOrigin = FindObjectOfType<UnityEngine.XR.Interaction.Toolkit.XROrigin>();
+                    if (xrOrigin != null) playerObject = xrOrigin.gameObject;
+                }
+                catch { }
+            }
+            Camera mainCamera = Camera.main;
+
+            string playerStatus = playerObject != null ? $"✅ {playerObject.name}" : "⚠ Not found (tag your player 'Player')";
+            string cameraStatus = mainCamera   != null ? $"✅ {mainCamera.name}"   : "⚠ No main camera found";
+            EditorGUILayout.LabelField($"Player: {playerStatus}", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField($"Camera: {cameraStatus}", EditorStyles.miniLabel);
+            EditorGUILayout.Space(8);
+
+            var categories = _recommendedTrackers.Select(t => t.category).Distinct().ToList();
+            foreach (var category in categories)
+            {
+                EditorGUILayout.LabelField(category, EditorStyles.boldLabel);
+
+                var trackersInCategory = _recommendedTrackers.Where(t => t.category == category).ToList();
+                foreach (var tracker in trackersInCategory)
+                {
+                    var componentType = AppDomain.CurrentDomain.GetAssemblies()
+                        .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
+                        .FirstOrDefault(t => t.Name == tracker.componentTypeName);
+
+                    GameObject targetObj = tracker.target == TrackerTarget.Player  ? playerObject
+                                        : tracker.target == TrackerTarget.Camera   ? (mainCamera?.gameObject)
+                                        : null;
+
+                    bool alreadyInScene = componentType != null &&
+                        FindObjectOfType(componentType) != null;
+
+                    EditorGUILayout.BeginHorizontal();
+
+                    string badge = alreadyInScene ? "✅" : "○";
+                    EditorGUILayout.LabelField(badge, GUILayout.Width(20));
+
+                    EditorGUILayout.BeginVertical();
+                    EditorGUILayout.LabelField(tracker.displayName, EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField(tracker.description, EditorStyles.wordWrappedMiniLabel);
+                    if (tracker.requiresConfiguration)
+                        EditorGUILayout.LabelField("⚠ Requires configuration in Inspector after adding.", EditorStyles.miniLabel);
+                    EditorGUILayout.EndVertical();
+
+                    if (alreadyInScene)
+                    {
+                        GUI.enabled = false;
+                        GUILayout.Button("Added", GUILayout.Width(70));
+                        GUI.enabled = true;
+                    }
+                    else if (componentType == null)
+                    {
+                        GUI.enabled = false;
+                        GUILayout.Button("N/A", GUILayout.Width(70));
+                        GUI.enabled = true;
+                    }
+                    else
+                    {
+                        bool canAdd = tracker.target == TrackerTarget.AnyObject || targetObj != null;
+                        GUI.enabled = canAdd;
+                        if (GUILayout.Button("Add", GUILayout.Width(70)))
+                        {
+                            GameObject addTarget = targetObj ?? (playerObject ?? new GameObject("GossipTrackers"));
+                            Undo.AddComponent(addTarget, componentType);
+                            EditorUtility.SetDirty(addTarget);
+                            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+                            Debug.Log($"[Gossip Analytics] Added {tracker.displayName} to {addTarget.name}");
+                        }
+                        GUI.enabled = true;
+                    }
+
+                    EditorGUILayout.EndHorizontal();
+                    EditorGUILayout.Space(4);
+                }
+
+                EditorGUILayout.Space(8);
+            }
         }
     }
 }
