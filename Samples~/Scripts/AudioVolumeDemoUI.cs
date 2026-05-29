@@ -297,6 +297,7 @@ public class AudioVolumeDemoUI : MonoBehaviour
     {
         var rt  = MakeRect(name, parent);
         var tmp = rt.gameObject.AddComponent<TextMeshProUGUI>();
+        tmp.font = TMP_Settings.defaultFontAsset;
         tmp.text = text; tmp.fontSize = size; tmp.color = color;
         tmp.raycastTarget = false;
         return tmp;
