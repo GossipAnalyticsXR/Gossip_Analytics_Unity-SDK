@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using GossipSDK;
+using GossipSDK.Core.Configuration;
 
 namespace GossipSDK.Editor
 {
