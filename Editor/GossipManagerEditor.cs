@@ -150,6 +150,29 @@ namespace GossipSDK.Editor
                         ": GossipManager has no Settings assigned. Assign before building.");
                 }
             }
+            
+            // Check VRPermissionsHandler for Android builds
+            if (report.summary.platform == BuildTarget.Android)
+            {
+                bool handlerFound = false;
+                foreach (var buildScene in UnityEditor.EditorBuildSettings.scenes)
+                {
+                    if (!buildScene.enabled) continue;
+                    var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(
+                        buildScene.path, UnityEditor.SceneManagement.OpenSceneMode.Additive);
+                    var handlers = UnityEngine.Object.FindObjectsByType<VRPermissionsHandler>(
+                        UnityEngine.FindObjectsSortMode.None);
+                    if (handlers.Length > 0) handlerFound = true;
+                    if (scene.path != activeScenePath)
+                        UnityEditor.SceneManagement.EditorSceneManager.CloseScene(scene, true);
+                    if (handlerFound) break;
+                }
+                if (!handlerFound)
+                    UnityEngine.Debug.LogWarning(
+                        "[Gossip Analytics] Building for Android but VRPermissionsHandler was not found in any scene. " +
+                        "Eye tracking, microphone, and camera permissions will NOT be requested at launch. " +
+                        "Add it via Window → Gossip Analytics → Instrumentation Manager → Permissions tab.");
+            }
         }
         }
     }
