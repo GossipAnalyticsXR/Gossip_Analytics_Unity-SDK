@@ -88,17 +88,16 @@ namespace GossipSDK.Editor
                 Debug.LogWarning("[Gossip Analytics] Could not find 'settings' property on GossipManager. Please assign the settings asset manually.");
             }
 
-            // STEP 4 — Select and focus the GossipManager in the editor
-            Selection.activeObject = settingsAsset;
-            EditorGUIUtility.PingObject(settingsAsset);
-
-            // STEP 5 — Mark scene dirty and show completion dialog
+            // STEP 4 — Mark scene dirty and show completion dialog
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
 
             EditorUtility.DisplayDialog(
                 "Gossip Analytics — Setup Complete ✅",
                 "GossipAnalyticsManager is ready in your scene.\n\nThe Inspector now shows your GossipAnalyticsSettings — enter your 3 API Keys (Dev, Beta, Production) and press Play.\n\nGet your API Keys inside the Gossip Analytics dashboard → Company Overview section.\n\nNext: open Window → Gossip Analytics → Instrumentation Manager to select which objects to track interactions on.",
                 "OK");
+
+            Selection.activeObject = settingsAsset;
+            EditorGUIUtility.PingObject(settingsAsset);
         }
     }
 }
