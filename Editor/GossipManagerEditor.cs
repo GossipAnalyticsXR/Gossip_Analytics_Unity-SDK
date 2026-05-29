@@ -23,6 +23,49 @@ namespace GossipSDK.Editor
                     "⚠️ Settings is not assigned. Drag your GossipAnalyticsSettings asset into the Settings field before pressing Play.",
                     MessageType.Error
                 );
+
+                EditorGUILayout.Space(4);
+                if (GUILayout.Button("Auto-Find Settings"))
+                {
+                    var guids = UnityEditor.AssetDatabase.FindAssets("t:GossipSettings");
+                    if (guids.Length == 1)
+                    {
+                        var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
+                        var found = UnityEditor.AssetDatabase.LoadAssetAtPath<GossipSettings>(path);
+                        serializedSettings.objectReferenceValue = found;
+                        serializedObject.ApplyModifiedProperties();
+                        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
+                            UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
+                        UnityEditor.EditorUtility.DisplayDialog(
+                            "Gossip Analytics",
+                            "Settings found and assigned! Remember to save your scene (Ctrl+S).",
+                            "OK");
+                    }
+                    else if (guids.Length > 1)
+                    {
+                        UnityEditor.EditorUtility.DisplayDialog(
+                            "Gossip Analytics",
+                            guids.Length + " GossipSettings assets found. Please assign one manually in the Inspector.",
+                            "OK");
+                    }
+                    else
+                    {
+                        bool create = UnityEditor.EditorUtility.DisplayDialog(
+                            "Gossip Analytics",
+                            "No GossipSettings asset found. Create one now at Assets/GossipAnalyticsSettings.asset?",
+                            "Create", "Cancel");
+                        if (create)
+                        {
+                            var newSettings = UnityEngine.ScriptableObject.CreateInstance<GossipSettings>();
+                            UnityEditor.AssetDatabase.CreateAsset(newSettings, "Assets/GossipAnalyticsSettings.asset");
+                            UnityEditor.AssetDatabase.SaveAssets();
+                            serializedSettings.objectReferenceValue = newSettings;
+                            serializedObject.ApplyModifiedProperties();
+                            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
+                                UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
+                        }
+                    }
+                }
             }
         }
     }
