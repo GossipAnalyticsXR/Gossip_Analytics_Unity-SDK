@@ -20,7 +20,7 @@ namespace GossipSDK.Editor
         private Vector2 _scrollPos;
         private bool _isScanning = false;
         private int _selectedTab = 0;
-        private readonly string[] _tabLabels = new string[] { "🎯 Interactables", "📡 Trackers" };
+        private readonly string[] _tabLabels = new string[] { "🎯 Interactables", "📡 Trackers", "🔐 Permissions" };
 
         private static readonly string[] InteractableKeywords = new[]
         {
@@ -237,6 +237,10 @@ namespace GossipSDK.Editor
                 DrawTrackersTab();
             }
         }
+            else if (_selectedTab == 2)
+            {
+                DrawPermissionsTab();
+            }
 
         private void DrawObjectRow(ScannedObject obj)
         {
@@ -689,6 +693,96 @@ namespace GossipSDK.Editor
 
                 EditorGUILayout.Space(8);
             }
+        }
+    }
+
+        // ─── Permissions tab ───────────────────────────────────────────────────
+        private void DrawPermissionsTab()
+        {
+            EditorGUILayout.HelpBox(
+                "VRPermissionsHandler automatically requests device permissions on Android/Meta Quest at runtime.\n\n" +
+                "In the Unity Editor and on non-Android platforms it does nothing — IsReady is set to true immediately.",
+                MessageType.Info);
+            EditorGUILayout.Space(6);
+
+            // Check if VRPermissionsHandler is in the current scene
+            var handlerType = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
+                .FirstOrDefault(t => t.Name == "VRPermissionsHandler");
+
+            bool handlerInScene = handlerType != null &&
+                FindObjectOfType(handlerType) != null;
+
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(
+                handlerInScene ? "✅  VRPermissionsHandler is in the scene" : "○  VRPermissionsHandler is NOT in the scene",
+                handlerInScene ? EditorStyles.boldLabel : EditorStyles.label);
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.Space(4);
+
+            if (!handlerInScene)
+            {
+                EditorGUILayout.HelpBox(
+                    "Without VRPermissionsHandler, your Meta Quest build will NOT request eye tracking, microphone, or camera permissions at launch. Add it before building for Android.",
+                    MessageType.Warning);
+                EditorGUILayout.Space(4);
+
+                GUI.enabled = handlerType != null;
+                if (GUILayout.Button("Add VRPermissionsHandler to Scene", GUILayout.Height(30)))
+                {
+                    var gossipManager = FindObjectOfType<GossipSDK.GossipManager>();
+                    GameObject target = gossipManager != null
+                        ? gossipManager.gameObject
+                        : new GameObject("VRPermissionsHandler");
+                    Undo.AddComponent(target, handlerType);
+                    EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+                    Debug.Log("[Gossip Analytics] VRPermissionsHandler added to " + target.name);
+                }
+                GUI.enabled = true;
+
+                if (handlerType == null)
+                    EditorGUILayout.LabelField("⚠ VRPermissionsHandler type not found in project.", EditorStyles.miniLabel);
+            }
+            else
+            {
+                if (GUILayout.Button("Remove from Scene", GUILayout.Width(140)))
+                {
+                    var instance = FindObjectOfType(handlerType) as Component;
+                    if (instance != null)
+                    {
+                        Undo.DestroyObjectImmediate(instance);
+                        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+                    }
+                }
+            }
+
+            EditorGUILayout.Space(10);
+
+            EditorGUILayout.LabelField("Permissions requested on Android launch:", EditorStyles.boldLabel);
+            EditorGUILayout.Space(2);
+
+            var permissions = new (string name, string permissionId, string note)[]
+            {
+                ("Eye Tracking",    "com.oculus.permission.EYE_TRACKING",  "Required for EyeTrackingComponent to capture gaze data."),
+                ("Scene / Spatial", "com.oculus.permission.USE_SCENE",     "Required for spatial mapping and environment understanding."),
+                ("Headset Camera",  "horizonos.permission.HEADSET_CAMERA", "Required for passthrough and MR camera access."),
+                ("Microphone",      "android.permission.RECORD_AUDIO",     "Required for AudioReactionTrackerComponent."),
+            };
+
+            foreach (var perm in permissions)
+            {
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.LabelField(perm.name, EditorStyles.boldLabel);
+                EditorGUILayout.LabelField(perm.permissionId, EditorStyles.miniLabel);
+                EditorGUILayout.LabelField(perm.note, EditorStyles.wordWrappedMiniLabel);
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.Space(2);
+            }
+
+            EditorGUILayout.Space(8);
+            EditorGUILayout.LabelField(
+                "Permissions are requested sequentially at app launch with a 10s timeout per permission.",
+                EditorStyles.wordWrappedMiniLabel);
         }
     }
 }
