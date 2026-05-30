@@ -184,46 +184,56 @@ namespace GossipSDK.Editor
                 EditorGUILayout.Space(6);
     
                 // ── Scene list ──
-                _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
-    
-                foreach (var kvp in _sceneObjects)
+                var enabledBuildSceneCount = UnityEditor.EditorBuildSettings.scenes.Count(s => s.enabled);
+                if (enabledBuildSceneCount == 0)
                 {
-                    string sceneName = kvp.Key;
-                    var objects = kvp.Value;
-    
-                    int instrumentedCount = objects.Count(o => o.hasInteractable);
-                    int totalCount = objects.Count;
-    
-                    if (!_sceneFoldouts.ContainsKey(sceneName))
-                        _sceneFoldouts[sceneName] = true;
-    
-                    EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-    
-                    // ── Scene header row ──
-                    EditorGUILayout.BeginHorizontal();
-                    _sceneFoldouts[sceneName] = EditorGUILayout.Foldout(
-                        _sceneFoldouts[sceneName],
-                        $"  {sceneName}   ({instrumentedCount} instrumented / {totalCount} total)",
-                        true,
-                        EditorStyles.foldoutHeader);
-                    GUILayout.FlexibleSpace();
-                    if (GUILayout.Button("Select All in Scene", GUILayout.Width(130)))
-                        foreach (var o in objects) o.isChecked = true;
-                    EditorGUILayout.EndHorizontal();
-    
-                    if (_sceneFoldouts[sceneName])
-                    {
-                        EditorGUILayout.Space(2);
-                        foreach (var obj in objects)
-                            DrawObjectRow(obj);
-                        EditorGUILayout.Space(2);
-                    }
-    
-                    EditorGUILayout.EndVertical();
-                    EditorGUILayout.Space(4);
+                    EditorGUILayout.HelpBox(
+                        "No scenes found in Build Settings. Add your scene via File → Build Settings before instrumenting.",
+                        MessageType.Warning);
                 }
-    
-                EditorGUILayout.EndScrollView();
+                else
+                {
+                    _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
+        
+                    foreach (var kvp in _sceneObjects)
+                    {
+                        string sceneName = kvp.Key;
+                        var objects = kvp.Value;
+        
+                        int instrumentedCount = objects.Count(o => o.hasInteractable);
+                        int totalCount = objects.Count;
+        
+                        if (!_sceneFoldouts.ContainsKey(sceneName))
+                            _sceneFoldouts[sceneName] = true;
+        
+                        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        
+                        // ── Scene header row ──
+                        EditorGUILayout.BeginHorizontal();
+                        _sceneFoldouts[sceneName] = EditorGUILayout.Foldout(
+                            _sceneFoldouts[sceneName],
+                            $"  {sceneName}   ({instrumentedCount} instrumented / {totalCount} total)",
+                            true,
+                            EditorStyles.foldoutHeader);
+                        GUILayout.FlexibleSpace();
+                        if (GUILayout.Button("Select All in Scene", GUILayout.Width(130)))
+                            foreach (var o in objects) o.isChecked = true;
+                        EditorGUILayout.EndHorizontal();
+        
+                        if (_sceneFoldouts[sceneName])
+                        {
+                            EditorGUILayout.Space(2);
+                            foreach (var obj in objects)
+                                DrawObjectRow(obj);
+                            EditorGUILayout.Space(2);
+                        }
+        
+                        EditorGUILayout.EndVertical();
+                        EditorGUILayout.Space(4);
+                    }
+        
+                    EditorGUILayout.EndScrollView();
+                }
     
                 // ── Bottom help ──
                 EditorGUILayout.Space(4);
