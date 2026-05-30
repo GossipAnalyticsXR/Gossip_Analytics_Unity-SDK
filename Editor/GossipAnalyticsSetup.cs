@@ -93,7 +93,7 @@ namespace GossipSDK.Editor
 
             EditorUtility.DisplayDialog(
                 "Gossip Analytics — Setup Complete ✅",
-                "GossipAnalyticsManager is ready in your scene.  Now, the Inspector will show your GossipAnalyticsSettings. Get your 3 API Keys (Dev, Beta, Production) from the Gossip Analytics dashboard -> Company Overview section, enter them, then press Check Connection to verify.  Next: open Window -> Gossip Analytics -> 2 -- Instrumentation Manager to select which objects to track interactions on.",
+                "GossipAnalyticsManager is ready in your scene.\n\nThe Inspector will show your GossipAnalyticsSettings. Get your 3 API Keys (Dev, Beta, Production) from the Gossip Analytics dashboard -> Company Overview section, enter them, then press Check Connection to verify.\n\nNext: open Window -> Gossip Analytics -> 2 -- Instrumentation Manager to select which objects to track interactions on.",
                 "OK");
 
             Selection.activeObject = settingsAsset;
