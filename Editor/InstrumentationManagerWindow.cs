@@ -12,7 +12,7 @@ namespace GossipSDK.Editor
 {
     public class InstrumentationManagerWindow : EditorWindow
     {
-        // ─── State ──────────────────────────────────────────────────────────
+        // ——— State ————————————————————————————————————————————————————————————
         private GossipInstrumentationData _data;
         private Dictionary<string, List<ScannedObject>> _sceneObjects = new Dictionary<string, List<ScannedObject>>();
         private Dictionary<string, bool> _sceneFoldouts = new Dictionary<string, bool>();
@@ -20,7 +20,9 @@ namespace GossipSDK.Editor
         private Vector2 _scrollPos;
         private bool _isScanning = false;
         private int _selectedTab = 0;
-        private readonly string[] _tabLabels = new string[] { "🎯 Interactables", "📡 Trackers", "🔐 Permissions" };
+        private readonly string[] _tabLabels = new string[] { " Interactables", " Trackers", " Permissions" };
+        private GameObject _playerObject = null;
+        private Camera _mainCamera = null;
 
         private static readonly string[] InteractableKeywords = new[]
         {
@@ -33,7 +35,7 @@ namespace GossipSDK.Editor
             "ambient", "light", "camera", "canvas", "event"
         };
 
-        // ─── Inner type ──────────────────────────────────────────────────────
+        // ——— Inner type ——————————————————————————————————————————————————————
         private class ScannedObject
         {
             public string sceneName;
@@ -44,7 +46,7 @@ namespace GossipSDK.Editor
             public bool isNew;
         }
 
-        // ─── Tracker types ────────────────────────────────────────────────────────
+        // ——— Tracker types ————————————————————————————————————————————————————
         public enum TrackerTarget { Player, Camera, AnyObject, Automatic }
 
         [System.Serializable]
@@ -61,32 +63,33 @@ namespace GossipSDK.Editor
         private static readonly List<TrackerInfo> _recommendedTrackers = new List<TrackerInfo>
         {
             // SPATIAL
-            new TrackerInfo { componentTypeName = "PositionTrackerComponent",            displayName = "Position Tracker",           description = "Tracks player position (X,Y,Z) over time. Feeds heatmaps.",                                    category = "Spatial", target = TrackerTarget.Player,    requiresConfiguration = false },
-            new TrackerInfo { componentTypeName = "RotationAndVelocityTrackerComponent", displayName = "Rotation & Velocity",         description = "Tracks player rotation, speed, and angular velocity.",                                        category = "Spatial", target = TrackerTarget.Player,    requiresConfiguration = false },
-            new TrackerInfo { componentTypeName = "UserPostureTrackerComponent",         displayName = "Posture Tracker",             description = "Detects standing/sitting/crouching. Requires sit and crouch thresholds in Inspector.",         category = "Spatial", target = TrackerTarget.Player,    requiresConfiguration = true  },
-            new TrackerInfo { componentTypeName = "UserBalanceTrackerComponent",         displayName = "Balance Tracker",             description = "Records body stability and oscillation. Attach to player head.",                               category = "Spatial", target = TrackerTarget.Player,    requiresConfiguration = false },
+            new TrackerInfo { componentTypeName = "PositionTrackerComponent", displayName = "Position Tracker", description = "Tracks player position (X,Y,Z) over time. Feeds heatmaps.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = false },
+            new TrackerInfo { componentTypeName = "RotationAndVelocityTrackerComponent", displayName = "Rotation & Velocity", description = "Tracks player rotation, speed, and angular velocity.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = false },
+            new TrackerInfo { componentTypeName = "UserPostureTrackerComponent", displayName = "Posture Tracker", description = "Detects standing/sitting/crouching. Requires thresholds in Inspector.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = true },
+            new TrackerInfo { componentTypeName = "UserBalanceTrackerComponent", displayName = "Balance Tracker", description = "Records body stability and oscillation.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = false },
             // DEVICE & PERFORMANCE
-            new TrackerInfo { componentTypeName = "PerformanceMonitorComponent",         displayName = "Performance Monitor",         description = "Tracks FPS and memory usage automatically.",                                                   category = "Device",  target = TrackerTarget.AnyObject, requiresConfiguration = false },
-            new TrackerInfo { componentTypeName = "BatteryMonitorComponent",             displayName = "Battery Monitor",             description = "Tracks battery level and charging status automatically.",                                     category = "Device",  target = TrackerTarget.AnyObject, requiresConfiguration = false },
-            new TrackerInfo { componentTypeName = "ConnectivityMonitorComponent",        displayName = "Connectivity Monitor",        description = "Tracks network connection type and speed automatically.",                                     category = "Device",  target = TrackerTarget.AnyObject, requiresConfiguration = false },
-            new TrackerInfo { componentTypeName = "HandControllerTrackingComponent",     displayName = "Hand & Controller Tracking",  description = "Tracks hand and controller movement. Place once anywhere in scene.",                          category = "Device",  target = TrackerTarget.AnyObject, requiresConfiguration = false },
-            new TrackerInfo { componentTypeName = "InputUsageTrackerComponent",          displayName = "Input Usage Tracker",         description = "Tracks time using controllers vs hand tracking. Reports on session end.",                     category = "Device",  target = TrackerTarget.AnyObject, requiresConfiguration = false },
+            new TrackerInfo { componentTypeName = "PerformanceMonitorComponent", displayName = "Performance Monitor", description = "Tracks FPS and memory usage automatically.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
+            new TrackerInfo { componentTypeName = "BatteryMonitorComponent", displayName = "Battery Monitor", description = "Tracks battery level and charging status automatically.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
+            new TrackerInfo { componentTypeName = "ConnectivityMonitorComponent", displayName = "Connectivity Monitor", description = "Tracks network connection type and speed automatically.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
+            new TrackerInfo { componentTypeName = "HandControllerTrackingComponent", displayName = "Hand & Controller Tracking", description = "Tracks hand and controller movement.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
+            new TrackerInfo { componentTypeName = "InputUsageTrackerComponent", displayName = "Input Usage Tracker", description = "Tracks time using controllers vs hand tracking.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
             // XR SPECIFIC
-            new TrackerInfo { componentTypeName = "EyeTrackingComponent",               displayName = "Eye Tracking",                description = "Tracks gaze hits and fixation. Requires OVR Manager + Eye Tracked Foveated Rendering. Attach to camera.", category = "XR", target = TrackerTarget.Camera, requiresConfiguration = true },
+            new TrackerInfo { componentTypeName = "EyeTrackingComponent", displayName = "Eye Tracking", description = "Tracks gaze hits and fixation. Attach to camera.", category = "XR", target = TrackerTarget.Camera, requiresConfiguration = true },
         };
 
-        // ─── Menu entry ──────────────────────────────────────────────────────
+        // ——— Menu entry ——————————————————————————————————————————————————————
         [MenuItem("Window/Gossip Analytics/2 — Instrumentation Manager", false, 2)]
         public static void Open()
         {
-            GetWindow<InstrumentationManagerWindow>("\ud83c\udfaf Instrumentation Manager");
+            GetWindow<InstrumentationManagerWindow>(" Instrumentation Manager");
         }
 
-        // ─── Lifecycle ───────────────────────────────────────────────────────
+        // ——— Lifecycle ———————————————————————————————————————————————————————
         private void OnEnable()
         {
             LoadOrCreateData();
             ScanAllScenes();
+            AutoDetectPlayer();
             EditorApplication.hierarchyChanged += OnHierarchyChanged;
         }
 
@@ -97,22 +100,21 @@ namespace GossipSDK.Editor
 
         private void OnHierarchyChanged()
         {
-            // Re-scan open scenes and detect new interactable objects
             var openSceneNames = new HashSet<string>();
             for (int i = 0; i < SceneManager.sceneCount; i++)
             {
-                var s = SceneManager.GetSceneAt(i);
-                if (s.isLoaded) openSceneNames.Add(s.name);
+                var sc = SceneManager.GetSceneAt(i);
+                if (sc.isLoaded) openSceneNames.Add(sc.name);
             }
 
             bool foundNew = false;
             foreach (var sceneName in openSceneNames)
             {
-                var s = SceneManager.GetSceneByName(sceneName);
-                if (!s.isLoaded) continue;
+                var sc = SceneManager.GetSceneByName(sceneName);
+                if (!sc.isLoaded) continue;
 
                 var scannedPaths = new HashSet<string>();
-                foreach (var root in s.GetRootGameObjects())
+                foreach (var root in sc.GetRootGameObjects())
                     CollectInteractableObjects(root, sceneName, scannedPaths);
 
                 var storedEntry = _data?.scenes.FirstOrDefault(e => e.sceneName == sceneName);
@@ -120,385 +122,341 @@ namespace GossipSDK.Editor
 
                 foreach (var path in scannedPaths)
                 {
-                    if (!storedPaths.Contains(path))
-                    {
-                        foundNew = true;
-                        break;
-                    }
+                    if (!storedPaths.Contains(path)) { foundNew = true; break; }
                 }
                 if (foundNew) break;
             }
 
-            if (foundNew && !_hasNewObjects)
+            if (foundNew != _hasNewObjects)
             {
-                _hasNewObjects = true;
-                titleContent.text = "\ud83c\udfaf Instrumentation Manager (!)";
+                _hasNewObjects = foundNew;
                 Repaint();
             }
         }
 
-        // ─── GUI ─────────────────────────────────────────────────────────────
+        // ——— OnGUI ———————————————————————————————————————————————————————————
         private void OnGUI()
         {
-            // ── Tab toolbar ──
             _selectedTab = GUILayout.Toolbar(_selectedTab, _tabLabels, GUILayout.Height(30));
             EditorGUILayout.Space(4);
 
+            float footerHeight = 36f;
+            Rect footerRect = new Rect(0, position.height - footerHeight, position.width, footerHeight);
+            Rect contentRect = new Rect(0, 40, position.width, position.height - 40 - footerHeight);
+
+            GUILayout.BeginArea(contentRect);
+            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
+
             if (_selectedTab == 0)
-            {
-                // ── Header ──
-                EditorGUILayout.Space(6);
-                EditorGUILayout.LabelField("Gossip Analytics \u2014 Instrumentation Manager", EditorStyles.boldLabel);
-                EditorGUILayout.LabelField(
-                    "Select which objects to track interactions on. Click Apply to add InteractableComponent.",
-                    EditorStyles.wordWrappedMiniLabel);
-                EditorGUILayout.Space(4);
-    
-                // ── New-objects warning ──
-                if (_hasNewObjects)
-                {
-                    EditorGUILayout.HelpBox(
-                        "\u26a0 New interactable objects detected. Click Refresh to review them.",
-                        MessageType.Warning);
-                    EditorGUILayout.Space(4);
-                }
-    
-                // ── Toolbar ──
-                EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button("Refresh", GUILayout.Width(70)))
-                {
-                    ScanAllScenes();
-                    _hasNewObjects = false;
-                    titleContent.text = "\ud83c\udfaf Instrumentation Manager";
-                }
-                if (GUILayout.Button("Select All Scenes", GUILayout.Width(120)))
-                    SetAllChecked(true);
-                if (GUILayout.Button("Deselect All", GUILayout.Width(90)))
-                    SetAllChecked(false);
-                GUILayout.FlexibleSpace();
-                GUI.backgroundColor = new Color(0.4f, 0.8f, 0.4f);
-                if (GUILayout.Button("Apply Selected", GUILayout.Width(110)))
-                    ApplyInstrumentation();
-                GUI.backgroundColor = Color.white;
-                EditorGUILayout.EndHorizontal();
-                EditorGUILayout.Space(6);
-    
-                // ── Scene list ──
-                var enabledBuildSceneCount = UnityEditor.EditorBuildSettings.scenes.Count(s => s.enabled);
-                if (enabledBuildSceneCount == 0)
-                {
-                    EditorGUILayout.HelpBox(
-                        "No scenes found in Build Settings. Add your scene via File → Build Settings before instrumenting.",
-                        MessageType.Warning);
-                }
-                else
-                {
-                    _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
-        
-                    foreach (var kvp in _sceneObjects)
-                    {
-                        string sceneName = kvp.Key;
-                        var objects = kvp.Value;
-        
-                        int instrumentedCount = objects.Count(o => o.hasInteractable);
-                        int totalCount = objects.Count;
-        
-                        if (!_sceneFoldouts.ContainsKey(sceneName))
-                            _sceneFoldouts[sceneName] = true;
-        
-                        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-        
-                        // ── Scene header row ──
-                        EditorGUILayout.BeginHorizontal();
-                        _sceneFoldouts[sceneName] = EditorGUILayout.Foldout(
-                            _sceneFoldouts[sceneName],
-                            $"  {sceneName}   ({instrumentedCount} instrumented / {totalCount} total)",
-                            true,
-                            EditorStyles.foldoutHeader);
-                        GUILayout.FlexibleSpace();
-                        if (GUILayout.Button("Select All in Scene", GUILayout.Width(130)))
-                            foreach (var o in objects) o.isChecked = true;
-                        EditorGUILayout.EndHorizontal();
-        
-                        if (_sceneFoldouts[sceneName])
-                        {
-                            EditorGUILayout.Space(2);
-                            foreach (var obj in objects)
-                                DrawObjectRow(obj);
-                            EditorGUILayout.Space(2);
-                        }
-        
-                        EditorGUILayout.EndVertical();
-                        EditorGUILayout.Space(4);
-                    }
-        
-                    EditorGUILayout.EndScrollView();
-                }
-    
-                // ── Bottom help ──
-                EditorGUILayout.Space(4);
-                EditorGUILayout.HelpBox(
-                    "After applying, call OnInteractInstant(\"grab\") or OnInteractStart/End from your input handler " +
-                    "on each instrumented object, or use autoTriggerOnStart for testing.",
-                    MessageType.Info);
-            }
+                DrawInteractablesTab();
             else if (_selectedTab == 1)
-            {
                 DrawTrackersTab();
-            }
             else if (_selectedTab == 2)
-            {
                 DrawPermissionsTab();
+
+            EditorGUILayout.EndScrollView();
+            GUILayout.EndArea();
+
+            DrawFooter(footerRect);
+        }
+
+        // ——— Footer ——————————————————————————————————————————————————————————
+        private void DrawFooter(Rect rect)
+        {
+            EditorGUI.DrawRect(rect, new Color(0.15f, 0.15f, 0.15f, 1f));
+
+            int trackedCount = 0;
+            foreach (var kvp in _sceneObjects)
+                foreach (var obj in kvp.Value)
+                    if (obj.isChecked) trackedCount++;
+
+            int activeTrackers = 0;
+            foreach (var t in _recommendedTrackers)
+            {
+                var type = AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
+                    .FirstOrDefault(tp => tp.Name == t.componentTypeName);
+                if (type != null && (Object.FindObjectOfType(type) as Component) != null) activeTrackers++;
             }
 
+            bool permsActive = Object.FindObjectOfType<VRPermissionsHandler>() != null;
+            string permsLabel = permsActive ? "enabled" : "disabled";
+            string summary = string.Format("✅ {0} objects tracked  ·  {1} trackers active  ·  Permissions {2}", trackedCount, activeTrackers, permsLabel);
+
+            var summaryStyle = new GUIStyle(EditorStyles.label);
+            summaryStyle.normal.textColor = Color.white;
+            summaryStyle.alignment = TextAnchor.MiddleLeft;
+            summaryStyle.fontSize = 11;
+
+            float btnW = 160f;
+            Rect lblRect = new Rect(rect.x + 8, rect.y, rect.width - btnW - 20, rect.height);
+            Rect btnRect = new Rect(rect.xMax - btnW - 8, rect.y + 4, btnW, rect.height - 8);
+
+            GUI.Label(lblRect, summary, summaryStyle);
+
+            var doneStyle = new GUIStyle(GUI.skin.button);
+            doneStyle.normal.textColor = Color.white;
+            doneStyle.fontStyle = FontStyle.Bold;
+
+            var prevBgColor = GUI.backgroundColor;
+            GUI.backgroundColor = new Color(0.2f, 0.6f, 0.2f, 1f);
+            if (GUI.Button(btnRect, "✅ Done — Save & Close", doneStyle))
+            {
+                AssetDatabase.SaveAssets();
+                EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
+                Close();
+            }
+            GUI.backgroundColor = prevBgColor;
         }
+
+        // ——— Tab: Interactables (opt-out) ————————————————————————————————————
+        private void DrawInteractablesTab()
+        {
+            EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("Gossip Analytics — Instrumentation Manager", EditorStyles.boldLabel);
+
+            if (_data == null)
+            {
+                EditorGUILayout.HelpBox("No data asset found. Try reopening the window.", MessageType.Error);
+                return;
+            }
+
+            if (_hasNewObjects)
+                EditorGUILayout.HelpBox("New interactable objects detected. Click Refresh to review them.", MessageType.Info);
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Refresh", GUILayout.Width(70)))
+            {
+                ScanAllScenes();
+                _hasNewObjects = false;
+            }
+            if (GUILayout.Button("Select All Scenes", GUILayout.Width(115)))
+                SetAllChecked(true);
+            if (GUILayout.Button("Deselect All", GUILayout.Width(90)))
+                SetAllChecked(false);
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.Space(6);
+
+            if (_sceneObjects.Count == 0)
+            {
+                EditorGUILayout.HelpBox("No interactable objects found in open scenes. Click Refresh after adding objects.", MessageType.Info);
+                return;
+            }
+
+            foreach (var kvp in _sceneObjects)
+            {
+                string sceneName = kvp.Key;
+                var objs = kvp.Value;
+
+                if (!_sceneFoldouts.ContainsKey(sceneName)) _sceneFoldouts[sceneName] = true;
+                _sceneFoldouts[sceneName] = EditorGUILayout.BeginFoldoutHeaderGroup(
+                    _sceneFoldouts[sceneName], sceneName + " (" + objs.Count + " objects)");
+
+                if (_sceneFoldouts[sceneName])
+                {
+                    var sorted = objs.OrderByDescending(o => o.isNew).ThenBy(o => o.objectName).ToList();
+                    foreach (var obj in sorted)
+                        DrawObjectRow(obj);
+                }
+
+                EditorGUILayout.EndFoldoutHeaderGroup();
+            }
+        }
+
+        // ——— DrawObjectRow ———————————————————————————————————————————————————
         private void DrawObjectRow(ScannedObject obj)
         {
             EditorGUILayout.BeginHorizontal();
-            obj.isChecked = EditorGUILayout.Toggle(obj.isChecked, GUILayout.Width(20));
 
-            EditorGUILayout.LabelField(obj.objectName, GUILayout.MinWidth(150), GUILayout.ExpandWidth(true));
+            bool newChecked = EditorGUILayout.Toggle(obj.isChecked, GUILayout.Width(18));
 
-            // Status badge
-            if (obj.hasInteractable)
+            if (newChecked != obj.isChecked)
             {
+                if (!newChecked && obj.hasInteractable)
+                {
+                    bool confirm = EditorUtility.DisplayDialog(
+                        "Remove Tracking",
+                        "This will remove InteractableComponent from " + obj.objectName + ". This object will no longer track interactions. Remove anyway?",
+                        "Remove", "Cancel");
+                    if (!confirm)
+                    {
+                        EditorGUILayout.EndHorizontal();
+                        return;
+                    }
+                    RemoveInstrumentationForObject(obj);
+                    obj.hasInteractable = false;
+                }
+                obj.isChecked = newChecked;
+            }
+
+            EditorGUILayout.LabelField(obj.objectName, GUILayout.ExpandWidth(true));
+
+            if (obj.hasInteractable && !obj.isNew)
+            {
+                var prevC = GUI.color;
                 GUI.color = new Color(0.4f, 0.9f, 0.4f);
-                EditorGUILayout.LabelField("\u2705 Instrumented", GUILayout.Width(110));
+                GUILayout.Label("✅ Tracked", GUILayout.Width(80));
+                GUI.color = prevC;
             }
             else if (obj.isNew)
             {
-                GUI.color = new Color(1f, 0.85f, 0.2f);
-                EditorGUILayout.LabelField("\u26a0 New", GUILayout.Width(110));
-            }
-            else
-            {
-                GUI.color = new Color(0.7f, 0.7f, 0.7f);
-                EditorGUILayout.LabelField("\u25cb Detected", GUILayout.Width(110));
-            }
-            GUI.color = Color.white;
-
-            // Remove button for already-instrumented objects
-            if (obj.hasInteractable)
-            {
-                GUI.backgroundColor = new Color(0.9f, 0.4f, 0.4f);
-                if (GUILayout.Button("Remove", GUILayout.Width(60)))
-                    RemoveInstrumentationForObject(obj);
-                GUI.backgroundColor = Color.white;
-            }
-            else
-            {
-                GUILayout.Space(64);
+                var prevC = GUI.color;
+                GUI.color = new Color(0.4f, 0.6f, 1.0f);
+                GUILayout.Label(" New", GUILayout.Width(80));
+                GUI.color = prevC;
             }
 
             EditorGUILayout.EndHorizontal();
         }
 
-        // ─── Scanning ────────────────────────────────────────────────────────
+        // ——— Scanning ————————————————————————————————————————————————————————
         private void ScanAllScenes()
         {
+            _isScanning = true;
             _sceneObjects.Clear();
 
-            // Track which scenes were already open
-            var alreadyOpen = new HashSet<string>();
+            var allStoredPaths = new Dictionary<string, HashSet<string>>();
+            if (_data != null)
+                foreach (var entry in _data.scenes)
+                {
+                    if (!allStoredPaths.ContainsKey(entry.sceneName))
+                        allStoredPaths[entry.sceneName] = new HashSet<string>(entry.instrumentedPaths);
+                }
+
             for (int i = 0; i < SceneManager.sceneCount; i++)
             {
-                var s = SceneManager.GetSceneAt(i);
-                if (s.isLoaded) alreadyOpen.Add(s.path);
-            }
+                var scene = SceneManager.GetSceneAt(i);
+                if (!scene.isLoaded) continue;
 
-            foreach (var buildScene in EditorBuildSettings.scenes)
-            {
-                if (!buildScene.enabled) continue;
+                string sceneName = scene.name;
+                var sceneList = new List<ScannedObject>();
+                _sceneObjects[sceneName] = sceneList;
 
-                string scenePath = buildScene.path;
-                string sceneName = System.IO.Path.GetFileNameWithoutExtension(scenePath);
-
-                bool wasOpen = alreadyOpen.Contains(scenePath);
-                Scene scene;
-
-                try
-                {
-                    if (!wasOpen)
-                        scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
-                    else
-                        scene = SceneManager.GetSceneByPath(scenePath);
-
-                    if (!scene.isLoaded) continue;
-
-                    var scannedPaths = new HashSet<string>();
-                    var result = new List<ScannedObject>();
-
-                    foreach (var root in scene.GetRootGameObjects())
-                        CollectInteractableObjectsForScan(root, sceneName, scannedPaths, result);
-
-                    _sceneObjects[sceneName] = result;
-                    _sceneFoldouts.TryAdd(sceneName, true);
-                }
-                finally
-                {
-                    if (!wasOpen)
-                    {
-                        var s = SceneManager.GetSceneByPath(scenePath);
-                        if (s.isLoaded)
-                            EditorSceneManager.CloseScene(s, true);
-                    }
-                }
-            }
-
-            // Also scan currently open scenes not in build settings
-            for (int i = 0; i < SceneManager.sceneCount; i++)
-            {
-                var s = SceneManager.GetSceneAt(i);
-                if (!s.isLoaded || string.IsNullOrEmpty(s.name)) continue;
-                if (_sceneObjects.ContainsKey(s.name)) continue;
-
+                var storedPaths = allStoredPaths.ContainsKey(sceneName) ? allStoredPaths[sceneName] : new HashSet<string>();
                 var scannedPaths = new HashSet<string>();
-                var result = new List<ScannedObject>();
-                foreach (var root in s.GetRootGameObjects())
-                    CollectInteractableObjectsForScan(root, s.name, scannedPaths, result);
-
-                if (result.Count > 0)
-                    _sceneObjects[s.name] = result;
+                foreach (var root in scene.GetRootGameObjects())
+                    CollectInteractableObjectsForScan(root, sceneName, scannedPaths, storedPaths, sceneList);
             }
 
+            _hasNewObjects = false;
+            _isScanning = false;
             Repaint();
         }
 
         private void CollectInteractableObjectsForScan(
-            GameObject go, string sceneName,
-            HashSet<string> visited, List<ScannedObject> result)
+            GameObject go, string sceneName, HashSet<string> scannedPaths,
+            HashSet<string> storedPaths, List<ScannedObject> sceneList)
         {
-            if (!IsInteractable(go)) goto children;
-
+            if (go == null) return;
             string path = GetHierarchyPath(go);
-            if (!visited.Add(path)) goto children;
 
-            var storedEntry = _data?.scenes.FirstOrDefault(e => e.sceneName == sceneName);
-            bool isInstrumented = go.GetComponent<InteractableComponent>() != null;
-            bool isStored = storedEntry?.instrumentedPaths.Contains(path) ?? false;
-
-            result.Add(new ScannedObject
+            if (IsInteractable(go) && !scannedPaths.Contains(path))
             {
-                sceneName = sceneName,
-                hierarchyPath = path,
-                objectName = go.name,
-                isChecked = isInstrumented || isStored,
-                hasInteractable = isInstrumented,
-                isNew = !isStored && !isInstrumented
-            });
+                scannedPaths.Add(path);
 
-        children:
-            foreach (Transform child in go.transform)
-                CollectInteractableObjectsForScan(child.gameObject, sceneName, visited, result);
-        }
+                bool hadInteractable = go.GetComponent<InteractableComponent>() != null;
+                bool wasStored = storedPaths.Contains(path);
 
-        private void CollectInteractableObjects(
-            GameObject go, string sceneName, HashSet<string> paths)
-        {
-            if (IsInteractable(go))
-                paths.Add(GetHierarchyPath(go));
-            foreach (Transform child in go.transform)
-                CollectInteractableObjects(child.gameObject, sceneName, paths);
-        }
+                if (!hadInteractable)
+                {
+                    Undo.AddComponent<InteractableComponent>(go);
+                    hadInteractable = true;
+                }
 
-        // ─── Filter ──────────────────────────────────────────────────────────
-        private bool IsInteractable(GameObject go)
-        {
-            // Exclude: fully static
-            if ((int)GameObjectUtility.GetStaticEditorFlags(go) != 0)
-                return false;
+                bool isNew = !wasStored;
 
-            // Exclude: name contains excluded keywords
-            string nameLower = go.name.ToLowerInvariant();
-            foreach (var kw in ExcludeNameKeywords)
-                if (nameLower.Contains(kw)) return false;
+                sceneList.Add(new ScannedObject
+                {
+                    sceneName = sceneName,
+                    hierarchyPath = path,
+                    objectName = go.name,
+                    isChecked = true,
+                    hasInteractable = hadInteractable,
+                    isNew = isNew
+                });
 
-            // Exclude: no renderer AND no collider
-            if (go.GetComponent<Renderer>() == null && go.GetComponent<Collider>() == null)
-                return false;
-
-            // Include: component name contains interactable keywords
-            foreach (var comp in go.GetComponents<Component>())
-            {
-                if (comp == null) continue;
-                string typeName = comp.GetType().Name;
-                foreach (var kw in InteractableKeywords)
-                    if (typeName.Contains(kw)) return true;
+                if (isNew && _data != null)
+                {
+                    var entry = GetOrCreateSceneEntry(sceneName);
+                    if (!entry.instrumentedPaths.Contains(path))
+                        entry.instrumentedPaths.Add(path);
+                    EditorUtility.SetDirty(_data);
+                }
             }
 
-            // Include: has Rigidbody and is not fully static
+            foreach (Transform child in go.transform)
+                CollectInteractableObjectsForScan(child.gameObject, sceneName, scannedPaths, storedPaths, sceneList);
+        }
+
+        private void CollectInteractableObjects(GameObject go, string sceneName, HashSet<string> scannedPaths)
+        {
+            if (go == null) return;
+            string path = GetHierarchyPath(go);
+            if (IsInteractable(go) && !scannedPaths.Contains(path))
+                scannedPaths.Add(path);
+            foreach (Transform child in go.transform)
+                CollectInteractableObjects(child.gameObject, sceneName, scannedPaths);
+        }
+
+        private bool IsInteractable(GameObject go)
+        {
+            if (go == null) return false;
+            string lowerName = go.name.ToLower();
+            foreach (var keyword in ExcludeNameKeywords)
+                if (lowerName.Contains(keyword)) return false;
+            foreach (var keyword in InteractableKeywords)
+                if (lowerName.Contains(keyword.ToLower())) return true;
             if (go.GetComponent<Rigidbody>() != null)
                 return true;
-
-            // Include: tag contains "Interactable" or "Pickup"
+            // Include: tag
             if (go.tag == "Interactable" || go.tag == "Pickup")
                 return true;
-
             return false;
         }
 
-        // ─── Apply ───────────────────────────────────────────────────────────
+        // ——— Apply / Remove ——————————————————————————————————————————————————
         private void ApplyInstrumentation()
         {
-            int addedCount = 0;
-            int removedCount = 0;
-            var dirtyScenes = new HashSet<Scene>();
+            if (_data == null) return;
+
+            var dirtySceneNames = new List<string>();
 
             foreach (var kvp in _sceneObjects)
             {
                 string sceneName = kvp.Key;
-                var objects = kvp.Value;
+                var entry = GetOrCreateSceneEntry(sceneName);
+                int changed = 0;
 
-                var storedEntry = GetOrCreateSceneEntry(sceneName);
-
-                foreach (var obj in objects)
+                foreach (var obj in kvp.Value)
                 {
-                    // Find the live GameObject in open scenes
-                    GameObject go = FindGameObjectByPath(obj.hierarchyPath, sceneName);
-                    if (go == null) continue;
-
-                    Scene goScene = go.scene;
-
-                    if (obj.isChecked && !obj.hasInteractable)
+                    if (obj.isChecked)
                     {
-                        var comp = Undo.AddComponent<InteractableComponent>(go);
-                        if (comp != null) comp.registerHeatmapHit = true;
-                        obj.hasInteractable = true;
-                        if (!storedEntry.instrumentedPaths.Contains(obj.hierarchyPath))
-                            storedEntry.instrumentedPaths.Add(obj.hierarchyPath);
-                        dirtyScenes.Add(goScene);
-                        addedCount++;
+                        if (!entry.instrumentedPaths.Contains(obj.hierarchyPath))
+                        { entry.instrumentedPaths.Add(obj.hierarchyPath); changed++; }
                     }
-                    else if (!obj.isChecked && obj.hasInteractable)
+                    else
                     {
-                        var comp = go.GetComponent<InteractableComponent>();
-                        if (comp != null)
-                        {
-                            Undo.DestroyObjectImmediate(comp);
-                            obj.hasInteractable = false;
-                        }
-                        storedEntry.instrumentedPaths.Remove(obj.hierarchyPath);
-                        dirtyScenes.Add(goScene);
-                        removedCount++;
+                        if (entry.instrumentedPaths.Contains(obj.hierarchyPath))
+                        { entry.instrumentedPaths.Remove(obj.hierarchyPath); changed++; }
                     }
                 }
+
+                if (changed > 0) dirtySceneNames.Add(sceneName);
             }
 
-            // Save data asset
-            if (_data != null)
+            EditorUtility.SetDirty(_data);
+            AssetDatabase.SaveAssets();
+
+            foreach (var name in dirtySceneNames)
             {
-                EditorUtility.SetDirty(_data);
-                AssetDatabase.SaveAssets();
+                var sc = SceneManager.GetSceneByName(name);
+                if (sc.isLoaded) EditorSceneManager.MarkSceneDirty(sc);
             }
 
-            // Mark scenes dirty
-            foreach (var s in dirtyScenes)
-                EditorSceneManager.MarkSceneDirty(s);
-
-            int sceneCount = dirtyScenes.Count;
             EditorUtility.DisplayDialog(
-                "Gossip Analytics \u2014 Applied!",
-                $"Applied!  {addedCount} object(s) instrumented, {removedCount} removed, across {sceneCount} scene(s).",
+                "Gossip Analytics — Applied!",
+                "Instrumentation data saved across " + dirtySceneNames.Count + " scene(s).",
                 "OK");
 
             ScanAllScenes();
@@ -506,99 +464,79 @@ namespace GossipSDK.Editor
 
         private void RemoveInstrumentationForObject(ScannedObject obj)
         {
-            GameObject go = FindGameObjectByPath(obj.hierarchyPath, obj.sceneName);
-            if (go == null) return;
-
-            var comp = go.GetComponent<InteractableComponent>();
-            if (comp != null) Undo.DestroyObjectImmediate(comp);
-
-            obj.hasInteractable = false;
-            obj.isChecked = false;
-
-            var entry = _data?.scenes.FirstOrDefault(e => e.sceneName == obj.sceneName);
-            entry?.instrumentedPaths.Remove(obj.hierarchyPath);
-
+            var go = FindGameObjectByPath(obj.hierarchyPath, obj.sceneName);
+            if (go != null)
+            {
+                var ic = go.GetComponent<InteractableComponent>();
+                if (ic != null) Undo.DestroyObjectImmediate(ic);
+            }
             if (_data != null)
             {
+                var entry = _data.scenes.FirstOrDefault(e => e.sceneName == obj.sceneName);
+                if (entry != null) entry.instrumentedPaths.Remove(obj.hierarchyPath);
                 EditorUtility.SetDirty(_data);
-                AssetDatabase.SaveAssets();
             }
-
-            EditorSceneManager.MarkSceneDirty(go.scene);
-            Repaint();
         }
 
-        // ─── Persistence ─────────────────────────────────────────────────────
+        // ——— Data helpers ————————————————————————————————————————————————————
         private void LoadOrCreateData()
         {
             string[] guids = AssetDatabase.FindAssets("t:GossipInstrumentationData");
             if (guids.Length > 0)
             {
-                string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-                _data = AssetDatabase.LoadAssetAtPath<GossipInstrumentationData>(path);
+                string assetPath = AssetDatabase.GUIDToAssetPath(guids[0]);
+                _data = AssetDatabase.LoadAssetAtPath<GossipInstrumentationData>(assetPath);
             }
             else
             {
                 _data = ScriptableObject.CreateInstance<GossipInstrumentationData>();
-                AssetDatabase.CreateAsset(_data, "Assets/GossipInstrumentationData.asset");
+                AssetDatabase.CreateAsset(_data, "Assets/GossipAnalytics/GossipInstrumentationData.asset");
                 AssetDatabase.SaveAssets();
             }
         }
 
         private SceneInstrumentationEntry GetOrCreateSceneEntry(string sceneName)
         {
-            if (_data == null) return new SceneInstrumentationEntry { sceneName = sceneName };
             var entry = _data.scenes.FirstOrDefault(e => e.sceneName == sceneName);
             if (entry == null)
             {
-                entry = new SceneInstrumentationEntry { sceneName = sceneName };
+                entry = new SceneInstrumentationEntry { sceneName = sceneName, instrumentedPaths = new List<string>() };
                 _data.scenes.Add(entry);
             }
             return entry;
         }
 
-        // ─── Helpers ─────────────────────────────────────────────────────────
         private static string GetHierarchyPath(GameObject go)
         {
             string path = go.name;
-            Transform t = go.transform.parent;
-            while (t != null)
+            Transform parent = go.transform.parent;
+            while (parent != null)
             {
-                path = t.name + "/" + path;
-                t = t.parent;
+                path = parent.name + "/" + path;
+                parent = parent.parent;
             }
             return path;
         }
 
         private static GameObject FindGameObjectByPath(string path, string sceneName)
         {
-            // Search in all loaded scenes that match
-            for (int i = 0; i < SceneManager.sceneCount; i++)
+            var scene = SceneManager.GetSceneByName(sceneName);
+            if (!scene.isLoaded) return null;
+            foreach (var root in scene.GetRootGameObjects())
             {
-                var s = SceneManager.GetSceneAt(i);
-                if (!s.isLoaded) continue;
-                if (!string.IsNullOrEmpty(sceneName) && s.name != sceneName) continue;
-
-                foreach (var root in s.GetRootGameObjects())
-                {
-                    var found = FindByPath(root, path);
-                    if (found != null) return found;
-                }
+                var result = FindByPath(root, path);
+                if (result != null) return result;
             }
             return null;
         }
 
         private static GameObject FindByPath(GameObject root, string path)
         {
-            string rootName = path.Contains("/") ? path.Substring(0, path.IndexOf('/')) : path;
-            if (root.name != rootName) return null;
-            if (!path.Contains("/")) return root;
-
-            string remainder = path.Substring(path.IndexOf('/') + 1);
+            if (GetHierarchyPath(root) == path) return root;
             foreach (Transform child in root.transform)
             {
-                var found = FindByPath(child.gameObject, remainder);
-                if (found != null) return found;
+                var result = FindByPath(child.gameObject, path);
+                if (result != null) return result;
             }
             return null;
         }
@@ -610,191 +548,292 @@ namespace GossipSDK.Editor
                     obj.isChecked = value;
         }
 
-        // ─── Trackers tab ───────────────────────────────────────────────────────
-        private void DrawTrackersTab()
+        // ——— Player auto-detect ——————————————————————————————————————————————
+        private void AutoDetectPlayer()
         {
-            EditorGUILayout.HelpBox("Add recommended tracker components to your scene. Spatial trackers go on your player, Device trackers can go on any object.", MessageType.Info);
-            EditorGUILayout.Space(6);
+            if (_playerObject != null) return;
 
-            // Auto-detect player and camera
-            GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
-            if (playerObject == null)
+            var byTag = GameObject.FindGameObjectsWithTag("Player");
+            if (byTag.Length > 0) { _playerObject = byTag[0]; return; }
+
+            try
             {
-                try
+                var xrOriginType = AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
+                    .FirstOrDefault(tp => tp.FullName == "UnityEngine.XR.Interaction.Toolkit.XROrigin");
+                if (xrOriginType != null)
                 {
-                    var xrOriginType = AppDomain.CurrentDomain.GetAssemblies()
-                        .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
-                        .FirstOrDefault(t => t.FullName == "UnityEngine.XR.Interaction.Toolkit.XROrigin");
-                    if (xrOriginType != null)
-                    {
-                        var xrOrigin = FindObjectOfType(xrOriginType) as Component;
-                        if (xrOrigin != null) playerObject = xrOrigin.gameObject;
-                    }
+                    var xrOrigin = FindObjectOfType(xrOriginType) as Component;
+                    if (xrOrigin != null) { _playerObject = xrOrigin.gameObject; return; }
                 }
-                catch { }
             }
-            Camera mainCamera = Camera.main;
+            catch { }
 
-            string playerStatus = playerObject != null ? $"✅ {playerObject.name}" : "⚠ Not found (tag your player 'Player')";
-            string cameraStatus = mainCamera   != null ? $"✅ {mainCamera.name}"   : "⚠ No main camera found";
-            EditorGUILayout.LabelField($"Player: {playerStatus}", EditorStyles.miniLabel);
-            EditorGUILayout.LabelField($"Camera: {cameraStatus}", EditorStyles.miniLabel);
-            EditorGUILayout.Space(8);
-
-            var categories = _recommendedTrackers.Select(t => t.category).Distinct().ToList();
-            foreach (var category in categories)
+            var allGOs = Object.FindObjectsOfType<GameObject>();
+            foreach (var go in allGOs)
             {
-                EditorGUILayout.LabelField(category, EditorStyles.boldLabel);
-
-                var trackersInCategory = _recommendedTrackers.Where(t => t.category == category).ToList();
-                foreach (var tracker in trackersInCategory)
+                string lname = go.name.ToLower();
+                if (lname.Contains("xrrig") || lname.Contains("xr rig"))
                 {
-                    var componentType = AppDomain.CurrentDomain.GetAssemblies()
-                        .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
-                        .FirstOrDefault(t => t.Name == tracker.componentTypeName);
-
-                    GameObject targetObj = tracker.target == TrackerTarget.Player  ? playerObject
-                                        : tracker.target == TrackerTarget.Camera   ? (mainCamera?.gameObject)
-                                        : null;
-
-                    bool alreadyInScene = componentType != null &&
-                        FindObjectOfType(componentType) != null;
-
-                    EditorGUILayout.BeginHorizontal();
-
-                    string badge = alreadyInScene ? "✅" : "○";
-                    EditorGUILayout.LabelField(badge, GUILayout.Width(20));
-
-                    EditorGUILayout.BeginVertical();
-                    EditorGUILayout.LabelField(tracker.displayName, EditorStyles.boldLabel);
-                    EditorGUILayout.LabelField(tracker.description, EditorStyles.wordWrappedMiniLabel);
-                    if (tracker.requiresConfiguration)
-                        EditorGUILayout.LabelField("⚠ Requires configuration in Inspector after adding.", EditorStyles.miniLabel);
-                    EditorGUILayout.EndVertical();
-
-                    if (alreadyInScene)
-                    {
-                        GUI.enabled = false;
-                        GUILayout.Button("Added", GUILayout.Width(70));
-                        GUI.enabled = true;
-                    }
-                    else if (componentType == null)
-                    {
-                        GUI.enabled = false;
-                        GUILayout.Button("N/A", GUILayout.Width(70));
-                        GUI.enabled = true;
-                    }
-                    else
-                    {
-                        bool canAdd = tracker.target == TrackerTarget.AnyObject || targetObj != null;
-                        GUI.enabled = canAdd;
-                        if (GUILayout.Button("Add", GUILayout.Width(70)))
-                        {
-                            GameObject addTarget = targetObj ?? (playerObject ?? new GameObject("GossipTrackers"));
-                            Undo.AddComponent(addTarget, componentType);
-                            EditorUtility.SetDirty(addTarget);
-                            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-                            Debug.Log($"[Gossip Analytics] Added {tracker.displayName} to {addTarget.name}");
-                        }
-                        GUI.enabled = true;
-                    }
-
-                    EditorGUILayout.EndHorizontal();
-                    EditorGUILayout.Space(4);
+                    _playerObject = go;
+                    return;
                 }
-
-                EditorGUILayout.Space(8);
             }
+
+            _mainCamera = Camera.main;
         }
 
-        // ─── Permissions tab ───────────────────────────────────────────────────
-        private void DrawPermissionsTab()
+        // ——— Tab: Trackers (opt-out) —————————————————————————————————————————
+        private void DrawTrackersTab()
         {
-            EditorGUILayout.HelpBox(
-                "VRPermissionsHandler automatically requests device permissions on Android/Meta Quest at runtime.\n\n" +
-                "In the Unity Editor and on non-Android platforms it does nothing — IsReady is set to true immediately.",
-                MessageType.Info);
             EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("Scene Trackers", EditorStyles.boldLabel);
 
-            // Check if VRPermissionsHandler is in the current scene
-            var handlerType = AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
-                .FirstOrDefault(t => t.Name == "VRPermissionsHandler");
-
-            bool handlerInScene = handlerType != null &&
-                FindObjectOfType(handlerType) != null;
+            // Player / Camera
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(
-                handlerInScene ? "✅  VRPermissionsHandler is in the scene" : "○  VRPermissionsHandler is NOT in the scene",
-                handlerInScene ? EditorStyles.boldLabel : EditorStyles.label);
+            EditorGUILayout.LabelField("Player:", GUILayout.Width(60));
+            _playerObject = (GameObject)EditorGUILayout.ObjectField(_playerObject, typeof(GameObject), true);
+            if (GUILayout.Button("Auto-detect", GUILayout.Width(90)))
+            {
+                _playerObject = null;
+                AutoDetectPlayer();
+                if (_playerObject == null)
+                    EditorUtility.DisplayDialog("Player Not Found", "No object with tag Player, XROrigin, or XR Rig was found.", "OK");
+            }
+            EditorGUILayout.EndHorizontal();
+
+            if (_mainCamera == null) _mainCamera = Camera.main;
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Camera:", GUILayout.Width(60));
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUILayout.ObjectField(_mainCamera, typeof(Camera), true);
+            EditorGUI.EndDisabledGroup();
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.Space(8);
+
+            // Global Add All / Remove All
+            int missingCount = 0, presentCount = 0;
+            foreach (var info in _recommendedTrackers)
+            {
+                var tp = AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
+                    .FirstOrDefault(t => t.Name == info.componentTypeName);
+                bool present = tp != null && (Object.FindObjectOfType(tp) as Component) != null;
+                if (present) presentCount++; else missingCount++;
+            }
+
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            if (missingCount > 0 && GUILayout.Button("Add All to Scene", GUILayout.Width(130)))
+                AddAllTrackers();
+            if (presentCount > 0 && GUILayout.Button("Remove All", GUILayout.Width(90)))
+            {
+                bool confirm = EditorUtility.DisplayDialog("Remove All Trackers", "Remove all tracker components from the scene?", "Remove All", "Cancel");
+                if (confirm) RemoveAllTrackers();
+            }
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space(4);
 
-            if (!handlerInScene)
+            // Per-tracker rows
+            string currentCategory = null;
+            foreach (var info in _recommendedTrackers)
             {
-                EditorGUILayout.HelpBox(
-                    "Without VRPermissionsHandler, your Meta Quest build will NOT request eye tracking, microphone, or camera permissions at launch. Add it before building for Android.",
-                    MessageType.Warning);
-                EditorGUILayout.Space(4);
-
-                GUI.enabled = handlerType != null;
-                if (GUILayout.Button("Add VRPermissionsHandler to Scene", GUILayout.Height(30)))
+                if (info.category != currentCategory)
                 {
-                    var gossipManager = FindObjectOfType<GossipSDK.GossipManager>();
-                    GameObject target = gossipManager != null
-                        ? gossipManager.gameObject
-                        : new GameObject("VRPermissionsHandler");
-                    Undo.AddComponent(target, handlerType);
-                    EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-                    Debug.Log("[Gossip Analytics] VRPermissionsHandler added to " + target.name);
+                    currentCategory = info.category;
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField(currentCategory, EditorStyles.boldLabel);
                 }
-                GUI.enabled = true;
 
-                if (handlerType == null)
-                    EditorGUILayout.LabelField("⚠ VRPermissionsHandler type not found in project.", EditorStyles.miniLabel);
+                var trackerType = AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
+                    .FirstOrDefault(tp => tp.Name == info.componentTypeName);
+
+                Component existing = trackerType != null ? (Object.FindObjectOfType(trackerType) as Component) : null;
+                bool isPresent = existing != null;
+
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.BeginHorizontal();
+
+                string statusIcon = isPresent ? "✅" : "○";
+                EditorGUILayout.LabelField(statusIcon + "  " + info.displayName, GUILayout.ExpandWidth(true));
+
+                bool playerNeeded = info.target == TrackerTarget.Player || info.target == TrackerTarget.Camera;
+                bool canAdd = !playerNeeded || _playerObject != null || info.target == TrackerTarget.Camera;
+
+                if (!isPresent)
+                {
+                    EditorGUI.BeginDisabledGroup(!canAdd);
+                    if (GUILayout.Button("Add", GUILayout.Width(50)))
+                        AddTracker(info);
+                    EditorGUI.EndDisabledGroup();
+                }
+                else
+                {
+                    var prevBg = GUI.backgroundColor;
+                    GUI.backgroundColor = new Color(0.9f, 0.3f, 0.3f);
+                    if (GUILayout.Button("Remove", GUILayout.Width(60)))
+                    {
+                        bool confirm = EditorUtility.DisplayDialog(
+                            "Remove " + info.displayName,
+                            "Removing this tracker will stop recording: " + info.description + " Are you sure?",
+                            "Remove", "Cancel");
+                        if (confirm)
+                        {
+                            Undo.DestroyObjectImmediate(existing);
+                            EditorSceneManager.MarkSceneDirty(existing.gameObject.scene);
+                        }
+                    }
+                    GUI.backgroundColor = prevBg;
+                }
+
+                EditorGUILayout.EndHorizontal();
+
+                var descStyle = new GUIStyle(EditorStyles.miniLabel);
+                descStyle.wordWrap = true;
+                string desc = info.description;
+                if (info.requiresConfiguration) desc += " ⚠ Requires configuration in Inspector after adding.";
+                if (playerNeeded && _playerObject == null && !isPresent) desc = "⚠ Assign Player first. " + desc;
+                EditorGUILayout.LabelField(desc, descStyle);
+
+                EditorGUILayout.EndVertical();
+            }
+        }
+
+        // ——— Tracker helpers —————————————————————————————————————————————————
+        private void AddTracker(TrackerInfo info)
+        {
+            var trackerType = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
+                .FirstOrDefault(tp => tp.Name == info.componentTypeName);
+            if (trackerType == null)
+            {
+                EditorUtility.DisplayDialog("Not Found", info.componentTypeName + " not found. Make sure the SDK is fully imported.", "OK");
+                return;
+            }
+
+            GameObject target = null;
+            if (info.target == TrackerTarget.Player && _playerObject != null)
+                target = _playerObject;
+            else if (info.target == TrackerTarget.Camera)
+            {
+                if (_mainCamera == null) _mainCamera = Camera.main;
+                if (_mainCamera != null) target = _mainCamera.gameObject;
             }
             else
             {
-                if (GUILayout.Button("Remove from Scene", GUILayout.Width(140)))
+                var manager = Object.FindObjectOfType<GossipManager>();
+                if (manager != null) target = manager.gameObject;
+            }
+            if (target == null)
+            {
+                var go = new GameObject(info.displayName);
+                Undo.RegisterCreatedObjectUndo(go, "Create Tracker");
+                target = go;
+            }
+            Undo.AddComponent(target, trackerType);
+            EditorSceneManager.MarkSceneDirty(target.scene);
+        }
+
+        private void AddAllTrackers()
+        {
+            foreach (var info in _recommendedTrackers)
+            {
+                var tp = AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
+                    .FirstOrDefault(t => t.Name == info.componentTypeName);
+                bool present = tp != null && (Object.FindObjectOfType(tp) as Component) != null;
+                if (!present) AddTracker(info);
+            }
+        }
+
+        private void RemoveAllTrackers()
+        {
+            foreach (var info in _recommendedTrackers)
+            {
+                var tp = AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
+                    .FirstOrDefault(t => t.Name == info.componentTypeName);
+                if (tp == null) continue;
+                var existing = Object.FindObjectOfType(tp) as Component;
+                if (existing != null)
                 {
-                    var instance = FindObjectOfType(handlerType) as Component;
-                    if (instance != null)
-                    {
-                        Undo.DestroyObjectImmediate(instance);
-                        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-                    }
+                    EditorSceneManager.MarkSceneDirty(existing.gameObject.scene);
+                    Undo.DestroyObjectImmediate(existing);
                 }
             }
+        }
 
-            EditorGUILayout.Space(10);
+        // ——— Tab: Permissions (opt-out) ——————————————————————————————————————
+        private void DrawPermissionsTab()
+        {
+            EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("VR Permissions", EditorStyles.boldLabel);
 
-            EditorGUILayout.LabelField("Permissions requested on Android launch:", EditorStyles.boldLabel);
-            EditorGUILayout.Space(2);
+            var handler = Object.FindObjectOfType<VRPermissionsHandler>();
 
-            var permissions = new (string name, string permissionId, string note)[]
+            if (handler == null)
             {
-                ("Eye Tracking",    "com.oculus.permission.EYE_TRACKING",  "Required for EyeTrackingComponent to capture gaze data."),
-                ("Scene / Spatial", "com.oculus.permission.USE_SCENE",     "Required for spatial mapping and environment understanding."),
-                ("Headset Camera",  "horizonos.permission.HEADSET_CAMERA", "Required for passthrough and MR camera access."),
-                ("Microphone",      "android.permission.RECORD_AUDIO",     "Required for AudioReactionTrackerComponent."),
-            };
-
-            foreach (var perm in permissions)
-            {
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                EditorGUILayout.LabelField(perm.name, EditorStyles.boldLabel);
-                EditorGUILayout.LabelField(perm.permissionId, EditorStyles.miniLabel);
-                EditorGUILayout.LabelField(perm.note, EditorStyles.wordWrappedMiniLabel);
-                EditorGUILayout.EndVertical();
-                EditorGUILayout.Space(2);
+                var go = new GameObject("VRPermissionsHandler");
+                Undo.RegisterCreatedObjectUndo(go, "Create VRPermissionsHandler");
+                Undo.AddComponent<VRPermissionsHandler>(go);
+                EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+                handler = go.GetComponent<VRPermissionsHandler>();
             }
 
-            EditorGUILayout.Space(8);
-            EditorGUILayout.LabelField(
-                "Permissions are requested sequentially at app launch with a 10s timeout per permission.",
-                EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.HelpBox("✅ VRPermissionsHandler active — Your app will request these permissions on Meta Quest launch.", MessageType.Info);
+            EditorGUILayout.Space(6);
+
+            EditorGUILayout.LabelField("Permissions included:", EditorStyles.boldLabel);
+
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("✅ Eye Tracking", GUILayout.Width(150));
+                EditorGUILayout.LabelField("Gaze data and fixation. Powers heat-of-gaze analytics.", EditorStyles.miniLabel);
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("✅ Scene / Spatial", GUILayout.Width(150));
+                EditorGUILayout.LabelField("Environment mesh for spatial heatmaps.", EditorStyles.miniLabel);
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("✅ Headset Camera", GUILayout.Width(150));
+                EditorGUILayout.LabelField("Passthrough and MR features.", EditorStyles.miniLabel);
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("✅ Microphone", GUILayout.Width(150));
+                EditorGUILayout.LabelField("Audio reaction and voice interaction tracking.", EditorStyles.miniLabel);
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space(12);
+
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            var prevBg = GUI.backgroundColor;
+            GUI.backgroundColor = new Color(0.7f, 0.3f, 0.3f);
+            if (GUILayout.Button("Remove VRPermissionsHandler", GUILayout.Width(200)))
+            {
+                string msg = "Removing VRPermissionsHandler will disable the following on Meta Quest:" +
+                System.Environment.NewLine + "• Eye Tracking — gaze data will not be captured" +
+                System.Environment.NewLine + "• Spatial / Scene — heatmap environment data will be lost" +
+                System.Environment.NewLine + "• Headset Camera — passthrough and MR will not work" +
+                System.Environment.NewLine + "• Microphone — audio reaction tracking will be silent" +
+                System.Environment.NewLine + System.Environment.NewLine + "Are you sure?";
+                bool confirm = EditorUtility.DisplayDialog("Remove VRPermissionsHandler", msg, "Remove Anyway", "Cancel");
+                if (confirm && handler != null)
+                {
+                    Undo.DestroyObjectImmediate(handler.gameObject);
+                    EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+                }
+            }
+            GUI.backgroundColor = prevBg;
+            EditorGUILayout.EndHorizontal();
         }
+
     }
 }
 #endif
