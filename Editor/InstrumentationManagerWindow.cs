@@ -251,6 +251,7 @@ namespace GossipSDK.Editor
                 DrawPermissionsTab();
             }
 
+        }
         private void DrawObjectRow(ScannedObject obj)
         {
             EditorGUILayout.BeginHorizontal();
@@ -703,7 +704,6 @@ namespace GossipSDK.Editor
                 EditorGUILayout.Space(8);
             }
         }
-    }
 
         // ─── Permissions tab ───────────────────────────────────────────────────
         private void DrawPermissionsTab()
