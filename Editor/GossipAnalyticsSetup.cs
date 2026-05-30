@@ -10,7 +10,7 @@ namespace GossipSDK.Editor
 {
     public static class GossipAnalyticsSetup
     {
-        [MenuItem("Window/Gossip Analytics/Quick Setup")]
+        [MenuItem("Window/Gossip Analytics/Quick Setup", false, 1)]
         public static void RunQuickSetup()
         {
             // STEP 1 — Check if GossipManager is already in the scene
