@@ -632,7 +632,7 @@ namespace GossipSDK.Editor
                     if (xrOriginType != null)
                     {
                         var xrOrigin = FindObjectOfType(xrOriginType) as Component;
-                        if (xrOrigin != null) return xrOrigin.gameObject;
+                        if (xrOrigin != null) playerObject = xrOrigin.gameObject;
                     }
                 }
                 catch { }
