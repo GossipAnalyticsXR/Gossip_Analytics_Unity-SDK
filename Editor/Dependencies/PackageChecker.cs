@@ -33,16 +33,34 @@ namespace GossipAnalytics.Editor.Dependencies
 
         private static void AutoFixActiveInputHandling()
         {
-            var assets = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/ProjectSettings.asset");
-            if (assets == null || assets.Length == 0) return;
-            var ps   = new SerializedObject(assets[0]);
-            var prop = ps.FindProperty("activeInputHandler");
             // 0 = InputManager (Old), 1 = Input System (New), 2 = Both
-            if (prop != null && prop.intValue == 0)
+            // G1-fix: evaluate and fix EACH BuildTargetGroup independently.
+            // Only set a group to Both (2) if THAT group is currently at 0 (Legacy).
+            // Never touch groups already at 1 (New) or 2 (Both).
+            var targetGroups = new[]
             {
-                prop.intValue = 2;
-                ps.ApplyModifiedProperties();
-                Debug.Log("GossipSDK: Active Input Handling set to 'Both' automatically.");
+                BuildTargetGroup.Standalone,
+                BuildTargetGroup.Android,
+                BuildTargetGroup.iOS,
+                BuildTargetGroup.WebGL
+            };
+
+            foreach (var group in targetGroups)
+            {
+                try
+                {
+                    int current = PlayerSettings.GetPropertyInt("activeInputHandler", group);
+                    if (current == 0)
+                    {
+                        PlayerSettings.SetPropertyInt("activeInputHandler", 2, group);
+                        Debug.Log($"GossipSDK: Active Input Handling set to 'Both' for {group} automatically.");
+                    }
+                    // If current == 1 (New) or 2 (Both) â do nothing for this group
+                }
+                catch (System.Exception)
+                {
+                    // Ignore groups that don't support this setting (e.g. WebGL on older Unity)
+                }
             }
         }
 
