@@ -718,7 +718,7 @@ namespace GossipSDK.Editor
         {
             EditorGUILayout.Space(6);
             EditorGUILayout.HelpBox(
-                "These Android permissions are required for full data collection on Meta Quest VR devices. " +
+                "These Android permissions are required for full data collection on Android XR devices. " +
                 "All are pre-enabled. Deselect only if your app does not use that feature.",
                 MessageType.Info);
             EditorGUILayout.Space(4);
@@ -731,7 +731,7 @@ namespace GossipSDK.Editor
                 EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
                 handler = go.GetComponent<VRPermissionsHandler>();
             }
-            EditorGUILayout.HelpBox("✅ VRPermissionsHandler active — Your app will request the selected permissions on Meta Quest launch.", MessageType.Info);
+            EditorGUILayout.HelpBox("✅ VRPermissionsHandler active — Your app will request the selected permissions on Android VR device launch.", MessageType.Info);
             EditorGUILayout.Space(6);
             var serializedHandler = new SerializedObject(handler);
             serializedHandler.Update();
@@ -769,7 +769,7 @@ namespace GossipSDK.Editor
             GUI.backgroundColor = new Color(0.7f, 0.3f, 0.3f);
             if (GUILayout.Button("Deselect VRPermissionsHandler", GUILayout.Width(210)))
             {
-                string msg = "Deselecting VRPermissionsHandler will disable the following on Meta Quest:" +
+                string msg = "Deselecting VRPermissionsHandler will disable the following on Android XR devices:" +
                 System.Environment.NewLine + "• Eye Tracking — gaze data will not be captured" +
                 System.Environment.NewLine + "• Spatial / Scene — heatmap environment data will be lost" +
                 System.Environment.NewLine + "• Headset Camera — passthrough and MR will not work" +
