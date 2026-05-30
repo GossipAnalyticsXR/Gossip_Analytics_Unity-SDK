@@ -174,6 +174,6 @@ namespace GossipSDK.Editor
                         "Add it via Window → Gossip Analytics → Instrumentation Manager → Permissions tab.");
             }
         }
-        }
     }
+}
 #endif
