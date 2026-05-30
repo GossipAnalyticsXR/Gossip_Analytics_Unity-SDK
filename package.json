@@ -3,7 +3,7 @@
   "version": "1.1.4",
   "displayName": "Gossip Analytics SDK",
   "organization": "Gossip Analytics",
-  "description": "—— QUICK SETUP ——\nStep 1 ✅  SDK installed — you\'re here.\nStep 2 →  Click the Samples tab above → Import.\nStep 3 →  Window → Gossip Analytics → 1 — Quick Setup.\nStep 4 →  Enter your 3 API Keys (Dev, Beta, Production) → press Check Connection to verify.\nStep 5 →  Window → Gossip Analytics → 2 — Instrumentation Manager → select which objects to track.\nStep 6 →  Press Play and verify your data appears in the Gossip Analytics dashboard.",
+  "description": "-- QUICK SETUP --\nStep 1 SDK installed - you are here.\nStep 2 -> Click the Samples tab above -> Import.\nStep 3 -> Window -> Gossip Analytics -> 1 - Quick Setup.\nStep 4 -> Enter your 3 API Keys (Dev, Beta, Production) -> press Check Connection to verify.\nStep 5 -> Window -> Gossip Analytics -> 2 - Instrumentation Manager -> select which objects to track.\nStep 6 -> Press Play and verify your data appears in the Gossip Analytics dashboard.",
   "samples": [
     {
       "displayName": "Step 2 — Import to Complete Setup",
