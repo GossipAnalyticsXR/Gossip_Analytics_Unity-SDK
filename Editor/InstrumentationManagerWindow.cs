@@ -626,8 +626,14 @@ namespace GossipSDK.Editor
             {
                 try
                 {
-                    var xrOrigin = FindObjectOfType<UnityEngine.XR.Interaction.Toolkit.XROrigin>();
-                    if (xrOrigin != null) playerObject = xrOrigin.gameObject;
+                    var xrOriginType = AppDomain.CurrentDomain.GetAssemblies()
+                        .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
+                        .FirstOrDefault(t => t.FullName == "UnityEngine.XR.Interaction.Toolkit.XROrigin");
+                    if (xrOriginType != null)
+                    {
+                        var xrOrigin = FindObjectOfType(xrOriginType) as Component;
+                        if (xrOrigin != null) return xrOrigin.gameObject;
+                    }
                 }
                 catch { }
             }
