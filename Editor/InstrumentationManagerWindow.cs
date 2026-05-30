@@ -297,10 +297,40 @@ namespace GossipSDK.Editor
                         if (!allStoredPaths.ContainsKey(entry.sceneName))
                             allStoredPaths[entry.sceneName] = new HashSet<string>(entry.instrumentedPaths);
                     }
-                for (int i = 0; i < SceneManager.sceneCount; i++)
-                {
-                    var scene = SceneManager.GetSceneAt(i);
-                    if (!scene.isLoaded) continue;
+                    // --- D3: collect scenes from all 3 sources ---
+                    var allScenePaths = new HashSet<string>();
+
+                    // Source 1: active scene
+                    var activeScenePath = EditorSceneManager.GetActiveScene().path;
+                    if (!string.IsNullOrEmpty(activeScenePath))
+                        allScenePaths.Add(activeScenePath);
+
+                    // Source 2: scenes enabled in Build Settings
+                    foreach (var buildScene in EditorBuildSettings.scenes)
+                    {
+                        if (buildScene.enabled && !string.IsNullOrEmpty(buildScene.path))
+                            allScenePaths.Add(buildScene.path);
+                    }
+
+                    // Source 3: all .unity files in Assets/
+                    var guids = AssetDatabase.FindAssets("t:Scene", new[] { "Assets" });
+                    foreach (var guid in guids)
+                    {
+                        var scenePath = AssetDatabase.GUIDToAssetPath(guid);
+                        if (!string.IsNullOrEmpty(scenePath))
+                            allScenePaths.Add(scenePath);
+                    }
+
+                    // Scan each scene path (deduplicated)
+                    foreach (var scenePath in allScenePaths)
+                    {
+                        Scene scene;
+                        var loadedScene = SceneManager.GetSceneByPath(scenePath);
+                        if (loadedScene.IsValid() && loadedScene.isLoaded)
+                            scene = loadedScene;
+                        else
+                            scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+                        if (!scene.isLoaded) continue;
                     string sceneName = scene.name;
                     var sceneList = new List<ScannedObject>();
                     _sceneObjects[sceneName] = sceneList;
@@ -308,7 +338,7 @@ namespace GossipSDK.Editor
                     var scannedPaths = new HashSet<string>();
                     foreach (var root in scene.GetRootGameObjects())
                         CollectInteractableObjectsForScan(root, sceneName, scannedPaths, storedPaths, sceneList);
-                }
+                    }
                 _hasNewObjects = false;
                 _isScanning = false;
                 Repaint();
