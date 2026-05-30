@@ -515,7 +515,6 @@ namespace GossipSDK.Editor
         {
             foreach (var info in _recommendedTrackers)
             {
-                if (info.requiresConfiguration) continue;
                 var trackerType = AppDomain.CurrentDomain.GetAssemblies()
                     .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
                     .FirstOrDefault(tp => tp.Name == info.componentTypeName);
