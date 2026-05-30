@@ -5,13 +5,18 @@ using System.Collections.Generic;
 
 public class VRPermissionsHandler : MonoBehaviour
 {
-    private readonly string[] permissions = new string[]
-    {
-        "com.oculus.permission.EYE_TRACKING",
-        "com.oculus.permission.USE_SCENE",
-        "horizonos.permission.HEADSET_CAMERA",
-        Permission.Microphone
-    };
+    // --- Per-permission toggles (editable in Inspector and Instrumentation Manager) ---
+    [Tooltip("Request Eye Tracking permission on Meta Quest. Required for gaze analytics.")]
+    public bool enableEyeTracking = true;
+
+    [Tooltip("Request Scene/Spatial permission on Meta Quest. Required for environment heatmaps.")]
+    public bool enableSpatialScene = true;
+
+    [Tooltip("Request Headset Camera permission on Meta Quest. Required for passthrough and MR.")]
+    public bool enableHeadsetCamera = true;
+
+    [Tooltip("Request Microphone permission. Audio is processed on-device and immediately discarded. No recordings stored or transmitted.")]
+    public bool enableMicrophone = true;
 
     public static bool IsReady = false;
     private bool _isAppFocused = true;
@@ -32,7 +37,14 @@ public class VRPermissionsHandler : MonoBehaviour
     {
         yield return new WaitForSecondsRealtime(0.5f);
 
-        foreach (var permission in permissions)
+        // Build list of enabled permissions
+        var permissionsToRequest = new List<string>();
+        if (enableEyeTracking)    permissionsToRequest.Add("com.oculus.permission.EYE_TRACKING");
+        if (enableSpatialScene)   permissionsToRequest.Add("com.oculus.permission.USE_SCENE");
+        if (enableHeadsetCamera)  permissionsToRequest.Add("horizonos.permission.HEADSET_CAMERA");
+        if (enableMicrophone)     permissionsToRequest.Add(Permission.Microphone);
+
+        foreach (var permission in permissionsToRequest)
         {
             if (!Permission.HasUserAuthorizedPermission(permission))
             {
@@ -44,12 +56,11 @@ public class VRPermissionsHandler : MonoBehaviour
                     yield return new WaitForSecondsRealtime(0.2f);
                     timeout += 0.2f;
                 }
-
                 yield return new WaitForSecondsRealtime(0.2f);
             }
         }
 
-        Debug.Log("[VRPermissionsHandler] Secuencia terminada. Sistema listo.");
+        Debug.Log("[VRPermissionsHandler] Permission sequence complete. System ready.");
         IsReady = true;
     }
 
