@@ -246,7 +246,6 @@ namespace GossipSDK.Editor
             {
                 DrawTrackersTab();
             }
-        }
             else if (_selectedTab == 2)
             {
                 DrawPermissionsTab();
