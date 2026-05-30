@@ -17,7 +17,7 @@ namespace GossipAnalytics.Editor
         {
             bool confirm = EditorUtility.DisplayDialog(
                 "Uninstall Gossip Analytics SDK",
-                "This will remove only the components and assets added by Gossip Analytics. Your scenes, scripts and assets will not be affected.\n\nWhat will be removed:\n  - GossipAnalyticsManager from your scenes\n  - InteractableComponent from instrumented objects\n  - Tracker components added via Instrumentation Manager\n  - VRPermissionsHandler from your scenes\n  - GossipAnalyticsSettings asset\n  - GossipInstrumentationData asset\n  - Imported Samples folder (Assets/Samples/Gossip Analytics SDK/)\n  - The com.gossip.core package\n\nWhat will NOT be touched:\n  - Your scenes and GameObjects\n  - Your scripts and prefabs\n  - Any other package or asset in your project",
+                "This will remove:\n\n- All Gossip Analytics components from your scenes (GossipAnalyticsManager, InteractableComponent, VRPermissionsHandler, and all tracker components)\n\n- GossipAnalyticsSettings asset\n\n- GossipInstrumentationData asset\n\n- Assets/Samples/Gossip Analytics SDK/ folder\n\n- The SDK package itself (com.gossip.core)\n\nThis will NOT remove:\n\n- Your own scripts or scenes\n\n- Dependency packages (LiteDB, R3, UniTask, XR packages)\n\n- README, CHANGELOG or LICENSE files (removed with the package automatically)",
                 "Uninstall",
                 "Cancel");
 
@@ -165,34 +165,61 @@ namespace GossipAnalytics.Editor
         private static void RunStep2_DeleteAssets()
         {
             EditorUtility.DisplayProgressBar(
-                "Gossip Analytics — Uninstalling...",
+                "Gossip Analytics â Uninstalling...",
                 "Deleting Gossip assets...",
                 0.75f);
 
-            var paths = new[]
-            {
-                "Assets/GossipAnalyticsSettings.asset",
-                "Assets/GossipInstrumentationData.asset",
-                "Assets/Samples/Gossip Analytics SDK"
-            };
-
-            foreach (var path in paths)
+            // FIX 1: Find all GossipAnalyticsSettings assets via FindAssets
+            string[] settingsGuids = AssetDatabase.FindAssets("t:GossipAnalyticsSettings");
+            foreach (var guid in settingsGuids)
             {
                 try
                 {
-                    if (AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path) != null ||
-                        System.IO.Directory.Exists(path) ||
-                        System.IO.File.Exists(path))
-                    {
-                        bool deleted = AssetDatabase.DeleteAsset(path);
-                        if (!deleted)
-                            Debug.LogWarning("[GossipUninstaller] Could not delete: " + path);
-                    }
+                    string path = AssetDatabase.GUIDToAssetPath(guid);
+                    bool ok = AssetDatabase.DeleteAsset(path);
+                    if (!ok) Debug.LogWarning("[GossipUninstaller] Could not delete settings: " + path);
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning("[GossipUninstaller] Error deleting " + path + ": " + ex.Message);
+                    Debug.LogWarning("[GossipUninstaller] Error deleting settings: " + ex.Message);
                 }
+            }
+
+            // Delete GossipInstrumentationData asset
+            string[] dataGuids = AssetDatabase.FindAssets("t:GossipInstrumentationData");
+            foreach (var guid in dataGuids)
+            {
+                try
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guid);
+                    AssetDatabase.DeleteAsset(path);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning("[GossipUninstaller] Error deleting data: " + ex.Message);
+                }
+            }
+
+            // FIX 2: Delete Assets/Gossip Analytics/ folder if empty
+            string gossipDir = "Assets/Gossip Analytics";
+            if (AssetDatabase.IsValidFolder(gossipDir))
+            {
+                var remaining = AssetDatabase.FindAssets("", new[] { gossipDir });
+                if (remaining.Length == 0)
+                    AssetDatabase.DeleteAsset(gossipDir);
+            }
+
+            // Delete Samples folder
+            string samplesPath = "Assets/Samples/Gossip Analytics SDK";
+            try
+            {
+                if (AssetDatabase.IsValidFolder(samplesPath) ||
+                    System.IO.Directory.Exists(samplesPath))
+                AssetDatabase.DeleteAsset(samplesPath);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[GossipUninstaller] Error deleting samples: " + ex.Message);
             }
 
             AssetDatabase.Refresh();
