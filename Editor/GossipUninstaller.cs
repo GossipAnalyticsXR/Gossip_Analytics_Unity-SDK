@@ -169,22 +169,40 @@ namespace GossipAnalytics.Editor
                 "Deleting Gossip assets...",
                 0.75f);
 
-            // FIX 1: Find all GossipAnalyticsSettings assets via FindAssets
+            // Step 2 — delete settings asset (search by type AND by filename as fallback)
+            EditorUtility.DisplayProgressBar("Gossip Uninstaller", "Removing settings asset...", 0.4f);
+
+            var deletedPaths = new System.Collections.Generic.List<string>();
+
+            // Primary: find by ScriptableObject type
             string[] settingsGuids = AssetDatabase.FindAssets("t:GossipAnalyticsSettings");
             foreach (var guid in settingsGuids)
             {
-                try
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (AssetDatabase.DeleteAsset(path))
                 {
-                    string path = AssetDatabase.GUIDToAssetPath(guid);
-                    bool ok = AssetDatabase.DeleteAsset(path);
-                    if (!ok) Debug.LogWarning("[GossipUninstaller] Could not delete settings: " + path);
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning("[GossipUninstaller] Error deleting settings: " + ex.Message);
+                    deletedPaths.Add(path);
+                    Debug.Log($"GossipSDK Uninstaller: deleted {path}");
                 }
             }
 
+            // Fallback: find by filename in case type search missed it
+            string[] nameGuids = AssetDatabase.FindAssets("GossipAnalyticsSettings");
+            foreach (var guid in nameGuids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (!deletedPaths.Contains(path))
+                {
+                    if (AssetDatabase.DeleteAsset(path))
+                    {
+                        Debug.Log($"GossipSDK Uninstaller (fallback): deleted {path}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"GossipSDK Uninstaller: could not delete {path} — delete it manually.");
+                    }
+                }
+            }
             // Delete GossipInstrumentationData asset
             string[] dataGuids = AssetDatabase.FindAssets("t:GossipInstrumentationData");
             foreach (var guid in dataGuids)
