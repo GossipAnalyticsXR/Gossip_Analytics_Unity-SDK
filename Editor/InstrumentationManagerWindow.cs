@@ -20,6 +20,7 @@ namespace GossipSDK.Editor
         private bool _hasNewObjects = false;
         private Vector2 _scrollPos;
         private bool _isScanning = false;
+        private static bool _dataPreloaded = false;
         private int _selectedTab = 0;
         private readonly string[] _tabLabels = new string[] { " Interactables", " Trackers", " Permissions" };
         private GameObject _playerObject = null;
@@ -83,12 +84,18 @@ namespace GossipSDK.Editor
         [MenuItem("Window/Gossip Analytics/2 — Instrumentation Manager", false, 2)]
         public static void Open()
         {
-            GetWindow<InstrumentationManagerWindow>(" Instrumentation Manager");
+            EditorUtility.DisplayProgressBar("Gossip Analytics", "Scanning scenes, please wait...", 0.2f);
+            _dataPreloaded = true;
+            var win = GetWindow<InstrumentationManagerWindow>(" Instrumentation Manager");
+            EditorUtility.DisplayProgressBar("Gossip Analytics", "Building object list...", 0.8f);
+            win.ScanNow();
+            EditorUtility.ClearProgressBar();
         }
 
         // --- Lifecycle ---
         private void OnEnable()
         {
+            if (_dataPreloaded) { _dataPreloaded = false; return; }
             LoadOrCreateData();
             ScanAllScenes();
             AutoDetectPlayer();
@@ -214,7 +221,9 @@ namespace GossipSDK.Editor
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Refresh", GUILayout.Width(70)))
             {
-                ScanAllScenes();
+                EditorUtility.DisplayProgressBar("Gossip Analytics", "Scanning scenes, please wait...", 0.2f);
+                ScanNow();
+                EditorUtility.ClearProgressBar();
                 _hasNewObjects = false;
             }
             if (GUILayout.Button("Select All Scenes", GUILayout.Width(115)))
@@ -289,60 +298,66 @@ namespace GossipSDK.Editor
             Repaint();
             EditorApplication.delayCall += () =>
             {
-                _sceneObjects.Clear();
-                var allStoredPaths = new Dictionary<string, HashSet<string>>();
-                if (_data != null)
-                    foreach (var entry in _data.scenes)
-                    {
-                        if (!allStoredPaths.ContainsKey(entry.sceneName))
-                            allStoredPaths[entry.sceneName] = new HashSet<string>(entry.instrumentedPaths);
-                    }
-                    // --- D3: collect scenes from all 3 sources ---
-                    var allScenePaths = new HashSet<string>();
-
-                    // Source 1: active scene
-                    var activeScenePath = EditorSceneManager.GetActiveScene().path;
-                    if (!string.IsNullOrEmpty(activeScenePath))
-                        allScenePaths.Add(activeScenePath);
-
-                    // Source 2: scenes enabled in Build Settings
-                    foreach (var buildScene in EditorBuildSettings.scenes)
-                    {
-                        if (buildScene.enabled && !string.IsNullOrEmpty(buildScene.path))
-                            allScenePaths.Add(buildScene.path);
-                    }
-
-                    // Source 3: all .unity files in Assets/
-                    var guids = AssetDatabase.FindAssets("t:Scene", new[] { "Assets" });
-                    foreach (var guid in guids)
-                    {
-                        var scenePath = AssetDatabase.GUIDToAssetPath(guid);
-                        if (!string.IsNullOrEmpty(scenePath))
-                            allScenePaths.Add(scenePath);
-                    }
-
-                    // Scan each scene path (deduplicated)
-                    foreach (var scenePath in allScenePaths)
-                    {
-                        Scene scene;
-                        var loadedScene = SceneManager.GetSceneByPath(scenePath);
-                        if (loadedScene.IsValid() && loadedScene.isLoaded)
-                            scene = loadedScene;
-                        else
-                            scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
-                        if (!scene.isLoaded) continue;
-                    string sceneName = scene.name;
-                    var sceneList = new List<ScannedObject>();
-                    _sceneObjects[sceneName] = sceneList;
-                    var storedPaths = allStoredPaths.ContainsKey(sceneName) ? allStoredPaths[sceneName] : new HashSet<string>();
-                    var scannedPaths = new HashSet<string>();
-                    foreach (var root in scene.GetRootGameObjects())
-                        CollectInteractableObjectsForScan(root, sceneName, scannedPaths, storedPaths, sceneList);
-                    }
-                _hasNewObjects = false;
+                ScanNow();
                 _isScanning = false;
                 Repaint();
             };
+        }
+
+        // --- Sync scan (used by Open() pre-load and Refresh button) ---
+        private void ScanNow()
+        {
+            _sceneObjects.Clear();
+            var allStoredPaths = new Dictionary<string, HashSet<string>>();
+            if (_data != null)
+                foreach (var entry in _data.scenes)
+                {
+                    if (!allStoredPaths.ContainsKey(entry.sceneName))
+                        allStoredPaths[entry.sceneName] = new HashSet<string>(entry.instrumentedPaths);
+                }
+                // --- D3: collect scenes from all 3 sources ---
+                var allScenePaths = new HashSet<string>();
+
+                // Source 1: active scene
+                var activeScenePath = EditorSceneManager.GetActiveScene().path;
+                if (!string.IsNullOrEmpty(activeScenePath))
+                    allScenePaths.Add(activeScenePath);
+
+                // Source 2: scenes enabled in Build Settings
+                foreach (var buildScene in EditorBuildSettings.scenes)
+                {
+                    if (buildScene.enabled && !string.IsNullOrEmpty(buildScene.path))
+                        allScenePaths.Add(buildScene.path);
+                }
+
+                // Source 3: all .unity files in Assets/
+                var guids = AssetDatabase.FindAssets("t:Scene", new[] { "Assets" });
+                foreach (var guid in guids)
+                {
+                    var scenePath = AssetDatabase.GUIDToAssetPath(guid);
+                    if (!string.IsNullOrEmpty(scenePath))
+                        allScenePaths.Add(scenePath);
+                }
+
+                // Scan each scene path (deduplicated)
+                foreach (var scenePath in allScenePaths)
+                {
+                    Scene scene;
+                    var loadedScene = SceneManager.GetSceneByPath(scenePath);
+                    if (loadedScene.IsValid() && loadedScene.isLoaded)
+                        scene = loadedScene;
+                    else
+                        scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+                    if (!scene.isLoaded) continue;
+                string sceneName = scene.name;
+                var sceneList = new List<ScannedObject>();
+                _sceneObjects[sceneName] = sceneList;
+                var storedPaths = allStoredPaths.ContainsKey(sceneName) ? allStoredPaths[sceneName] : new HashSet<string>();
+                var scannedPaths = new HashSet<string>();
+                foreach (var root in scene.GetRootGameObjects())
+                    CollectInteractableObjectsForScan(root, sceneName, scannedPaths, storedPaths, sceneList);
+                }
+            _hasNewObjects = false;
         }
 
         private void CollectInteractableObjectsForScan(
@@ -429,7 +444,7 @@ namespace GossipSDK.Editor
                 if (sc.isLoaded) EditorSceneManager.MarkSceneDirty(sc);
             }
             EditorUtility.DisplayDialog("Gossip Analytics — Applied!", "Data saved across " + dirtySceneNames.Count + " scene(s).", "OK");
-            ScanAllScenes();
+            ScanNow();
         }
 
         private void RemoveInstrumentationForObject(ScannedObject obj)
