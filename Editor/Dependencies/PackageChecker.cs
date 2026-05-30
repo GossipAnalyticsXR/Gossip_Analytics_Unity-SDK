@@ -38,7 +38,7 @@ namespace GossipAnalytics.Editor.Dependencies
             var ps   = new SerializedObject(assets[0]);
             var prop = ps.FindProperty("activeInputHandler");
             // 0 = InputManager (Old), 1 = Input System (New), 2 = Both
-            if (prop != null && prop.intValue != 2)
+            if (prop != null && prop.intValue == 0)
             {
                 prop.intValue = 2;
                 ps.ApplyModifiedProperties();
