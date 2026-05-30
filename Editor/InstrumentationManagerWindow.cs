@@ -7,6 +7,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using GossipSDK.Components;
+using Object = UnityEngine.Object;
 
 namespace GossipSDK.Editor
 {
