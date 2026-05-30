@@ -22,7 +22,7 @@ namespace GossipSDK.Editor
         private bool _isScanning = false;
         private static bool _dataPreloaded = false;
         private int _selectedTab = 0;
-        private readonly string[] _tabLabels = new string[] { " Interactables", " Trackers", " Permissions" };
+        private readonly string[] _tabLabels = new string[] { "Interactables", "Trackers", "Permissions" };
         private GameObject _playerObject = null;
         private Camera _mainCamera = null;
 
@@ -86,7 +86,7 @@ namespace GossipSDK.Editor
         {
             EditorUtility.DisplayProgressBar("Gossip Analytics", "Scanning scenes, please wait...", 0.2f);
             _dataPreloaded = true;
-            var win = GetWindow<InstrumentationManagerWindow>(" Instrumentation Manager");
+            var win = GetWindow<InstrumentationManagerWindow>("Instrumentation Manager");
             EditorUtility.DisplayProgressBar("Gossip Analytics", "Building object list...", 0.8f);
             win.ScanNow();
             EditorUtility.ClearProgressBar();
