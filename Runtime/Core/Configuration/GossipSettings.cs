@@ -36,9 +36,9 @@ namespace GossipSDK.Core.Configuration
         public string ProductionServerUrl => productionServerUrl;
 
         [Header("API Key per environment")]
-        [SerializeField] private string devApiKey  = "dev-key";
-        [SerializeField] private string betaApiKey = "beta-key";
-        [SerializeField] private string prodApiKey = "prod-key";
+        [SerializeField] private string devApiKey = "";
+        [SerializeField] private string betaApiKey = "";
+        [SerializeField] private string prodApiKey = "";
 
         public string DevApiKey  => devApiKey;
         public string BetaApiKey => betaApiKey;
