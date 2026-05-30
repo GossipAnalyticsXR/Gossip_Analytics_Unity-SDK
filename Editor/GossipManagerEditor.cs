@@ -149,44 +149,44 @@ namespace GossipSDK.Editor
                         "[GossipManager] " + foundManager.gameObject.scene.name +
                         ": GossipManager has no Settings assigned. Assign before building.");
                 }
-            }
 
-            // Check Dev environment for Android / iOS builds
-            if (foundManager != null &&
-                (report.summary.platform == BuildTarget.Android ||
-                 report.summary.platform == BuildTarget.iOS))
-            {
-                var gossipSettings = settingsValue as GossipSettings;
-                if (gossipSettings != null && gossipSettings.environment == GossipSettings.Environment.Dev)
+                // Dev environment check for Android / iOS builds
+                if (report.summary.platform == BuildTarget.Android ||
+                    report.summary.platform == BuildTarget.iOS)
                 {
-                    int choice = EditorUtility.DisplayDialogComplex(
-                        "Gossip Analytics — Environment Warning",
-                        "Your Gossip Analytics environment is set to Dev.\n\n" +
-                        "If you are deploying to Beta or Production, analytics data will be " +
-                        "sent to your Dev dashboard instead — live users will not appear in " +
-                        "Beta or Production reports.\n\n" +
-                        "Change the Environment in GossipAnalyticsSettings before building.",
-                        "Continue with Dev",
-                        "Cancel",
-                        "Open Settings & Cancel"
-                    );
-                    if (choice == 1)
-                        throw new BuildFailedException("Build cancelled. Change Gossip Analytics environment before building.");
-                    if (choice == 2)
+                    var gossipSettings = settingsValue as GossipSettings;
+                    if (gossipSettings != null &&
+                        gossipSettings.SelectedEnvironment == GossipSettings.Environment.Dev)
                     {
-                        var guids = AssetDatabase.FindAssets("t:GossipAnalyticsSettings");
-                        if (guids.Length > 0)
+                        int choice = EditorUtility.DisplayDialogComplex(
+                            "Gossip Analytics — Environment Warning",
+                            "Your Gossip Analytics environment is set to Dev.\n\n" +
+                            "If you are deploying to Beta or Production, analytics data will be " +
+                            "sent to your Dev dashboard instead — live users will not appear in " +
+                            "Beta or Production reports.\n\n" +
+                            "Change the Environment in GossipAnalyticsSettings before building.",
+                            "Continue with Dev",
+                            "Cancel",
+                            "Open Settings & Cancel"
+                        );
+                        if (choice == 1)
+                            throw new BuildFailedException("Build cancelled. Change Gossip Analytics environment before building.");
+                        if (choice == 2)
                         {
-                            var path = AssetDatabase.GUIDToAssetPath(guids[0]);
-                            var asset = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
-                            Selection.activeObject = asset;
-                            EditorGUIUtility.PingObject(asset);
-                            var inspectorType = typeof(UnityEditor.Editor).Assembly
-                                .GetType("UnityEditor.InspectorWindow");
-                            if (inspectorType != null)
-                                EditorWindow.GetWindow(inspectorType);
+                            var guids = AssetDatabase.FindAssets("t:GossipAnalyticsSettings");
+                            if (guids.Length > 0)
+                            {
+                                var path = AssetDatabase.GUIDToAssetPath(guids[0]);
+                                var asset = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+                                Selection.activeObject = asset;
+                                EditorGUIUtility.PingObject(asset);
+                                var inspectorType = typeof(UnityEditor.Editor).Assembly
+                                    .GetType("UnityEditor.InspectorWindow");
+                                if (inspectorType != null)
+                                    EditorWindow.GetWindow(inspectorType);
+                            }
+                            throw new BuildFailedException("Build cancelled. Change Gossip Analytics environment and rebuild.");
                         }
-                        throw new BuildFailedException("Build cancelled. Change Gossip Analytics environment and rebuild.");
                     }
                 }
             }
