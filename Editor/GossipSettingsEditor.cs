@@ -126,7 +126,7 @@ namespace Editor.InspectorViews
                     var devHint = new GUIStyle(EditorStyles.label);
                     devHint.normal.textColor = new Color(0.5f, 0.5f, 0.5f, 0.8f);
                     devHint.fontStyle = FontStyle.Italic;
-                    GUI.Label(new Rect(devRect.x + 4, devRect.y, devRect.width - 8, devRect.height),
+                    GUI.Label(new Rect(devRect.x + EditorGUIUtility.labelWidth + 4, devRect.y, devRect.width - EditorGUIUtility.labelWidth - 8, devRect.height),
                         "Paste your Dev API Key here", devHint);
                 }
             }
@@ -146,7 +146,7 @@ namespace Editor.InspectorViews
                     var betaHint = new GUIStyle(EditorStyles.label);
                     betaHint.normal.textColor = new Color(0.5f, 0.5f, 0.5f, 0.8f);
                     betaHint.fontStyle = FontStyle.Italic;
-                    GUI.Label(new Rect(betaRect.x + 4, betaRect.y, betaRect.width - 8, betaRect.height),
+                    GUI.Label(new Rect(betaRect.x + EditorGUIUtility.labelWidth + 4, betaRect.y, betaRect.width - EditorGUIUtility.labelWidth - 8, betaRect.height),
                         "Paste your Beta API Key here", betaHint);
                 }
             }
@@ -166,7 +166,7 @@ namespace Editor.InspectorViews
                     var prodHint = new GUIStyle(EditorStyles.label);
                     prodHint.normal.textColor = new Color(0.5f, 0.5f, 0.5f, 0.8f);
                     prodHint.fontStyle = FontStyle.Italic;
-                    GUI.Label(new Rect(prodRect.x + 4, prodRect.y, prodRect.width - 8, prodRect.height),
+                    GUI.Label(new Rect(prodRect.x + EditorGUIUtility.labelWidth + 4, prodRect.y, prodRect.width - EditorGUIUtility.labelWidth - 8, prodRect.height),
                         "Paste your Production API Key here", prodHint);
                 }
             }
