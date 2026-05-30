@@ -423,7 +423,10 @@ namespace GossipSDK.Editor
             else
             {
                 _data = ScriptableObject.CreateInstance<GossipInstrumentationData>();
-                AssetDatabase.CreateAsset(_data, "Assets/GossipAnalytics/GossipInstrumentationData.asset");
+                string dir = "Assets/Gossip Analytics";
+                if (!System.IO.Directory.Exists(dir))
+                    System.IO.Directory.CreateDirectory(dir);
+                AssetDatabase.CreateAsset(_data, dir + "/GossipInstrumentationData.asset");
                 AssetDatabase.SaveAssets();
             }
         }
