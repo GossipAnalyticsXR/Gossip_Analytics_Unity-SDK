@@ -33,35 +33,19 @@ namespace GossipAnalytics.Editor.Dependencies
 
         private static void AutoFixActiveInputHandling()
         {
-            // 0 = InputManager (Old), 1 = Input System (New), 2 = Both
-            // G1-fix: evaluate and fix EACH BuildTargetGroup independently.
-            // Only set a group to Both (2) if THAT group is currently at 0 (Legacy).
-            // Never touch groups already at 1 (New) or 2 (Both).
-            var targetGroups = new[]
+            // activeInputHandler values: 0 = Legacy Input Manager, 1 = New Input System, 2 = Both
+            // Only auto-fix if stuck on legacy (0). Leave New (1) and Both (2) untouched.
+            var assets = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/ProjectSettings.asset");
+            if (assets.Length == 0) return;
+            var so = new SerializedObject(assets[0]);
+            var prop = so.FindProperty("activeInputHandler");
+            if (prop != null && prop.intValue == 0)
             {
-                BuildTargetGroup.Standalone,
-                BuildTargetGroup.Android,
-                BuildTargetGroup.iOS,
-                BuildTargetGroup.WebGL
-            };
-
-            foreach (var group in targetGroups)
-            {
-                try
-                {
-                    int current = PlayerSettings.GetPropertyInt("activeInputHandler", group);
-                    if (current == 0)
-                    {
-                        PlayerSettings.SetPropertyInt("activeInputHandler", 2, group);
-                        Debug.Log($"GossipSDK: Active Input Handling set to 'Both' for {group} automatically.");
-                    }
-                    // If current == 1 (New) or 2 (Both) â do nothing for this group
-                }
-                catch (System.Exception)
-                {
-                    // Ignore groups that don't support this setting (e.g. WebGL on older Unity)
-                }
+                prop.intValue = 2;
+                so.ApplyModifiedProperties();
+                Debug.Log("GossipSDK: Active Input Handling set to 'Both' automatically.");
             }
+            // intValue 1 (New Input System) or 2 (Both) - do nothing
         }
 
         static PackageChecker()
