@@ -287,29 +287,32 @@ namespace GossipSDK.Editor
         {
             _isScanning = true;
             Repaint();
-            _sceneObjects.Clear();
-            var allStoredPaths = new Dictionary<string, HashSet<string>>();
-            if (_data != null)
-                foreach (var entry in _data.scenes)
-                {
-                    if (!allStoredPaths.ContainsKey(entry.sceneName))
-                        allStoredPaths[entry.sceneName] = new HashSet<string>(entry.instrumentedPaths);
-                }
-            for (int i = 0; i < SceneManager.sceneCount; i++)
+            EditorApplication.delayCall += () =>
             {
-                var scene = SceneManager.GetSceneAt(i);
-                if (!scene.isLoaded) continue;
-                string sceneName = scene.name;
-                var sceneList = new List<ScannedObject>();
-                _sceneObjects[sceneName] = sceneList;
-                var storedPaths = allStoredPaths.ContainsKey(sceneName) ? allStoredPaths[sceneName] : new HashSet<string>();
-                var scannedPaths = new HashSet<string>();
-                foreach (var root in scene.GetRootGameObjects())
-                    CollectInteractableObjectsForScan(root, sceneName, scannedPaths, storedPaths, sceneList);
-            }
-            _hasNewObjects = false;
-            _isScanning = false;
-            Repaint();
+                _sceneObjects.Clear();
+                var allStoredPaths = new Dictionary<string, HashSet<string>>();
+                if (_data != null)
+                    foreach (var entry in _data.scenes)
+                    {
+                        if (!allStoredPaths.ContainsKey(entry.sceneName))
+                            allStoredPaths[entry.sceneName] = new HashSet<string>(entry.instrumentedPaths);
+                    }
+                for (int i = 0; i < SceneManager.sceneCount; i++)
+                {
+                    var scene = SceneManager.GetSceneAt(i);
+                    if (!scene.isLoaded) continue;
+                    string sceneName = scene.name;
+                    var sceneList = new List<ScannedObject>();
+                    _sceneObjects[sceneName] = sceneList;
+                    var storedPaths = allStoredPaths.ContainsKey(sceneName) ? allStoredPaths[sceneName] : new HashSet<string>();
+                    var scannedPaths = new HashSet<string>();
+                    foreach (var root in scene.GetRootGameObjects())
+                        CollectInteractableObjectsForScan(root, sceneName, scannedPaths, storedPaths, sceneList);
+                }
+                _hasNewObjects = false;
+                _isScanning = false;
+                Repaint();
+            };
         }
 
         private void CollectInteractableObjectsForScan(
