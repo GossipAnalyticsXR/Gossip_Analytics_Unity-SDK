@@ -3,11 +3,11 @@
   "version": "1.1.4",
   "displayName": "Gossip Analytics SDK",
   "organization": "Gossip Analytics",
-  "description": "── QUICK SETUP ──\nStep 1 ✅  SDK installed — you're here.\nStep 2 →   Click the Samples tab above → Import → then go to Window → Gossip Analytics → Quick Setup.\nStep 3 →   Enter your 3 API Keys (Dev, Beta, Production) in the Inspector and press Play.\nStep 4 →   Open Window → Gossip Analytics → Instrumentation Manager to select which objects in your scenes you want to track interactions on.\n\n── ABOUT ──\nOpenXR-first Unity SDK for XR analytics, capturing high-signal spatial telemetry from immersive experiences and turning it into AI-driven decisions. Tracks session lifecycle, user/device context, movement, eye/hand signals, interactions and immersive metrics in real time, with minimal performance impact.\n\nBuilt around a component-based tracker architecture, the SDK ships with 4 next-gen spatial heatmaps (owl view, human view, eye view and Hand&Controller) that adapt to static, procedural and swappable environments. Supports Dev, Beta and Production environments natively, keeping production data clean and isolated with 2-click switching.",
+  "description": "—— QUICK SETUP ——\nStep 1 ✅  SDK installed — you\'re here.\nStep 2 →  Click the Samples tab above → Import.\nStep 3 →  Window → Gossip Analytics → 1 — Quick Setup.\nStep 4 →  Enter your 3 API Keys (Dev, Beta, Production) → press Check Connection to verify.\nStep 5 →  Window → Gossip Analytics → 2 — Instrumentation Manager → select which objects to track.\nStep 6 →  Press Play and verify your data appears in the Gossip Analytics dashboard.",
   "samples": [
     {
       "displayName": "Step 2 — Import to Complete Setup",
-      "description": "Import this to finish setting up the SDK. Once imported, go to Window → Gossip Analytics → Quick Setup — one click adds the manager to your scene, assigns your settings, and you're ready. Then enter your API Key and press Play.",
+      "description": "Import this to finish setting up the SDK. Once imported:\n→ Step 3: Window → Gossip Analytics → 1 — Quick Setup (places the manager and opens settings)\n→ Step 4: Enter your 3 API Keys (Dev, Beta, Production) → press Check Connection to verify\n→ Step 5: Window → Gossip Analytics → 2 — Instrumentation Manager — select which objects to track\n→ Step 6: Press Play and verify your data appears in the Gossip Analytics dashboard",
       "path": "Samples~"
     }
   ],
