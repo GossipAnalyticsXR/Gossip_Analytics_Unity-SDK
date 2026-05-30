@@ -111,11 +111,65 @@ namespace Editor.InspectorViews
 
 
             if (devApiKeyProp != null)
-                EditorGUILayout.PropertyField(devApiKeyProp, new GUIContent("Dev API Key"));
+            {
+                EditorGUI.BeginChangeCheck();
+                string devVal = devApiKeyProp.stringValue;
+                string newDevVal = EditorGUILayout.TextField(new GUIContent("Dev API Key"), devVal);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    devApiKeyProp.stringValue = newDevVal;
+                    serializedObject.ApplyModifiedProperties();
+                }
+                if (string.IsNullOrEmpty(newDevVal))
+                {
+                    var devRect = GUILayoutUtility.GetLastRect();
+                    var devHint = new GUIStyle(EditorStyles.label);
+                    devHint.normal.textColor = new Color(0.5f, 0.5f, 0.5f, 0.8f);
+                    devHint.fontStyle = FontStyle.Italic;
+                    GUI.Label(new Rect(devRect.x + 4, devRect.y, devRect.width - 8, devRect.height),
+                        "Paste your Dev API Key here", devHint);
+                }
+            }
             if (betaApiKeyProp != null)
-                EditorGUILayout.PropertyField(betaApiKeyProp, new GUIContent("Beta API Key"));
+            {
+                EditorGUI.BeginChangeCheck();
+                string betaVal = betaApiKeyProp.stringValue;
+                string newBetaVal = EditorGUILayout.TextField(new GUIContent("Beta API Key"), betaVal);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    betaApiKeyProp.stringValue = newBetaVal;
+                    serializedObject.ApplyModifiedProperties();
+                }
+                if (string.IsNullOrEmpty(newBetaVal))
+                {
+                    var betaRect = GUILayoutUtility.GetLastRect();
+                    var betaHint = new GUIStyle(EditorStyles.label);
+                    betaHint.normal.textColor = new Color(0.5f, 0.5f, 0.5f, 0.8f);
+                    betaHint.fontStyle = FontStyle.Italic;
+                    GUI.Label(new Rect(betaRect.x + 4, betaRect.y, betaRect.width - 8, betaRect.height),
+                        "Paste your Beta API Key here", betaHint);
+                }
+            }
             if (prodApiKeyProp != null)
-                EditorGUILayout.PropertyField(prodApiKeyProp, new GUIContent("Prod API Key"));
+            {
+                EditorGUI.BeginChangeCheck();
+                string prodVal = prodApiKeyProp.stringValue;
+                string newProdVal = EditorGUILayout.TextField(new GUIContent("Prod API Key"), prodVal);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    prodApiKeyProp.stringValue = newProdVal;
+                    serializedObject.ApplyModifiedProperties();
+                }
+                if (string.IsNullOrEmpty(newProdVal))
+                {
+                    var prodRect = GUILayoutUtility.GetLastRect();
+                    var prodHint = new GUIStyle(EditorStyles.label);
+                    prodHint.normal.textColor = new Color(0.5f, 0.5f, 0.5f, 0.8f);
+                    prodHint.fontStyle = FontStyle.Italic;
+                    GUI.Label(new Rect(prodRect.x + 4, prodRect.y, prodRect.width - 8, prodRect.height),
+                        "Paste your Production API Key here", prodHint);
+                }
+            }
 
             EditorGUILayout.Space();
             EditorGUILayout.Space();
