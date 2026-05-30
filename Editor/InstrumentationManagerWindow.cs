@@ -13,7 +13,7 @@ namespace GossipSDK.Editor
 {
     public class InstrumentationManagerWindow : EditorWindow
     {
-        // ——— State ————————————————————————————————————————————————————————————
+        // --- State ---
         private GossipInstrumentationData _data;
         private Dictionary<string, List<ScannedObject>> _sceneObjects = new Dictionary<string, List<ScannedObject>>();
         private Dictionary<string, bool> _sceneFoldouts = new Dictionary<string, bool>();
@@ -33,10 +33,11 @@ namespace GossipSDK.Editor
         private static readonly string[] ExcludeNameKeywords = new[]
         {
             "wall", "floor", "ceiling", "ground", "terrain", "sky",
-            "ambient", "light", "camera", "canvas", "event"
+            "ambient", "light", "camera", "canvas", "event",
+            "trigger", "collider", "volume", "bounds", "hitbox", "detector", "zone"
         };
 
-        // ——— Inner type ——————————————————————————————————————————————————————
+        // --- Inner type ---
         private class ScannedObject
         {
             public string sceneName;
@@ -47,7 +48,7 @@ namespace GossipSDK.Editor
             public bool isNew;
         }
 
-        // ——— Tracker types ————————————————————————————————————————————————————
+        // --- Tracker types ---
         public enum TrackerTarget { Player, Camera, AnyObject, Automatic }
 
         [System.Serializable]
@@ -78,19 +79,20 @@ namespace GossipSDK.Editor
             new TrackerInfo { componentTypeName = "EyeTrackingComponent", displayName = "Eye Tracking", description = "Tracks gaze hits and fixation. Attach to camera.", category = "XR", target = TrackerTarget.Camera, requiresConfiguration = true },
         };
 
-        // ——— Menu entry ——————————————————————————————————————————————————————
+        // --- Menu entry ---
         [MenuItem("Window/Gossip Analytics/2 — Instrumentation Manager", false, 2)]
         public static void Open()
         {
             GetWindow<InstrumentationManagerWindow>(" Instrumentation Manager");
         }
 
-        // ——— Lifecycle ———————————————————————————————————————————————————————
+        // --- Lifecycle ---
         private void OnEnable()
         {
             LoadOrCreateData();
             ScanAllScenes();
             AutoDetectPlayer();
+            AutoAddTrackers();
             EditorApplication.hierarchyChanged += OnHierarchyChanged;
         }
 
@@ -107,99 +109,88 @@ namespace GossipSDK.Editor
                 var sc = SceneManager.GetSceneAt(i);
                 if (sc.isLoaded) openSceneNames.Add(sc.name);
             }
-
             bool foundNew = false;
             foreach (var sceneName in openSceneNames)
             {
                 var sc = SceneManager.GetSceneByName(sceneName);
                 if (!sc.isLoaded) continue;
-
                 var scannedPaths = new HashSet<string>();
                 foreach (var root in sc.GetRootGameObjects())
                     CollectInteractableObjects(root, sceneName, scannedPaths);
-
                 var storedEntry = _data?.scenes.FirstOrDefault(e => e.sceneName == sceneName);
                 var storedPaths = storedEntry?.instrumentedPaths ?? new List<string>();
-
                 foreach (var path in scannedPaths)
                 {
                     if (!storedPaths.Contains(path)) { foundNew = true; break; }
                 }
                 if (foundNew) break;
             }
-
-            if (foundNew != _hasNewObjects)
-            {
-                _hasNewObjects = foundNew;
-                Repaint();
-            }
+            if (foundNew != _hasNewObjects) { _hasNewObjects = foundNew; Repaint(); }
         }
 
-        // ——— OnGUI ———————————————————————————————————————————————————————————
+        // --- OnGUI ---
         private void OnGUI()
         {
             _selectedTab = GUILayout.Toolbar(_selectedTab, _tabLabels, GUILayout.Height(30));
             EditorGUILayout.Space(4);
-
             float footerHeight = 36f;
             Rect footerRect = new Rect(0, position.height - footerHeight, position.width, footerHeight);
             Rect contentRect = new Rect(0, 40, position.width, position.height - 40 - footerHeight);
-
             GUILayout.BeginArea(contentRect);
             _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
-
-            if (_selectedTab == 0)
+            if (_isScanning)
+            {
+                EditorGUILayout.HelpBox("Loading - reading scene objects, please wait...", MessageType.None);
+            }
+            else if (_selectedTab == 0)
                 DrawInteractablesTab();
             else if (_selectedTab == 1)
                 DrawTrackersTab();
             else if (_selectedTab == 2)
                 DrawPermissionsTab();
-
             EditorGUILayout.EndScrollView();
             GUILayout.EndArea();
-
             DrawFooter(footerRect);
         }
 
-        // ——— Footer ——————————————————————————————————————————————————————————
+        // --- Footer ---
         private void DrawFooter(Rect rect)
         {
             EditorGUI.DrawRect(rect, new Color(0.15f, 0.15f, 0.15f, 1f));
-
             int trackedCount = 0;
             foreach (var kvp in _sceneObjects)
                 foreach (var obj in kvp.Value)
                     if (obj.isChecked) trackedCount++;
-
             int activeTrackers = 0;
             foreach (var t in _recommendedTrackers)
             {
-                var type = AppDomain.CurrentDomain.GetAssemblies()
+                var tp = AppDomain.CurrentDomain.GetAssemblies()
                     .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
-                    .FirstOrDefault(tp => tp.Name == t.componentTypeName);
-                if (type != null && (Object.FindObjectOfType(type) as Component) != null) activeTrackers++;
+                    .FirstOrDefault(x => x.Name == t.componentTypeName);
+                if (tp != null && (Object.FindObjectOfType(tp) as Component) != null) activeTrackers++;
             }
-
-            bool permsActive = Object.FindObjectOfType<VRPermissionsHandler>() != null;
-            string permsLabel = permsActive ? "enabled" : "disabled";
+            var handler = Object.FindObjectOfType<VRPermissionsHandler>();
+            string permsLabel;
+            if (handler == null)
+                permsLabel = "disabled";
+            else
+            {
+                bool allOn = handler.enableEyeTracking && handler.enableSpatialScene && handler.enableHeadsetCamera && handler.enableMicrophone;
+                permsLabel = allOn ? "enabled" : "partially enabled";
+            }
             string summary = string.Format("✅ {0} objects tracked  ·  {1} trackers active  ·  Permissions {2}", trackedCount, activeTrackers, permsLabel);
-
             var summaryStyle = new GUIStyle(EditorStyles.label);
             summaryStyle.normal.textColor = Color.white;
             summaryStyle.alignment = TextAnchor.MiddleLeft;
             summaryStyle.fontSize = 11;
-
             float btnW = 160f;
             Rect lblRect = new Rect(rect.x + 8, rect.y, rect.width - btnW - 20, rect.height);
             Rect btnRect = new Rect(rect.xMax - btnW - 8, rect.y + 4, btnW, rect.height - 8);
-
             GUI.Label(lblRect, summary, summaryStyle);
-
             var doneStyle = new GUIStyle(GUI.skin.button);
             doneStyle.normal.textColor = Color.white;
             doneStyle.fontStyle = FontStyle.Bold;
-
-            var prevBgColor = GUI.backgroundColor;
+            var prevBg = GUI.backgroundColor;
             GUI.backgroundColor = new Color(0.2f, 0.6f, 0.2f, 1f);
             if (GUI.Button(btnRect, "✅ Done — Save & Close", doneStyle))
             {
@@ -207,24 +198,19 @@ namespace GossipSDK.Editor
                 EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
                 Close();
             }
-            GUI.backgroundColor = prevBgColor;
+            GUI.backgroundColor = prevBg;
         }
 
-        // ——— Tab: Interactables (opt-out) ————————————————————————————————————
+        // --- Tab: Interactables ---
         private void DrawInteractablesTab()
         {
             EditorGUILayout.Space(6);
-            EditorGUILayout.LabelField("Gossip Analytics — Instrumentation Manager", EditorStyles.boldLabel);
-
-            if (_data == null)
-            {
-                EditorGUILayout.HelpBox("No data asset found. Try reopening the window.", MessageType.Error);
-                return;
-            }
-
+            EditorGUILayout.HelpBox("These are the interactive objects detected in your scenes. All are pre-selected - " +
+                "deselect any you do not want to track. InteractableComponent will be added automatically.", MessageType.Info);
+            EditorGUILayout.Space(4);
+            if (_data == null) { EditorGUILayout.HelpBox("No data asset found. Try reopening the window.", MessageType.Error); return; }
             if (_hasNewObjects)
                 EditorGUILayout.HelpBox("New interactable objects detected. Click Refresh to review them.", MessageType.Info);
-
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Refresh", GUILayout.Width(70)))
             {
@@ -236,63 +222,49 @@ namespace GossipSDK.Editor
             if (GUILayout.Button("Deselect All", GUILayout.Width(90)))
                 SetAllChecked(false);
             EditorGUILayout.EndHorizontal();
-
             EditorGUILayout.Space(6);
-
             if (_sceneObjects.Count == 0)
             {
-                EditorGUILayout.HelpBox("No interactable objects found in open scenes. Click Refresh after adding objects.", MessageType.Info);
+                EditorGUILayout.HelpBox("No interactable objects found. Click Refresh after adding objects.", MessageType.Info);
                 return;
             }
-
             foreach (var kvp in _sceneObjects)
             {
                 string sceneName = kvp.Key;
                 var objs = kvp.Value;
-
                 if (!_sceneFoldouts.ContainsKey(sceneName)) _sceneFoldouts[sceneName] = true;
                 _sceneFoldouts[sceneName] = EditorGUILayout.BeginFoldoutHeaderGroup(
                     _sceneFoldouts[sceneName], sceneName + " (" + objs.Count + " objects)");
-
                 if (_sceneFoldouts[sceneName])
                 {
                     var sorted = objs.OrderByDescending(o => o.isNew).ThenBy(o => o.objectName).ToList();
                     foreach (var obj in sorted)
                         DrawObjectRow(obj);
                 }
-
                 EditorGUILayout.EndFoldoutHeaderGroup();
             }
         }
 
-        // ——— DrawObjectRow ———————————————————————————————————————————————————
+        // --- DrawObjectRow ---
         private void DrawObjectRow(ScannedObject obj)
         {
             EditorGUILayout.BeginHorizontal();
-
             bool newChecked = EditorGUILayout.Toggle(obj.isChecked, GUILayout.Width(18));
-
             if (newChecked != obj.isChecked)
             {
                 if (!newChecked && obj.hasInteractable)
                 {
                     bool confirm = EditorUtility.DisplayDialog(
-                        "Remove Tracking",
-                        "This will remove InteractableComponent from " + obj.objectName + ". This object will no longer track interactions. Remove anyway?",
-                        "Remove", "Cancel");
-                    if (!confirm)
-                    {
-                        EditorGUILayout.EndHorizontal();
-                        return;
-                    }
+                        "Deselect " + obj.objectName + "?",
+                        "InteractableComponent will be removed from this object. It will no longer track interactions.",
+                        "Deselect", "Cancel");
+                    if (!confirm) { EditorGUILayout.EndHorizontal(); return; }
                     RemoveInstrumentationForObject(obj);
                     obj.hasInteractable = false;
                 }
                 obj.isChecked = newChecked;
             }
-
             EditorGUILayout.LabelField(obj.objectName, GUILayout.ExpandWidth(true));
-
             if (obj.hasInteractable && !obj.isNew)
             {
                 var prevC = GUI.color;
@@ -307,16 +279,15 @@ namespace GossipSDK.Editor
                 GUILayout.Label(" New", GUILayout.Width(80));
                 GUI.color = prevC;
             }
-
             EditorGUILayout.EndHorizontal();
         }
 
-        // ——— Scanning ————————————————————————————————————————————————————————
+        // --- Scanning ---
         private void ScanAllScenes()
         {
             _isScanning = true;
+            Repaint();
             _sceneObjects.Clear();
-
             var allStoredPaths = new Dictionary<string, HashSet<string>>();
             if (_data != null)
                 foreach (var entry in _data.scenes)
@@ -324,22 +295,18 @@ namespace GossipSDK.Editor
                     if (!allStoredPaths.ContainsKey(entry.sceneName))
                         allStoredPaths[entry.sceneName] = new HashSet<string>(entry.instrumentedPaths);
                 }
-
             for (int i = 0; i < SceneManager.sceneCount; i++)
             {
                 var scene = SceneManager.GetSceneAt(i);
                 if (!scene.isLoaded) continue;
-
                 string sceneName = scene.name;
                 var sceneList = new List<ScannedObject>();
                 _sceneObjects[sceneName] = sceneList;
-
                 var storedPaths = allStoredPaths.ContainsKey(sceneName) ? allStoredPaths[sceneName] : new HashSet<string>();
                 var scannedPaths = new HashSet<string>();
                 foreach (var root in scene.GetRootGameObjects())
                     CollectInteractableObjectsForScan(root, sceneName, scannedPaths, storedPaths, sceneList);
             }
-
             _hasNewObjects = false;
             _isScanning = false;
             Repaint();
@@ -351,22 +318,17 @@ namespace GossipSDK.Editor
         {
             if (go == null) return;
             string path = GetHierarchyPath(go);
-
             if (IsInteractable(go) && !scannedPaths.Contains(path))
             {
                 scannedPaths.Add(path);
-
                 bool hadInteractable = go.GetComponent<InteractableComponent>() != null;
                 bool wasStored = storedPaths.Contains(path);
-
                 if (!hadInteractable)
                 {
                     Undo.AddComponent<InteractableComponent>(go);
                     hadInteractable = true;
                 }
-
                 bool isNew = !wasStored;
-
                 sceneList.Add(new ScannedObject
                 {
                     sceneName = sceneName,
@@ -376,16 +338,13 @@ namespace GossipSDK.Editor
                     hasInteractable = hadInteractable,
                     isNew = isNew
                 });
-
                 if (isNew && _data != null)
                 {
                     var entry = GetOrCreateSceneEntry(sceneName);
-                    if (!entry.instrumentedPaths.Contains(path))
-                        entry.instrumentedPaths.Add(path);
+                    if (!entry.instrumentedPaths.Contains(path)) entry.instrumentedPaths.Add(path);
                     EditorUtility.SetDirty(_data);
                 }
             }
-
             foreach (Transform child in go.transform)
                 CollectInteractableObjectsForScan(child.gameObject, sceneName, scannedPaths, storedPaths, sceneList);
         }
@@ -394,8 +353,7 @@ namespace GossipSDK.Editor
         {
             if (go == null) return;
             string path = GetHierarchyPath(go);
-            if (IsInteractable(go) && !scannedPaths.Contains(path))
-                scannedPaths.Add(path);
+            if (IsInteractable(go) && !scannedPaths.Contains(path)) scannedPaths.Add(path);
             foreach (Transform child in go.transform)
                 CollectInteractableObjects(child.gameObject, sceneName, scannedPaths);
         }
@@ -408,69 +366,43 @@ namespace GossipSDK.Editor
                 if (lowerName.Contains(keyword)) return false;
             foreach (var keyword in InteractableKeywords)
                 if (lowerName.Contains(keyword.ToLower())) return true;
-            if (go.GetComponent<Rigidbody>() != null)
-                return true;
-            // Include: tag
-            if (go.tag == "Interactable" || go.tag == "Pickup")
-                return true;
+            if (go.GetComponent<Rigidbody>() != null) return true;
+            if (go.tag == "Interactable" || go.tag == "Pickup") return true;
             return false;
         }
 
-        // ——— Apply / Remove ——————————————————————————————————————————————————
+        // --- Apply / Remove ---
         private void ApplyInstrumentation()
         {
             if (_data == null) return;
-
             var dirtySceneNames = new List<string>();
-
             foreach (var kvp in _sceneObjects)
             {
                 string sceneName = kvp.Key;
                 var entry = GetOrCreateSceneEntry(sceneName);
                 int changed = 0;
-
                 foreach (var obj in kvp.Value)
                 {
-                    if (obj.isChecked)
-                    {
-                        if (!entry.instrumentedPaths.Contains(obj.hierarchyPath))
-                        { entry.instrumentedPaths.Add(obj.hierarchyPath); changed++; }
-                    }
-                    else
-                    {
-                        if (entry.instrumentedPaths.Contains(obj.hierarchyPath))
-                        { entry.instrumentedPaths.Remove(obj.hierarchyPath); changed++; }
-                    }
+                    if (obj.isChecked) { if (!entry.instrumentedPaths.Contains(obj.hierarchyPath)) { entry.instrumentedPaths.Add(obj.hierarchyPath); changed++; } }
+                    else { if (entry.instrumentedPaths.Contains(obj.hierarchyPath)) { entry.instrumentedPaths.Remove(obj.hierarchyPath); changed++; } }
                 }
-
                 if (changed > 0) dirtySceneNames.Add(sceneName);
             }
-
             EditorUtility.SetDirty(_data);
             AssetDatabase.SaveAssets();
-
             foreach (var name in dirtySceneNames)
             {
                 var sc = SceneManager.GetSceneByName(name);
                 if (sc.isLoaded) EditorSceneManager.MarkSceneDirty(sc);
             }
-
-            EditorUtility.DisplayDialog(
-                "Gossip Analytics — Applied!",
-                "Instrumentation data saved across " + dirtySceneNames.Count + " scene(s).",
-                "OK");
-
+            EditorUtility.DisplayDialog("Gossip Analytics — Applied!", "Data saved across " + dirtySceneNames.Count + " scene(s).", "OK");
             ScanAllScenes();
         }
 
         private void RemoveInstrumentationForObject(ScannedObject obj)
         {
             var go = FindGameObjectByPath(obj.hierarchyPath, obj.sceneName);
-            if (go != null)
-            {
-                var ic = go.GetComponent<InteractableComponent>();
-                if (ic != null) Undo.DestroyObjectImmediate(ic);
-            }
+            if (go != null) { var ic = go.GetComponent<InteractableComponent>(); if (ic != null) Undo.DestroyObjectImmediate(ic); }
             if (_data != null)
             {
                 var entry = _data.scenes.FirstOrDefault(e => e.sceneName == obj.sceneName);
@@ -479,7 +411,7 @@ namespace GossipSDK.Editor
             }
         }
 
-        // ——— Data helpers ————————————————————————————————————————————————————
+        // --- Data helpers ---
         private void LoadOrCreateData()
         {
             string[] guids = AssetDatabase.FindAssets("t:GossipInstrumentationData");
@@ -511,11 +443,7 @@ namespace GossipSDK.Editor
         {
             string path = go.name;
             Transform parent = go.transform.parent;
-            while (parent != null)
-            {
-                path = parent.name + "/" + path;
-                parent = parent.parent;
-            }
+            while (parent != null) { path = parent.name + "/" + path; parent = parent.parent; }
             return path;
         }
 
@@ -549,14 +477,12 @@ namespace GossipSDK.Editor
                     obj.isChecked = value;
         }
 
-        // ——— Player auto-detect ——————————————————————————————————————————————
+        // --- Player auto-detect ---
         private void AutoDetectPlayer()
         {
             if (_playerObject != null) return;
-
             var byTag = GameObject.FindGameObjectsWithTag("Player");
             if (byTag.Length > 0) { _playerObject = byTag[0]; return; }
-
             try
             {
                 var xrOriginType = AppDomain.CurrentDomain.GetAssemblies()
@@ -569,30 +495,54 @@ namespace GossipSDK.Editor
                 }
             }
             catch { }
-
             var allGOs = Object.FindObjectsOfType<GameObject>();
             foreach (var go in allGOs)
             {
                 string lname = go.name.ToLower();
-                if (lname.Contains("xrrig") || lname.Contains("xr rig"))
-                {
-                    _playerObject = go;
-                    return;
-                }
+                if (lname.Contains("xrrig") || lname.Contains("xr rig")) { _playerObject = go; return; }
             }
-
             _mainCamera = Camera.main;
         }
 
-        // ——— Tab: Trackers (opt-out) —————————————————————————————————————————
+        // --- Auto-add trackers on open ---
+        private void AutoAddTrackers()
+        {
+            foreach (var info in _recommendedTrackers)
+            {
+                if (info.requiresConfiguration) continue;
+                var trackerType = AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
+                    .FirstOrDefault(tp => tp.Name == info.componentTypeName);
+                if (trackerType == null) continue;
+                bool isPresent = (Object.FindObjectOfType(trackerType) as Component) != null;
+                if (isPresent) continue;
+                if (info.target == TrackerTarget.AnyObject)
+                {
+                    var manager = Object.FindObjectOfType<GossipManager>();
+                    if (manager != null) Undo.AddComponent(manager.gameObject, trackerType);
+                }
+                else if (info.target == TrackerTarget.Player && _playerObject != null)
+                {
+                    Undo.AddComponent(_playerObject, trackerType);
+                }
+                else if (info.target == TrackerTarget.Camera)
+                {
+                    if (_mainCamera == null) _mainCamera = Camera.main;
+                    if (_mainCamera != null) Undo.AddComponent(_mainCamera.gameObject, trackerType);
+                }
+            }
+        }
+
+        // --- Tab: Trackers ---
         private void DrawTrackersTab()
         {
             EditorGUILayout.Space(6);
-            EditorGUILayout.LabelField("Scene Trackers", EditorStyles.boldLabel);
-
-            // Player / Camera
+            EditorGUILayout.HelpBox(
+                "Trackers collect analytics data from your player and device. Spatial trackers " +
+                "require a Player object assigned below. Device trackers run automatically.",
+                MessageType.Info);
+            EditorGUILayout.Space(4);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Player:", GUILayout.Width(60));
             _playerObject = (GameObject)EditorGUILayout.ObjectField(_playerObject, typeof(GameObject), true);
@@ -604,7 +554,14 @@ namespace GossipSDK.Editor
                     EditorUtility.DisplayDialog("Player Not Found", "No object with tag Player, XROrigin, or XR Rig was found.", "OK");
             }
             EditorGUILayout.EndHorizontal();
-
+            if (_playerObject == null)
+            {
+                var hintStyle = new GUIStyle(EditorStyles.miniLabel);
+                hintStyle.wordWrap = true;
+                EditorGUILayout.LabelField(
+                    "Player: Assign your XR player root here. Spatial trackers (Position, Rotation, Balance) " +
+                    "attach to this object. Without it, spatial data will not be captured.", hintStyle);
+            }
             if (_mainCamera == null) _mainCamera = Camera.main;
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Camera:", GUILayout.Width(60));
@@ -612,11 +569,8 @@ namespace GossipSDK.Editor
             EditorGUILayout.ObjectField(_mainCamera, typeof(Camera), true);
             EditorGUI.EndDisabledGroup();
             EditorGUILayout.EndHorizontal();
-
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space(8);
-
-            // Global Add All / Remove All
             int missingCount = 0, presentCount = 0;
             foreach (var info in _recommendedTrackers)
             {
@@ -626,20 +580,18 @@ namespace GossipSDK.Editor
                 bool present = tp != null && (Object.FindObjectOfType(tp) as Component) != null;
                 if (present) presentCount++; else missingCount++;
             }
-
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             if (missingCount > 0 && GUILayout.Button("Add All to Scene", GUILayout.Width(130)))
                 AddAllTrackers();
-            if (presentCount > 0 && GUILayout.Button("Remove All", GUILayout.Width(90)))
+            if (presentCount > 0 && GUILayout.Button("Deselect All", GUILayout.Width(90)))
             {
-                bool confirm = EditorUtility.DisplayDialog("Remove All Trackers", "Remove all tracker components from the scene?", "Remove All", "Cancel");
+                bool confirm = EditorUtility.DisplayDialog("Deselect All Trackers", "Remove all tracker components from the scene?", "Deselect All", "Cancel");
                 if (confirm) RemoveAllTrackers();
             }
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space(4);
 
-            // Per-tracker rows
             string currentCategory = null;
             foreach (var info in _recommendedTrackers)
             {
@@ -649,23 +601,17 @@ namespace GossipSDK.Editor
                     EditorGUILayout.Space(4);
                     EditorGUILayout.LabelField(currentCategory, EditorStyles.boldLabel);
                 }
-
                 var trackerType = AppDomain.CurrentDomain.GetAssemblies()
                     .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
                     .FirstOrDefault(tp => tp.Name == info.componentTypeName);
-
                 Component existing = trackerType != null ? (Object.FindObjectOfType(trackerType) as Component) : null;
                 bool isPresent = existing != null;
-
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
                 EditorGUILayout.BeginHorizontal();
-
                 string statusIcon = isPresent ? "✅" : "○";
                 EditorGUILayout.LabelField(statusIcon + "  " + info.displayName, GUILayout.ExpandWidth(true));
-
                 bool playerNeeded = info.target == TrackerTarget.Player || info.target == TrackerTarget.Camera;
                 bool canAdd = !playerNeeded || _playerObject != null || info.target == TrackerTarget.Camera;
-
                 if (!isPresent)
                 {
                     EditorGUI.BeginDisabledGroup(!canAdd);
@@ -677,12 +623,12 @@ namespace GossipSDK.Editor
                 {
                     var prevBg = GUI.backgroundColor;
                     GUI.backgroundColor = new Color(0.9f, 0.3f, 0.3f);
-                    if (GUILayout.Button("Remove", GUILayout.Width(60)))
+                    if (GUILayout.Button("Deselect", GUILayout.Width(65)))
                     {
                         bool confirm = EditorUtility.DisplayDialog(
-                            "Remove " + info.displayName,
+                            "Deselect " + info.displayName + "?",
                             "Removing this tracker will stop recording: " + info.description + " Are you sure?",
-                            "Remove", "Cancel");
+                            "Deselect", "Cancel");
                         if (confirm)
                         {
                             Undo.DestroyObjectImmediate(existing);
@@ -691,21 +637,18 @@ namespace GossipSDK.Editor
                     }
                     GUI.backgroundColor = prevBg;
                 }
-
                 EditorGUILayout.EndHorizontal();
-
                 var descStyle = new GUIStyle(EditorStyles.miniLabel);
                 descStyle.wordWrap = true;
                 string desc = info.description;
                 if (info.requiresConfiguration) desc += " ⚠ Requires configuration in Inspector after adding.";
                 if (playerNeeded && _playerObject == null && !isPresent) desc = "⚠ Assign Player first. " + desc;
                 EditorGUILayout.LabelField(desc, descStyle);
-
                 EditorGUILayout.EndVertical();
             }
         }
 
-        // ——— Tracker helpers —————————————————————————————————————————————————
+        // --- Tracker helpers ---
         private void AddTracker(TrackerInfo info)
         {
             var trackerType = AppDomain.CurrentDomain.GetAssemblies()
@@ -716,7 +659,6 @@ namespace GossipSDK.Editor
                 EditorUtility.DisplayDialog("Not Found", info.componentTypeName + " not found. Make sure the SDK is fully imported.", "OK");
                 return;
             }
-
             GameObject target = null;
             if (info.target == TrackerTarget.Player && _playerObject != null)
                 target = _playerObject;
@@ -761,22 +703,20 @@ namespace GossipSDK.Editor
                     .FirstOrDefault(t => t.Name == info.componentTypeName);
                 if (tp == null) continue;
                 var existing = Object.FindObjectOfType(tp) as Component;
-                if (existing != null)
-                {
-                    EditorSceneManager.MarkSceneDirty(existing.gameObject.scene);
-                    Undo.DestroyObjectImmediate(existing);
-                }
+                if (existing != null) { EditorSceneManager.MarkSceneDirty(existing.gameObject.scene); Undo.DestroyObjectImmediate(existing); }
             }
         }
 
-        // ——— Tab: Permissions (opt-out) ——————————————————————————————————————
+        // --- Tab: Permissions ---
         private void DrawPermissionsTab()
         {
             EditorGUILayout.Space(6);
-            EditorGUILayout.LabelField("VR Permissions", EditorStyles.boldLabel);
-
+            EditorGUILayout.HelpBox(
+                "These Android permissions are required for full data collection on Meta Quest VR devices. " +
+                "All are pre-enabled. Deselect only if your app does not use that feature.",
+                MessageType.Info);
+            EditorGUILayout.Space(4);
             var handler = Object.FindObjectOfType<VRPermissionsHandler>();
-
             if (handler == null)
             {
                 var go = new GameObject("VRPermissionsHandler");
@@ -785,46 +725,51 @@ namespace GossipSDK.Editor
                 EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
                 handler = go.GetComponent<VRPermissionsHandler>();
             }
-
-            EditorGUILayout.HelpBox("✅ VRPermissionsHandler active — Your app will request these permissions on Meta Quest launch.", MessageType.Info);
+            EditorGUILayout.HelpBox("✅ VRPermissionsHandler active — Your app will request the selected permissions on Meta Quest launch.", MessageType.Info);
             EditorGUILayout.Space(6);
+            var serializedHandler = new SerializedObject(handler);
+            serializedHandler.Update();
+            var propEye = serializedHandler.FindProperty("enableEyeTracking");
+            var propSpatial = serializedHandler.FindProperty("enableSpatialScene");
+            var propCamera = serializedHandler.FindProperty("enableHeadsetCamera");
+            var propMic = serializedHandler.FindProperty("enableMicrophone");
 
-            EditorGUILayout.LabelField("Permissions included:", EditorStyles.boldLabel);
+            DrawPermissionRow(serializedHandler, propEye,
+                "Eye Tracking",
+                "Gaze data and fixation. Powers heat-of-gaze analytics.",
+                "Deselecting will stop gaze data capture. Heat-of-gaze analytics will not function.");
 
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField("✅ Eye Tracking", GUILayout.Width(150));
-                EditorGUILayout.LabelField("Gaze data and fixation. Powers heat-of-gaze analytics.", EditorStyles.miniLabel);
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField("✅ Scene / Spatial", GUILayout.Width(150));
-                EditorGUILayout.LabelField("Environment mesh for spatial heatmaps.", EditorStyles.miniLabel);
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField("✅ Headset Camera", GUILayout.Width(150));
-                EditorGUILayout.LabelField("Passthrough and MR features.", EditorStyles.miniLabel);
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField("✅ Microphone", GUILayout.Width(150));
-                EditorGUILayout.LabelField("Audio reaction and voice interaction tracking.", EditorStyles.miniLabel);
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.EndVertical();
+            DrawPermissionRow(serializedHandler, propSpatial,
+                "Scene / Spatial",
+                "Environment mesh for spatial heatmaps.",
+                "Deselecting will disable spatial heatmaps. Environment data will not be captured.");
+
+            DrawPermissionRow(serializedHandler, propCamera,
+                "Headset Camera",
+                "Passthrough and MR features.",
+                "Deselecting will disable passthrough and mixed reality features.");
+
+            DrawPermissionRow(serializedHandler, propMic,
+                "Microphone",
+                "Emotion detection via brief audio samples. Privacy: audio processed on-device and discarded. No recordings stored or transmitted.",
+                "Deselecting will disable audio-based emotion detection.");
+
+            serializedHandler.ApplyModifiedProperties();
 
             EditorGUILayout.Space(12);
-
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             var prevBg = GUI.backgroundColor;
             GUI.backgroundColor = new Color(0.7f, 0.3f, 0.3f);
-            if (GUILayout.Button("Remove VRPermissionsHandler", GUILayout.Width(200)))
+            if (GUILayout.Button("Deselect VRPermissionsHandler", GUILayout.Width(210)))
             {
-                string msg = "Removing VRPermissionsHandler will disable the following on Meta Quest:" +
+                string msg = "Deselecting VRPermissionsHandler will disable the following on Meta Quest:" +
                 System.Environment.NewLine + "• Eye Tracking — gaze data will not be captured" +
                 System.Environment.NewLine + "• Spatial / Scene — heatmap environment data will be lost" +
                 System.Environment.NewLine + "• Headset Camera — passthrough and MR will not work" +
                 System.Environment.NewLine + "• Microphone — audio reaction tracking will be silent" +
                 System.Environment.NewLine + System.Environment.NewLine + "Are you sure?";
-                bool confirm = EditorUtility.DisplayDialog("Remove VRPermissionsHandler", msg, "Remove Anyway", "Cancel");
+                bool confirm = EditorUtility.DisplayDialog("Deselect VRPermissionsHandler", msg, "Deselect Anyway", "Cancel");
                 if (confirm && handler != null)
                 {
                     Undo.DestroyObjectImmediate(handler.gameObject);
@@ -833,6 +778,35 @@ namespace GossipSDK.Editor
             }
             GUI.backgroundColor = prevBg;
             EditorGUILayout.EndHorizontal();
+        }
+
+        // --- DrawPermissionRow ---
+        private void DrawPermissionRow(SerializedObject so, SerializedProperty prop, string label, string description, string deselectImpact)
+        {
+            if (prop == null) return;
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.BeginHorizontal();
+            string icon = prop.boolValue ? "✅" : "○";
+            EditorGUILayout.LabelField(icon + "  " + label, GUILayout.ExpandWidth(true));
+            bool newVal = EditorGUILayout.Toggle(prop.boolValue, GUILayout.Width(18));
+            if (newVal != prop.boolValue)
+            {
+                if (!newVal)
+                {
+                    bool confirm = EditorUtility.DisplayDialog(
+                        "Deselect " + label + " permission?",
+                        deselectImpact,
+                        "Deselect", "Cancel");
+                    if (confirm) prop.boolValue = false;
+                }
+                else
+                    prop.boolValue = true;
+            }
+            EditorGUILayout.EndHorizontal();
+            var descStyle = new GUIStyle(EditorStyles.miniLabel);
+            descStyle.wordWrap = true;
+            EditorGUILayout.LabelField(description, descStyle);
+            EditorGUILayout.EndVertical();
         }
 
     }
