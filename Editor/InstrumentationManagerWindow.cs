@@ -21,6 +21,7 @@ namespace GossipSDK.Editor
         private Vector2 _scrollPos;
         private bool _isScanning = false;
         private static bool _dataPreloaded = false;
+        private SerializedObject _vrHandlerSO;
         private int _selectedTab = 0;
         private readonly string[] _tabLabels = new string[] { "Interactables", "Trackers", "Permissions" };
         private GameObject _playerObject = null;
@@ -777,34 +778,35 @@ namespace GossipSDK.Editor
             }
             EditorGUILayout.HelpBox("✅ VRPermissionsHandler active — Your app will request the selected permissions on Android VR device launch.", MessageType.Info);
             EditorGUILayout.Space(6);
-            var serializedHandler = new SerializedObject(handler);
-            serializedHandler.Update();
-            var propEye = serializedHandler.FindProperty("enableEyeTracking");
-            var propSpatial = serializedHandler.FindProperty("enableSpatialScene");
-            var propCamera = serializedHandler.FindProperty("enableHeadsetCamera");
-            var propMic = serializedHandler.FindProperty("enableMicrophone");
+            if (_vrHandlerSO == null || _vrHandlerSO.targetObject != handler)
+                _vrHandlerSO = new SerializedObject(handler);
+            _vrHandlerSO.Update();
+            var propEye = _vrHandlerSO.FindProperty("enableEyeTracking");
+            var propSpatial = _vrHandlerSO.FindProperty("enableSpatialScene");
+            var propCamera = _vrHandlerSO.FindProperty("enableHeadsetCamera");
+            var propMic = _vrHandlerSO.FindProperty("enableMicrophone");
 
-            DrawPermissionRow(serializedHandler, propEye,
+            DrawPermissionRow(_vrHandlerSO, propEye,
                 "Eye Tracking",
                 "Gaze data and fixation. Powers heat-of-gaze analytics.",
                 "Deselecting will stop gaze data capture. Heat-of-gaze analytics will not function.");
 
-            DrawPermissionRow(serializedHandler, propSpatial,
+            DrawPermissionRow(_vrHandlerSO, propSpatial,
                 "Scene / Spatial",
                 "Environment mesh for spatial heatmaps.",
                 "Deselecting will disable spatial heatmaps. Environment data will not be captured.");
 
-            DrawPermissionRow(serializedHandler, propCamera,
+            DrawPermissionRow(_vrHandlerSO, propCamera,
                 "Headset Camera",
                 "Passthrough and MR features.",
                 "Deselecting will disable passthrough and mixed reality features.");
 
-            DrawPermissionRow(serializedHandler, propMic,
+            DrawPermissionRow(_vrHandlerSO, propMic,
                 "Microphone",
                 "Emotion detection via brief audio samples. Privacy: audio processed on-device and discarded. No recordings stored or transmitted.",
                 "Deselecting will disable audio-based emotion detection.");
 
-            serializedHandler.ApplyModifiedProperties();
+            _vrHandlerSO.ApplyModifiedProperties();
 
             EditorGUILayout.Space(12);
             EditorGUILayout.BeginHorizontal();
@@ -824,6 +826,7 @@ namespace GossipSDK.Editor
                 {
                     Undo.DestroyObjectImmediate(handler.gameObject);
                     EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+                    _vrHandlerSO = null;
                 }
             }
             GUI.backgroundColor = prevBg;
