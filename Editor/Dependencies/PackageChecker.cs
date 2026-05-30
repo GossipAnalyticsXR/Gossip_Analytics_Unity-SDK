@@ -52,7 +52,7 @@ namespace GossipAnalytics.Editor.Dependencies
             AutoFixActiveInputHandling();
 
             // Detect missing packages via reflection
-            bool missingSocketIO = System.Type.GetType("SocketIOClient.SocketIO, SocketIOUnity") == null;
+            bool missingSocketIO = System.Type.GetType("SocketIOUnity, SocketIOUnityAssembly") == null;
             bool missingUniTask  = System.Type.GetType("Cysharp.Threading.Tasks.UniTask, UniTask") == null;
             bool missingXRMgmt   = System.Type.GetType("UnityEngine.XR.Management.XRGeneralSettings, Unity.XR.Management") == null;
             bool missingInputSys = System.Type.GetType("UnityEngine.InputSystem.InputSystem, Unity.InputSystem") == null;
