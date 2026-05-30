@@ -76,7 +76,7 @@ namespace GossipSDK.Editor
         };
 
         // ─── Menu entry ──────────────────────────────────────────────────────
-        [MenuItem("Window/Gossip Analytics/Instrumentation Manager")]
+        [MenuItem("Window/Gossip Analytics/Instrumentation Manager", false, 2)]
         public static void Open()
         {
             GetWindow<InstrumentationManagerWindow>("\ud83c\udfaf Instrumentation Manager");
