@@ -431,12 +431,8 @@ namespace GossipSDK.Editor
                 return true;
 
             // Include: tag contains "Interactable" or "Pickup"
-            try
-            {
-                if (go.CompareTag("Interactable") || go.CompareTag("Pickup"))
-                    return true;
-            }
-            catch { /* tag not defined */ }
+            if (go.tag == "Interactable" || go.tag == "Pickup")
+                return true;
 
             return false;
         }
