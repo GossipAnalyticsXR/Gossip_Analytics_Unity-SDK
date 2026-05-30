@@ -86,9 +86,9 @@ namespace GossipSDK.Editor
         public static void Open()
         {
             EditorUtility.DisplayProgressBar("Gossip Analytics", "Scanning scenes, please wait...", 0.2f);
-            LoadOrCreateDataAsset();
             _dataPreloaded = true;
             var win = GetWindow<InstrumentationManagerWindow>("Instrumentation Manager");
+            win.LoadOrCreateDataAsset();
             EditorUtility.DisplayProgressBar("Gossip Analytics", "Building object list...", 0.8f);
             win.ScanNow();
             EditorUtility.ClearProgressBar();
