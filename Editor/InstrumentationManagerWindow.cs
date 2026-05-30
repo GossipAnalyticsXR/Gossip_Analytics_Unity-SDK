@@ -86,6 +86,7 @@ namespace GossipSDK.Editor
         public static void Open()
         {
             EditorUtility.DisplayProgressBar("Gossip Analytics", "Scanning scenes, please wait...", 0.2f);
+            LoadOrCreateDataAsset();
             _dataPreloaded = true;
             var win = GetWindow<InstrumentationManagerWindow>("Instrumentation Manager");
             EditorUtility.DisplayProgressBar("Gossip Analytics", "Building object list...", 0.8f);
@@ -96,8 +97,8 @@ namespace GossipSDK.Editor
         // --- Lifecycle ---
         private void OnEnable()
         {
+            LoadOrCreateDataAsset();
             if (_dataPreloaded) { _dataPreloaded = false; return; }
-            LoadOrCreateData();
             ScanAllScenes();
             AutoDetectPlayer();
             AutoAddTrackers();
@@ -461,7 +462,7 @@ namespace GossipSDK.Editor
         }
 
         // --- Data helpers ---
-        private void LoadOrCreateData()
+        private void LoadOrCreateDataAsset()
         {
             string[] guids = AssetDatabase.FindAssets("t:GossipInstrumentationData");
             if (guids.Length > 0)
