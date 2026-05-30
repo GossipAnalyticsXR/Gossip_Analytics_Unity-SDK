@@ -97,8 +97,12 @@ namespace GossipSDK.Editor
                 "OK");
 
             EditorApplication.delayCall += () => {
+                EditorUtility.FocusProjectWindow();
                 Selection.activeObject = settingsAsset;
                 EditorGUIUtility.PingObject(settingsAsset);
+                var inspectorType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.InspectorWindow");
+                if (inspectorType != null)
+                    EditorWindow.GetWindow(inspectorType);
             };
         }
     }
