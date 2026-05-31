@@ -187,6 +187,13 @@ namespace GossipSDK.Editor
             },
         };
         private static Dictionary<string, Type> _trackerTypeCache = null;
+        private static Type _cachedXROriginType;
+        private static Type _cachedXRInputModalityManagerType;
+        private static bool _healthCheckTypesCached;
+        private static GUIStyle _wordWrapMiniLabel;
+        private static GUIStyle _footerSummaryStyle;
+        private static GUIStyle _footerHintStyle;
+        private static GUIContent _doneButtonContent;
         private static Dictionary<string, Component> _trackerComponentCache = new Dictionary<string, Component>();
 
         // --- Menu entry ---
@@ -333,6 +340,20 @@ namespace GossipSDK.Editor
         // --- Footer ---
         private void DrawFooter(Rect rect)
         {
+            if (_footerSummaryStyle == null)
+            {
+                _footerSummaryStyle = new GUIStyle(EditorStyles.label);
+                _footerSummaryStyle.normal.textColor = Color.white;
+                _footerSummaryStyle.alignment = TextAnchor.MiddleLeft;
+                _footerSummaryStyle.fontSize = 11;
+                _footerSummaryStyle.richText = true;
+            }
+            if (_footerHintStyle == null)
+            {
+                _footerHintStyle = new GUIStyle(EditorStyles.miniLabel);
+                _footerHintStyle.normal.textColor = new Color(1f, 1f, 1f, 0.45f);
+                _footerHintStyle.alignment = TextAnchor.MiddleRight;
+            }
             EditorGUI.DrawRect(rect, new Color(0.15f, 0.15f, 0.15f, 1f));
             int trackedCount = 0;
             foreach (var kvp in _sceneObjects)
@@ -368,18 +389,12 @@ namespace GossipSDK.Editor
                 objColor,  trackedCount,   totalObjects,
                 trkColor,  activeTrackers, totalTrackers,
                 permColor, enabledPerms,   totalPerms);
-            var summaryStyle = new GUIStyle(EditorStyles.label);
-            summaryStyle.normal.textColor = Color.white;
-            summaryStyle.alignment = TextAnchor.MiddleLeft;
-            summaryStyle.fontSize = 11;
-            summaryStyle.richText = true;
+            var summaryStyle = _footerSummaryStyle;
             float btnW = 160f;
             Rect lblRect = new Rect(rect.x + 8, rect.y, rect.width - btnW - 20, rect.height);
             Rect btnRect = new Rect(rect.xMax - btnW - 8, rect.y + 4, btnW, rect.height - 8);
             GUI.Label(lblRect, summary, summaryStyle);
-            var hintStyle = new GUIStyle(EditorStyles.miniLabel);
-            hintStyle.normal.textColor = new Color(1f, 1f, 1f, 0.45f);
-            hintStyle.alignment = TextAnchor.MiddleRight;
+            var hintStyle = _footerHintStyle;
             Rect hintRect = new Rect(rect.xMax - btnW - 8 - 170, rect.y, 165f, rect.height);
             GUI.Label(hintRect, "▶ Play to test — then build →", hintStyle);
             var doneStyle = new GUIStyle(GUI.skin.button);
@@ -400,9 +415,12 @@ namespace GossipSDK.Editor
             string doneLabel = buildReady ? "✅ Done — Save & Close" : "⚠ Save & Close Anyway";
             var prevBg = GUI.backgroundColor;
             GUI.backgroundColor = doneColor;
+            if (_doneButtonContent == null)
+                _doneButtonContent = new GUIContent("",
+                    "Saves all instrumentation data and open scenes, then closes this window.\nRun this before building your APK.");
+            _doneButtonContent.text = doneLabel;
             if (GUI.Button(btnRect,
-                new GUIContent(doneLabel,
-                    "Saves all instrumentation data and open scenes, then closes this window.\nRun this before building your APK."),
+                _doneButtonContent
                 doneStyle))
             {
                 AssetDatabase.SaveAssets();
@@ -953,9 +971,8 @@ namespace GossipSDK.Editor
             int missingCount = 0, presentCount = 0;
             foreach (var info in _recommendedTrackers)
             {
-                var tp = GetTrackerType(info.componentTypeName);
-                bool present = tp != null && (Object.FindObjectOfType(tp) as Component) != null;
-                if (present) presentCount++; else missingCount++;
+                _trackerComponentCache.TryGetValue(info.componentTypeName, out var cachedComp);
+                if ((UnityEngine.Object)cachedComp != null) presentCount++; else missingCount++;
             }
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
@@ -970,6 +987,8 @@ namespace GossipSDK.Editor
             EditorGUILayout.Space(4);
 
             string currentCategory = null;
+            if (_wordWrapMiniLabel == null)
+                _wordWrapMiniLabel = new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
             foreach (var info in _recommendedTrackers)
             {
                 if (info.category != currentCategory)
@@ -1015,8 +1034,7 @@ namespace GossipSDK.Editor
                     GUI.backgroundColor = prevBg;
                 }
                 EditorGUILayout.EndHorizontal();
-                var descStyle = new GUIStyle(EditorStyles.miniLabel);
-                descStyle.wordWrap = true;
+                var descStyle = _wordWrapMiniLabel;
                 string desc = info.description;
                 if (info.requiresConfiguration) desc += " ⚠ Requires configuration in Inspector after adding.";
                 if (playerNeeded && _playerObject == null && !isPresent) desc = "⚠ Assign Player first. " + desc;
@@ -1188,13 +1206,20 @@ namespace GossipSDK.Editor
         // --- Scene Health Check (XR config warnings) ---
         private void DrawSceneHealthCheck()
         {
+            if (!_healthCheckTypesCached)
+            {
+                _cachedXROriginType = AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => { try { return a.GetTypes(); } catch { return Type.EmptyTypes; } })
+                    .FirstOrDefault(t => t.FullName == "UnityEngine.XR.Interaction.Toolkit.XROrigin");
+                _cachedXRInputModalityManagerType = AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => { try { return a.GetTypes(); } catch { return Type.EmptyTypes; } })
+                    .FirstOrDefault(t => t.FullName == "UnityEngine.XR.Interaction.Toolkit.XRInputModalityManager");
+                _healthCheckTypesCached = true;
+            }
             // 1. XROrigin Tracking Origin Mode = Not Specified (0)
             try
             {
-                var xrOriginType = AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } })
-                    .FirstOrDefault(tp => tp.FullName == "UnityEngine.XR.Interaction.Toolkit.XROrigin" ||
-                            tp.FullName == "Unity.XR.CoreUtils.XROrigin");
+                var xrOriginType = _cachedXROriginType;
                 if (xrOriginType != null)
                 {
                     var xrOrigin = Object.FindObjectOfType(xrOriginType) as Component;
@@ -1219,9 +1244,7 @@ namespace GossipSDK.Editor
             // 2. XRInputModalityManager Left/Right Hand not assigned
             try
             {
-                var modalityType = AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } })
-                    .FirstOrDefault(tp => tp.Name == "XRInputModalityManager");
+                var modalityType = _cachedXRInputModalityManagerType;
                 if (modalityType != null)
                 {
                     var manager = Object.FindObjectOfType(modalityType) as Component;
