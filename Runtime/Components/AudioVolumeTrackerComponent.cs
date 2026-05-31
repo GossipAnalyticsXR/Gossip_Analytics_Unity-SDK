@@ -13,6 +13,8 @@ namespace GossipSDK.Components
         public string masterParam = "MasterVolume";
         public string musicParam = "MusicVolume";
         public string sfxParam = "SfxVolume";
+        public float dbMin = -80f;
+        public float dbMax = 0f;
 
         [Header("Behaviour")]
         public bool autoReportOnStart = true;
@@ -98,7 +100,7 @@ namespace GossipSDK.Components
         {
             if (audioMixer.GetFloat(param, out float db))
             {
-                return Mathf.InverseLerp(-80f, 0f, db);
+                return Mathf.InverseLerp(dbMin, dbMax, db);
             }
             return 1f;
         }
