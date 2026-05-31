@@ -107,6 +107,7 @@ namespace GossipSDK.Editor
             },
         };
         private static Dictionary<string, Type> _trackerTypeCache = null;
+        private static Dictionary<string, Component> _trackerComponentCache = new Dictionary<string, Component>();
 
         // --- Menu entry ---
         [MenuItem("Window/Gossip Analytics/2 — Instrumentation Manager", false, 2)]
@@ -173,6 +174,23 @@ namespace GossipSDK.Editor
         // --- OnGUI ---
         private void OnGUI()
         {
+            // Refresh tracker component cache (max once every 2s)
+            if (EditorApplication.timeSinceStartup - _lastTrackerCountTime > 2.0)
+            {
+                _cachedActiveTrackers = 0;
+                _trackerComponentCache.Clear();
+                foreach (var t in _recommendedTrackers)
+                {
+                    var tp = GetTrackerType(t.componentTypeName);
+                    var comp = tp != null ? (Object.FindObjectOfType(tp) as Component) : null;
+                    if (comp != null)
+                    {
+                        _cachedActiveTrackers++;
+                        _trackerComponentCache[t.componentTypeName] = comp;
+                    }
+                }
+                _lastTrackerCountTime = EditorApplication.timeSinceStartup;
+            }
             int newTab = GUILayout.Toolbar(_selectedTab, _tabLabels, GUILayout.Height(30));
             if (newTab != _selectedTab && !_tabSwitching)
             {
@@ -208,7 +226,10 @@ namespace GossipSDK.Editor
             if (_tabSwitching)
             {
                 GUILayout.FlexibleSpace();
-                EditorGUILayout.LabelField("Loading...",
+                string[] _loadingLabels = { "Loading Interactables...", "Loading Trackers...", "Loading Permissions..." };
+                string _loadingText = (_tabSwitchTarget >= 0 && _tabSwitchTarget < _loadingLabels.Length)
+                    ? _loadingLabels[_tabSwitchTarget] : "Loading...";
+                EditorGUILayout.LabelField(_loadingText,
                     EditorStyles.centeredGreyMiniLabel, GUILayout.ExpandWidth(true));
                 GUILayout.FlexibleSpace();
                 EditorGUILayout.EndScrollView();
@@ -238,17 +259,6 @@ namespace GossipSDK.Editor
             int totalObjects = 0;
             foreach (var kvp2 in _sceneObjects)
                 totalObjects += kvp2.Value.Count;
-            if (EditorApplication.timeSinceStartup - _lastTrackerCountTime > 2.0)
-            {
-                _cachedActiveTrackers = 0;
-                foreach (var t in _recommendedTrackers)
-                {
-                    var tp = GetTrackerType(t.componentTypeName);
-                    if (tp != null && (Object.FindObjectOfType(tp) as Component) != null)
-                        _cachedActiveTrackers++;
-                }
-                _lastTrackerCountTime = EditorApplication.timeSinceStartup;
-            }
             int totalTrackers = _recommendedTrackers.Count;
             int activeTrackers = _cachedActiveTrackers;
             if (_cachedPermHandler == null)
@@ -848,7 +858,7 @@ namespace GossipSDK.Editor
                     EditorGUILayout.LabelField(currentCategory, EditorStyles.boldLabel);
                 }
                 var trackerType = GetTrackerType(info.componentTypeName);
-                Component existing = trackerType != null ? (Object.FindObjectOfType(trackerType) as Component) : null;
+                _trackerComponentCache.TryGetValue(info.componentTypeName, out Component existing);
                 bool isPresent = existing != null;
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
                 EditorGUILayout.BeginHorizontal();
@@ -876,6 +886,8 @@ namespace GossipSDK.Editor
                         if (confirm)
                         {
                             Undo.DestroyObjectImmediate(existing);
+                            _lastTrackerCountTime = 0;
+                            _trackerComponentCache.Clear();
                             EditorSceneManager.MarkSceneDirty(existing.gameObject.scene);
                         }
                     }
@@ -984,6 +996,7 @@ namespace GossipSDK.Editor
             Undo.AddComponent(target, trackerType);
             EditorSceneManager.MarkSceneDirty(target.scene);
             _lastTrackerCountTime = 0;
+            _trackerComponentCache.Clear();
         }
 
         private void AddAllTrackers()
@@ -1005,6 +1018,7 @@ namespace GossipSDK.Editor
                 var existing = Object.FindObjectOfType(tp) as Component;
                 if (existing != null) { EditorSceneManager.MarkSceneDirty(existing.gameObject.scene); Undo.DestroyObjectImmediate(existing); }
                 _lastTrackerCountTime = 0;
+                _trackerComponentCache.Clear();
             }
         }
 
