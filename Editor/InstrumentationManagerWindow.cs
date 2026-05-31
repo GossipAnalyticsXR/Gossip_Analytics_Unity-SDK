@@ -19,7 +19,7 @@ namespace GossipSDK.Editor
         private Dictionary<string, bool> _sceneFoldouts = new Dictionary<string, bool>();
         private bool _hasNewObjects = false;
         private Vector2 _scrollPos;
-        private bool _isScanning = false;
+        private static bool _isScanning = false;
         private static bool _dataPreloaded = false;
         private SerializedObject _vrHandlerSO;
         private static int _selectedTab = 0;
@@ -85,14 +85,13 @@ namespace GossipSDK.Editor
         [MenuItem("Window/Gossip Analytics/2 — Instrumentation Manager", false, 2)]
         public static void Open()
         {
-            EditorUtility.DisplayProgressBar("Gossip Analytics", "Scanning scenes, please wait...", 0.2f);
+            _selectedTab = 0;
             _dataPreloaded = true;
-            _selectedTab = 0;                    // force Interactables tab on every open
+            _isScanning = true;
             var win = GetWindow<InstrumentationManagerWindow>("Instrumentation Manager");
             win.LoadOrCreateDataAsset();
-            EditorUtility.DisplayProgressBar("Gossip Analytics", "Building object list...", 0.8f);
             win.ScanNow();
-            EditorUtility.ClearProgressBar();
+            _isScanning = false;
         }
 
         // --- Lifecycle ---
@@ -150,7 +149,12 @@ namespace GossipSDK.Editor
             _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
             if (_isScanning)
             {
-                EditorGUILayout.HelpBox("Loading - reading scene objects, please wait...", MessageType.None);
+                GUILayout.FlexibleSpace();
+                EditorGUILayout.LabelField("Scanning scenes, please wait...",
+                    EditorStyles.centeredGreyMiniLabel, GUILayout.ExpandWidth(true));
+                GUILayout.FlexibleSpace();
+                Repaint();
+                return;
             }
             else if (_selectedTab == 0)
                 DrawInteractablesTab();
