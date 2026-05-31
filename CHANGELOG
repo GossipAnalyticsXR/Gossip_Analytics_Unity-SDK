@@ -21,6 +21,39 @@ This project follows **Semantic Versioning** (MAJOR.MINOR.PATCH):
 
 ---
 
+## [2.0.0] — 2026-05
+
+### Added
+
+- Instrumentation Manager: 19 trackers across Spatial (5), Device (10), XR (4) categories
+- Instrumentation Manager: auto-assign Camera.main to UserPostureComponent.headTransform and EyeTrackingComponent.cam on add
+- Instrumentation Manager: auto-fill ExperienceInfoComponent.appVersion from Application.version and targetHardware from SystemInfo.deviceModel via SerializedObject delayCall
+- Instrumentation Manager: Scene Health Check (XROrigin TrackingOriginMode warning; XRInputModalityManager missing hand prefab warning)
+- Instrumentation Manager: preAddHint / postAddHint per-tracker guidance copy in Trackers tab
+- Instrumentation Manager: 3-tier device tracker fallback (GossipManager -> _playerObject -> "Gossip Device Trackers" host)
+- Instrumentation Manager: color-coded footer status bar (objects / trackers / permissions counts)
+- Instrumentation Manager: Done button cancel-safe (SaveCurrentModifiedScenesIfUserWantsTo return value checked)
+- GossipBuildPreprocessor: auto-disables EnableDebug before every build (IPreprocessBuildWithReport)
+- GossipUninstaller: clears Library/PackageCache/com.gossip.core@* after Client.Remove()
+- AudioVolumeTrackerComponent: configurable dB normalisation range via public fields dbMin (default -80f) and dbMax (default 0f)
+- AudioReactionTrackerComponent: 8 tunable [SerializeField] parameters — scoreWeightEnergy/Voice/Movement, signalThresholdEnergy/Voice/Movement, rmsNormCeiling, movementSpeedCeiling
+- EyeTrackingComponent: configurable head-fallback multipliers (headFallbackCooldownMultiplier = 1.5f, headFallbackThresholdMultiplier = 2.5f)
+- ConnectivityMonitorComponent: configurable speed test timeout via public int speedTestTimeoutSeconds (default 5)
+- HeatmapSceneAutoCapture: configurable captureDelay (default 0.5f) and cameraHeight (default 100f) as [SerializeField] fields
+- TextNarrationCoverageTracker: sdk_version now uses Application.version dynamically
+
+### Fixed
+
+- AudioReactionTrackerComponent: EventSeverity computed from real microphone RMS; MovementIntensity from normalised head velocity (were hardcoded 0.6 / 0.4)
+- AudioReactionTrackerComponent: trackedTransform auto-assigned in Start() via Camera.main?.transform fallback; TriggerSnippet() null guard added
+- HandControllerTrackingComponent: removed fabricated Send("left", Quaternion.identity) from Start() — first real data arrives from periodic Update() sampler
+- MistakeReporter: replaced silent GossipManager fallback with Debug.LogError + disabled = true; all data paths guarded with if (disabled) return
+- PlatformMonitorComponent: ControllersLatency and AmountDevicesInGame marked with TODO comments (not yet implemented)
+- Instrumentation Manager: Unity overloaded null check enforced for tracker component cache — prevents ArgumentException on stale destroyed-object references
+- Instrumentation Manager: AutoDetectPlayer and AutoAddTrackers now run on every Open() call, not only on cold domain-reload start
+
+---
+
 ## [1.1.1] - 2026-05-24
 ### Fixed
 - **EyeTrackingTracker.cs** and **InputUsageTracker.cs**: Removed invalid `[SerializeField]` attributes from `EntityData` auto-properties. `[SerializeField]` only works on instance fields, not auto-properties — Unity silently ignored them, causing `EntityData` values to never serialize correctly.
