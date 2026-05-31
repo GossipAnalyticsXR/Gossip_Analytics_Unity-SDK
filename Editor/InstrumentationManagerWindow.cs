@@ -543,14 +543,13 @@ namespace GossipSDK.Editor
         // --- Player auto-detect ---
         private void AutoDetectPlayer()
         {
-            if (_playerObject != null) return;
-            var byTag = GameObject.FindGameObjectsWithTag("Player");
-            if (byTag.Length > 0) { _playerObject = byTag[0]; return; }
+            // 1. XROrigin via reflection (highest priority - OpenXR standard)
             try
             {
                 var xrOriginType = AppDomain.CurrentDomain.GetAssemblies()
                     .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
-                    .FirstOrDefault(tp => tp.FullName == "UnityEngine.XR.Interaction.Toolkit.XROrigin");
+                    .FirstOrDefault(tp => tp.FullName == "UnityEngine.XR.Interaction.Toolkit.XROrigin" ||
+                                          tp.FullName == "Unity.XR.CoreUtils.XROrigin");
                 if (xrOriginType != null)
                 {
                     var xrOrigin = FindObjectOfType(xrOriginType) as Component;
@@ -558,12 +557,41 @@ namespace GossipSDK.Editor
                 }
             }
             catch { }
-            var allGOs = Object.FindObjectsOfType<GameObject>();
-            foreach (var go in allGOs)
+
+            // 2. Tag "Player"
+            if (_playerObject == null)
+                _playerObject = GameObject.FindWithTag("Player");
+
+            // 3. Direct parent of the Main Camera
+            if (_playerObject == null)
             {
-                string lname = go.name.ToLower();
-                if (lname.Contains("xrrig") || lname.Contains("xr rig")) { _playerObject = go; return; }
+                var cam = Camera.main;
+                if (cam != null && cam.transform.parent != null)
+                    _playerObject = cam.transform.parent.gameObject;
             }
+
+            // 4. Root of the Main Camera hierarchy
+            if (_playerObject == null)
+            {
+                var cam = Camera.main;
+                if (cam != null)
+                {
+                    var root = cam.transform.root.gameObject;
+                    if (root != cam.gameObject) _playerObject = root;
+                }
+            }
+
+            // 5. Generic OpenXR rig names as last resort
+            if (_playerObject == null)
+            {
+                string[] openXRRigNames = { "XR Origin", "XRRig", "XR Rig", "CameraRig", "PlayerRig", "Player" };
+                foreach (var rigName in openXRRigNames)
+                {
+                    var go = GameObject.Find(rigName);
+                    if (go != null) { _playerObject = go; break; }
+                }
+            }
+
             _mainCamera = Camera.main;
         }
 
@@ -621,8 +649,7 @@ namespace GossipSDK.Editor
                 var hintStyle = new GUIStyle(EditorStyles.miniLabel);
                 hintStyle.wordWrap = true;
                 EditorGUILayout.LabelField(
-                    "Player: Assign your XR player root here. Spatial trackers (Position, Rotation, Balance) " +
-                    "attach to this object. Without it, spatial data will not be captured.", hintStyle);
+                    "Assign your XR player root (XROrigin or equivalent). Spatial trackers attach here.", hintStyle);
             }
             if (_mainCamera == null) _mainCamera = Camera.main;
             EditorGUILayout.BeginHorizontal();
