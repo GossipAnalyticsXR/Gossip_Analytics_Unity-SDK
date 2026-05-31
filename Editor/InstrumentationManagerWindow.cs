@@ -314,8 +314,8 @@ namespace GossipSDK.Editor
                 doneStyle))
             {
                 AssetDatabase.SaveAssets();
-                EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
-                Close();
+                bool didSave = EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
+                if (didSave) Close();
             }
             GUI.backgroundColor = prevBg;
         }
