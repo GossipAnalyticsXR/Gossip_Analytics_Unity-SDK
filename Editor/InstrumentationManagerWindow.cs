@@ -94,6 +94,14 @@ namespace GossipSDK.Editor
             new TrackerInfo { componentTypeName = "ConnectivityMonitorComponent", displayName = "Connectivity Monitor", description = "Tracks network connection type and speed automatically.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
             new TrackerInfo { componentTypeName = "HandControllerTrackingComponent", displayName = "Hand & Controller Tracking", description = "Tracks hand and controller movement.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
             new TrackerInfo { componentTypeName = "InputUsageTrackerComponent", displayName = "Input Usage Tracker", description = "Tracks time using controllers vs hand tracking.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
+            new TrackerInfo {
+                componentTypeName = "AudioVolumeTrackerComponent",
+                displayName = "Audio Volume Tracker",
+                description = "Tracks in-app audio volume (master, music, SFX). Assign an AudioMixer for per-channel tracking, or leave empty to use AudioListener.volume.",
+                category = "Device",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = false
+            },
             // XR SPECIFIC
             new TrackerInfo {
                 componentTypeName = "EyeTrackingComponent",
@@ -104,6 +112,16 @@ namespace GossipSDK.Editor
                 requiresConfiguration = true,
                 preAddHint = "The SDK will auto-assign the main camera. Set worldMinXZ and worldMaxXZ to your scene's play area bounds (in metres) for accurate heatmaps.",
                 postAddHint = "Cam: auto-assigned ✔  |  You must still set worldMinXZ and worldMaxXZ (in metres) to your scene's play area bounds before building."
+            },
+            new TrackerInfo {
+                componentTypeName = "AudioReactionTrackerComponent",
+                displayName = "Audio Reaction Tracker",
+                description = "Detects emotional audio reactions via microphone. Requires Microphone permission.",
+                category = "XR",
+                target = TrackerTarget.Camera,
+                requiresConfiguration = true,
+                preAddHint = "The SDK will auto-assign the tracked transform to the main camera. Set worldMinXZ and worldMaxXZ to your scene bounds. Ensure Microphone permission is enabled in the Permissions tab.",
+                postAddHint = "Tracked Transform: auto-assigned ✔  |  Set worldMinXZ and worldMaxXZ (in metres) to your scene bounds. Microphone permission must be enabled in the Permissions tab."
             },
         };
         private static Dictionary<string, Type> _trackerTypeCache = null;
@@ -778,9 +796,12 @@ namespace GossipSDK.Editor
                 }
             // Queue auto-assign for trackers that have a transform field
             if (info.componentTypeName == "UserPostureComponent" ||
-                info.componentTypeName == "EyeTrackingComponent")
+                info.componentTypeName == "EyeTrackingComponent"  ||
+                info.componentTypeName == "AudioReactionTrackerComponent")
             {
-                string fieldName = info.componentTypeName == "UserPostureComponent" ? "headTransform" : "cam";
+                string fieldName = info.componentTypeName == "UserPostureComponent" ? "headTransform"
+                        : info.componentTypeName == "EyeTrackingComponent" ? "cam"
+                        : "trackedTransform";
                 string typeName  = info.componentTypeName;
                 EditorApplication.delayCall += () =>
                 {
@@ -918,6 +939,7 @@ namespace GossipSDK.Editor
                     string autoAssignField = null;
                     if (info.componentTypeName == "UserPostureComponent")   autoAssignField = "headTransform";
                     else if (info.componentTypeName == "EyeTrackingComponent") autoAssignField = "cam";
+                    else if (info.componentTypeName == "AudioReactionTrackerComponent") autoAssignField = "trackedTransform";
                     if (autoAssignField != null)
                     {
                         var checkSO = new SerializedObject(existing);
