@@ -284,11 +284,11 @@ namespace GossipSDK.Editor
                 doneColor = new Color(0.75f, 0.60f, 0.1f, 1f);
             else
                 doneColor = new Color(0.2f, 0.60f, 0.2f, 1f);
+            bool buildReady = trackersAllActive && permsComplete;
+            string doneLabel = buildReady ? "✅ Done — Save & Close" : "⚠ Save & Close Anyway";
             var prevBg = GUI.backgroundColor;
             GUI.backgroundColor = doneColor;
             if (GUI.Button(btnRect,
-            bool buildReady = trackersAllActive && permsComplete;
-            string doneLabel = buildReady ? "✅ Done — Save & Close" : "⚠ Save & Close Anyway";
                 new GUIContent(doneLabel,
                     "Saves all instrumentation data and open scenes, then closes this window.\nRun this before building your APK."),
                 doneStyle))
