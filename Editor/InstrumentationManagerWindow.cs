@@ -846,12 +846,43 @@ namespace GossipSDK.Editor
 
             _vrHandlerSO.ApplyModifiedProperties();
 
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Select All", GUILayout.Width(80)))
+            {
+                if (_vrHandlerSO != null)
+                {
+                    _vrHandlerSO.Update();
+                    foreach (var p in new[]{"enableEyeTracking","enableSpatialScene",
+                                             "enableHeadsetCamera","enableMicrophone"})
+                    {
+                        var prop = _vrHandlerSO.FindProperty(p);
+                        if (prop != null) prop.boolValue = true;
+                    }
+                    _vrHandlerSO.ApplyModifiedProperties();
+                }
+            }
+            if (GUILayout.Button("Deselect All", GUILayout.Width(90)))
+            {
+                if (_vrHandlerSO != null)
+                {
+                    _vrHandlerSO.Update();
+                    foreach (var p in new[]{"enableEyeTracking","enableSpatialScene",
+                                             "enableHeadsetCamera","enableMicrophone"})
+                    {
+                        var prop = _vrHandlerSO.FindProperty(p);
+                        if (prop != null) prop.boolValue = false;
+                    }
+                    _vrHandlerSO.ApplyModifiedProperties();
+                }
+            }
+            EditorGUILayout.EndHorizontal();
+
             EditorGUILayout.Space(12);
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             var prevBg = GUI.backgroundColor;
             GUI.backgroundColor = new Color(0.7f, 0.3f, 0.3f);
-            if (GUILayout.Button("Deselect VRPermissionsHandler", GUILayout.Width(210)))
+            if (GUILayout.Button("Remove Handler", GUILayout.Width(110)))
             {
                 string msg = "Deselecting VRPermissionsHandler will disable the following on Android XR devices:" +
                 System.Environment.NewLine + "• Eye Tracking — gaze data will not be captured" +
