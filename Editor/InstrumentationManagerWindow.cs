@@ -891,6 +891,12 @@ namespace GossipSDK.Editor
                         so.ApplyModifiedProperties();
                         EditorSceneManager.MarkSceneDirty(capturedComp.gameObject.scene);
                     }
+                    var hwProp = so.FindProperty("targetHardware");
+                    if (hwProp != null && (string.IsNullOrEmpty(hwProp.stringValue) || hwProp.stringValue == "Unity"))
+                    {
+                        hwProp.stringValue = SystemInfo.deviceModel;
+                        so.ApplyModifiedProperties();
+                    }
                 };
             }
             }
