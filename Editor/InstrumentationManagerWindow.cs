@@ -86,6 +86,7 @@ namespace GossipSDK.Editor
             // XR SPECIFIC
             new TrackerInfo { componentTypeName = "EyeTrackingComponent", displayName = "Eye Tracking", description = "Tracks gaze hits and fixation. Attach to camera.", category = "XR", target = TrackerTarget.Camera, requiresConfiguration = true },
         };
+        private static Dictionary<string, Type> _trackerTypeCache = null;
 
         // --- Menu entry ---
         [MenuItem("Window/Gossip Analytics/2 — Instrumentation Manager", false, 2)]
@@ -222,9 +223,7 @@ namespace GossipSDK.Editor
                 _cachedActiveTrackers = 0;
                 foreach (var t in _recommendedTrackers)
                 {
-                    var tp = AppDomain.CurrentDomain.GetAssemblies()
-                        .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
-                        .FirstOrDefault(x => x.Name == t.componentTypeName);
+                    var tp = GetTrackerType(t.componentTypeName);
                     if (tp != null && (Object.FindObjectOfType(tp) as Component) != null)
                         _cachedActiveTrackers++;
                 }
@@ -692,9 +691,7 @@ namespace GossipSDK.Editor
         {
             foreach (var info in _recommendedTrackers)
             {
-                var trackerType = AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
-                    .FirstOrDefault(tp => tp.Name == info.componentTypeName);
+                var trackerType = GetTrackerType(info.componentTypeName);
                 if (trackerType == null) continue;
                 bool isPresent = (Object.FindObjectOfType(trackerType) as Component) != null;
                 if (isPresent) continue;
@@ -777,9 +774,7 @@ namespace GossipSDK.Editor
             int missingCount = 0, presentCount = 0;
             foreach (var info in _recommendedTrackers)
             {
-                var tp = AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
-                    .FirstOrDefault(t => t.Name == info.componentTypeName);
+                var tp = GetTrackerType(info.componentTypeName);
                 bool present = tp != null && (Object.FindObjectOfType(tp) as Component) != null;
                 if (present) presentCount++; else missingCount++;
             }
@@ -804,9 +799,7 @@ namespace GossipSDK.Editor
                     EditorGUILayout.Space(4);
                     EditorGUILayout.LabelField(currentCategory, EditorStyles.boldLabel);
                 }
-                var trackerType = AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
-                    .FirstOrDefault(tp => tp.Name == info.componentTypeName);
+                var trackerType = GetTrackerType(info.componentTypeName);
                 Component existing = trackerType != null ? (Object.FindObjectOfType(trackerType) as Component) : null;
                 bool isPresent = existing != null;
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
@@ -883,9 +876,7 @@ namespace GossipSDK.Editor
         // --- Tracker helpers ---
         private void AddTracker(TrackerInfo info)
         {
-            var trackerType = AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
-                .FirstOrDefault(tp => tp.Name == info.componentTypeName);
+            var trackerType = GetTrackerType(info.componentTypeName);
             if (trackerType == null)
             {
                 EditorUtility.DisplayDialog("Not Found", info.componentTypeName + " not found. Make sure the SDK is fully imported.", "OK");
@@ -932,9 +923,7 @@ namespace GossipSDK.Editor
         {
             foreach (var info in _recommendedTrackers)
             {
-                var tp = AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
-                    .FirstOrDefault(t => t.Name == info.componentTypeName);
+                var tp = GetTrackerType(info.componentTypeName);
                 bool present = tp != null && (Object.FindObjectOfType(tp) as Component) != null;
                 if (!present) AddTracker(info);
             }
@@ -944,14 +933,30 @@ namespace GossipSDK.Editor
         {
             foreach (var info in _recommendedTrackers)
             {
-                var tp = AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
-                    .FirstOrDefault(t => t.Name == info.componentTypeName);
+                var tp = GetTrackerType(info.componentTypeName);
                 if (tp == null) continue;
                 var existing = Object.FindObjectOfType(tp) as Component;
                 if (existing != null) { EditorSceneManager.MarkSceneDirty(existing.gameObject.scene); Undo.DestroyObjectImmediate(existing); }
                 _lastTrackerCountTime = 0;
             }
+        }
+
+        // --- Tracker type cache ---
+        private static Type GetTrackerType(string componentTypeName)
+        {
+            if (_trackerTypeCache == null)
+            {
+                _trackerTypeCache = new Dictionary<string, Type>();
+                var allTypes = AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } });
+                foreach (var info in _recommendedTrackers)
+                {
+                    var found = allTypes.FirstOrDefault(t => t.Name == info.componentTypeName);
+                    _trackerTypeCache[info.componentTypeName] = found;
+                }
+            }
+            if (_trackerTypeCache.TryGetValue(componentTypeName, out var tp)) return tp;
+            return null;
         }
 
         // --- Tab: Permissions ---
