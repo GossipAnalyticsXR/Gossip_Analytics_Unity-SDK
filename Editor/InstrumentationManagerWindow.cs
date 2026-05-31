@@ -20,6 +20,8 @@ namespace GossipSDK.Editor
         private bool _hasNewObjects = false;
         private Vector2 _scrollPos;
         private static bool _isScanning = false;
+        private int _cachedActiveTrackers = 0;
+        private double _lastTrackerCountTime = 0;
         private static bool _dataPreloaded = false;
         private SerializedObject _vrHandlerSO;
         private static int _selectedTab = 0;
@@ -179,14 +181,20 @@ namespace GossipSDK.Editor
             foreach (var kvp in _sceneObjects)
                 foreach (var obj in kvp.Value)
                     if (obj.isChecked) trackedCount++;
-            int activeTrackers = 0;
-            foreach (var t in _recommendedTrackers)
+            if (EditorApplication.timeSinceStartup - _lastTrackerCountTime > 2.0)
             {
-                var tp = AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
-                    .FirstOrDefault(x => x.Name == t.componentTypeName);
-                if (tp != null && (Object.FindObjectOfType(tp) as Component) != null) activeTrackers++;
+                _cachedActiveTrackers = 0;
+                foreach (var t in _recommendedTrackers)
+                {
+                    var tp = AppDomain.CurrentDomain.GetAssemblies()
+                        .SelectMany(a => { try { return a.GetTypes(); } catch { return new System.Type[0]; } })
+                        .FirstOrDefault(x => x.Name == t.componentTypeName);
+                    if (tp != null && (Object.FindObjectOfType(tp) as Component) != null)
+                        _cachedActiveTrackers++;
+                }
+                _lastTrackerCountTime = EditorApplication.timeSinceStartup;
             }
+            int activeTrackers = _cachedActiveTrackers;
             var handler = Object.FindObjectOfType<VRPermissionsHandler>();
             string permsLabel;
             if (handler == null)
@@ -804,6 +812,7 @@ namespace GossipSDK.Editor
             }
             Undo.AddComponent(target, trackerType);
             EditorSceneManager.MarkSceneDirty(target.scene);
+            _lastTrackerCountTime = 0;
         }
 
         private void AddAllTrackers()
@@ -828,6 +837,7 @@ namespace GossipSDK.Editor
                 if (tp == null) continue;
                 var existing = Object.FindObjectOfType(tp) as Component;
                 if (existing != null) { EditorSceneManager.MarkSceneDirty(existing.gameObject.scene); Undo.DestroyObjectImmediate(existing); }
+                _lastTrackerCountTime = 0;
             }
         }
 
