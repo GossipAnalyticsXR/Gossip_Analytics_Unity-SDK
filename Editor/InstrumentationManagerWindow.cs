@@ -376,22 +376,26 @@ namespace GossipSDK.Editor
                 // Scan each scene path (deduplicated)
                 foreach (var scenePath in allScenePaths)
                 {
-                    Scene scene;
                     bool wasAlreadyOpen = alreadyOpen.Contains(scenePath);
-                    var scene = wasAlreadyOpen
-                        ? EditorSceneManager.GetSceneByPath(scenePath)
-                        : EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+                    string sceneName = System.IO.Path.GetFileNameWithoutExtension(scenePath);
+
+                    UnityEditor.SceneManagement.Scene scene;
+                    if (wasAlreadyOpen)
+                        scene = EditorSceneManager.GetSceneByPath(scenePath);
+                    else
+                        scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
 
                     if (!scene.isLoaded) continue;
-                var sceneList = new List<ScannedObject>();
-                _sceneObjects[sceneName] = sceneList;
+                    var sceneList = new List<ScannedObject>();
+                    _sceneObjects[sceneName] = sceneList;
+
+                    var storedPaths = allStoredPaths.ContainsKey(sceneName) ? allStoredPaths[sceneName] : new HashSet<string>();
+                    var scannedPaths = new HashSet<string>();
+                    foreach (var root in scene.GetRootGameObjects())
+                        CollectInteractableObjectsForScan(root, sceneName, scannedPaths, storedPaths, sceneList);
 
                     if (!wasAlreadyOpen)
                         EditorSceneManager.CloseScene(scene, true);
-                var storedPaths = allStoredPaths.ContainsKey(sceneName) ? allStoredPaths[sceneName] : new HashSet<string>();
-                var scannedPaths = new HashSet<string>();
-                foreach (var root in scene.GetRootGameObjects())
-                    CollectInteractableObjectsForScan(root, sceneName, scannedPaths, storedPaths, sceneList);
                 }
             _hasNewObjects = false;
         }
