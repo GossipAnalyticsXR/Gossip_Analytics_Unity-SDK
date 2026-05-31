@@ -146,6 +146,8 @@ namespace GossipSDK.Editor
 
         private void OnHierarchyChanged()
         {
+            _trackerComponentCache.Clear();
+            _lastTrackerCountTime = 0;
             var openSceneNames = new HashSet<string>();
             for (int i = 0; i < SceneManager.sceneCount; i++)
             {
@@ -859,7 +861,7 @@ namespace GossipSDK.Editor
                 }
                 var trackerType = GetTrackerType(info.componentTypeName);
                 _trackerComponentCache.TryGetValue(info.componentTypeName, out Component existing);
-                bool isPresent = existing != null;
+                bool isPresent = (UnityEngine.Object)existing != null;
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
                 EditorGUILayout.BeginHorizontal();
                 string statusIcon = isPresent ? "✅" : "○";
