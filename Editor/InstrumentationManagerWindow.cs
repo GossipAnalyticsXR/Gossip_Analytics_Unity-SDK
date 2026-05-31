@@ -716,7 +716,7 @@ namespace GossipSDK.Editor
                 string statusIcon = isPresent ? "✅" : "○";
                 EditorGUILayout.LabelField(statusIcon + "  " + info.displayName, GUILayout.ExpandWidth(true));
                 bool playerNeeded = info.target == TrackerTarget.Player || info.target == TrackerTarget.Camera;
-                bool canAdd = !playerNeeded || _playerObject != null || info.target == TrackerTarget.Camera;
+                bool canAdd = true; // opt-out model: always allow adding; warnings inform about missing Player
                 if (!isPresent)
                 {
                     EditorGUI.BeginDisabledGroup(!canAdd);
