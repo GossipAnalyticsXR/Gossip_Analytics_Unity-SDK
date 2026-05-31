@@ -1,6 +1,6 @@
 {
   "name": "com.gossip.core",
-  "version": "1.1.4",
+  "version": "2.0.0",
   "displayName": "Gossip Analytics SDK",
   "organization": "Gossip Analytics",
   "description": "-- QUICK SETUP --\nStep 1 SDK installed - you are here.\nStep 2 -> Click the Samples tab above -> Import.\nStep 3 -> Window -> Gossip Analytics -> 1 - Quick Setup.\nStep 4 -> Enter your 3 API Keys (Dev, Beta, Production) -> press Check Connection to verify.\nStep 5 -> Window -> Gossip Analytics -> 2 - Instrumentation Manager -> select which objects to track.\nStep 6 -> Press Play and verify your data appears in the Gossip Analytics dashboard.",
@@ -30,7 +30,7 @@
     "training"
   ],
   "_upm": {
-    "changelog": "### Fixed\n- Removed NuGetForUnity label from all bundled DLL .meta files (LiteDB, R3, Microsoft.Bcl.TimeProvider, System.Threading.Channels, System.ComponentModel.Annotations). These plugins now work as standard Unity plugins without requiring NuGetForUnity to be installed.\n- Gossip.cs: EyeTrackingTracker and InputUsageTracker were missing from the RunResendLoopAsync resend worker list. Both trackers now share the same automatic retry resilience as all other trackers.\n\n### Changed\n- Updated README with corrected Dependencies section reflecting bundled DLLs and required external packages.\n\n### Added\n\n### Removed\n\n### Known Issues"
+    "changelog": "### Added\n- Instrumentation Manager: Inline \"Deselect Handler\" button, color-coded footer with X/Y counts, Done button tooltip, per-tab loading indicators.\n- Instrumentation Manager: Auto-detect player and auto-add all trackers on Open().\n- Instrumentation Manager: Auto-assign Camera.main to headTransform (Posture Tracker) and cam (Eye Tracking) immediately after adding.\n- Instrumentation Manager: Scene Health Check — warns if XROrigin Tracking Origin Mode is Not Specified or XRInputModalityManager hand prefabs are unassigned.\n- Instrumentation Manager: Per-tracker preAddHint / postAddHint copy with an Auto-assign Camera button in Case B.\n- Instrumentation Manager: Shared tracker component cache in OnGUI() — 10 FindObjectOfType calls run at most once every 2 seconds instead of every repaint.\n- Build Preprocessor: GossipBuildPreprocessor auto-disables EnableDebug before every build.\n- Uninstaller: PackageCache cleanup removes all com.gossip.core@* cache entries on uninstall.\n\n### Changed\n- Done button color reflects build readiness (green / amber / orange-red).\n- Tracker type lookups cached in GetTrackerType() — assembly scan runs once per domain load.\n- VRPermissionsHandler: removed auto-creation; requires explicit Add button. Deselect no longer recreates the handler."
   },
   "category": "utilities",
   "author": {
