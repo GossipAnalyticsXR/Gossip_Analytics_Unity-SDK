@@ -745,6 +745,25 @@ namespace GossipSDK.Editor
                 if (info.requiresConfiguration) desc += " ⚠ Requires configuration in Inspector after adding.";
                 if (playerNeeded && _playerObject == null && !isPresent) desc = "⚠ Assign Player first. " + desc;
                 EditorGUILayout.LabelField(desc, descStyle);
+                if (isPresent && info.requiresConfiguration)
+                {
+                    EditorGUILayout.BeginHorizontal();
+                    EditorGUILayout.HelpBox(
+                        "Requires configuration in Inspector — the SDK cannot know your app's specific thresholds. Open the Inspector and configure before building.",
+                        MessageType.Warning);
+                    if (GUILayout.Button("Open\nInspector", GUILayout.Width(70), GUILayout.Height(38)))
+                    {
+                        Selection.activeGameObject = existing.gameObject;
+                        EditorApplication.delayCall += () =>
+                        {
+                            var inspectorType = typeof(UnityEditor.Editor).Assembly
+                                .GetType("UnityEditor.InspectorWindow");
+                            if (inspectorType != null)
+                                EditorWindow.GetWindow(inspectorType).Focus();
+                        };
+                    }
+                    EditorGUILayout.EndHorizontal();
+                }
                 EditorGUILayout.EndVertical();
             }
         }
