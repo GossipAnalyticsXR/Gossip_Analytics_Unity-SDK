@@ -21,6 +21,9 @@ namespace GossipSDK.Editor
         private Vector2 _scrollPos;
         private static bool _isScanning = false;
         private int _cachedActiveTrackers = 0;
+        private static bool _tabSwitching = false;
+        private static int  _tabSwitchTarget = 0;
+        private static bool _tabDelayQueued = false;
         private double _lastTrackerCountTime = 0;
         private static bool _dataPreloaded = false;
         private SerializedObject _vrHandlerSO;
@@ -147,7 +150,23 @@ namespace GossipSDK.Editor
         // --- OnGUI ---
         private void OnGUI()
         {
-            _selectedTab = GUILayout.Toolbar(_selectedTab, _tabLabels, GUILayout.Height(30));
+            int newTab = GUILayout.Toolbar(_selectedTab, _tabLabels, GUILayout.Height(30));
+            if (newTab != _selectedTab && !_tabSwitching)
+            {
+                _tabSwitching = true;
+                _tabSwitchTarget = newTab;
+                if (!_tabDelayQueued)
+                {
+                    _tabDelayQueued = true;
+                    EditorApplication.delayCall += () =>
+                    {
+                        _selectedTab = _tabSwitchTarget;
+                        _tabSwitching = false;
+                        _tabDelayQueued = false;
+                        GetWindow<InstrumentationManagerWindow>()?.Repaint();
+                    };
+                }
+            }
             EditorGUILayout.Space(4);
             float footerHeight = 36f;
             Rect footerRect = new Rect(0, position.height - footerHeight, position.width, footerHeight);
@@ -161,6 +180,17 @@ namespace GossipSDK.Editor
                     EditorStyles.centeredGreyMiniLabel, GUILayout.ExpandWidth(true));
                 GUILayout.FlexibleSpace();
                 Repaint();
+                return;
+            }
+            if (_tabSwitching)
+            {
+                GUILayout.FlexibleSpace();
+                EditorGUILayout.LabelField("Loading...",
+                    EditorStyles.centeredGreyMiniLabel, GUILayout.ExpandWidth(true));
+                GUILayout.FlexibleSpace();
+                EditorGUILayout.EndScrollView();
+                GUILayout.EndArea();
+                DrawFooter(footerRect);
                 return;
             }
             else if (_selectedTab == 0)
