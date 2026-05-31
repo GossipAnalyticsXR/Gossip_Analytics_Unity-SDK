@@ -245,15 +245,23 @@ namespace GossipSDK.Editor
                 string sceneName = kvp.Key;
                 var objs = kvp.Value;
                 if (!_sceneFoldouts.ContainsKey(sceneName)) _sceneFoldouts[sceneName] = true;
-                _sceneFoldouts[sceneName] = EditorGUILayout.BeginFoldoutHeaderGroup(
-                    _sceneFoldouts[sceneName], sceneName + " (" + objs.Count + " objects)");
+                EditorGUILayout.BeginHorizontal();
+                _sceneFoldouts[sceneName] = EditorGUILayout.Foldout(
+                    _sceneFoldouts[sceneName],
+                    sceneName + " (" + objs.Count + " objects)",
+                    true, EditorStyles.foldoutHeader);
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("All", GUILayout.Width(36)))
+                    foreach (var obj in objs) obj.isChecked = true;
+                if (GUILayout.Button("None", GUILayout.Width(44)))
+                    foreach (var obj in objs) obj.isChecked = false;
+                EditorGUILayout.EndHorizontal();
                 if (_sceneFoldouts[sceneName])
                 {
                     var sorted = objs.OrderByDescending(o => o.isNew).ThenBy(o => o.objectName).ToList();
                     foreach (var obj in sorted)
                         DrawObjectRow(obj);
                 }
-                EditorGUILayout.EndFoldoutHeaderGroup();
             }
         }
 
