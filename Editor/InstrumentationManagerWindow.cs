@@ -379,7 +379,7 @@ namespace GossipSDK.Editor
                     bool wasAlreadyOpen = alreadyOpen.Contains(scenePath);
                     string sceneName = System.IO.Path.GetFileNameWithoutExtension(scenePath);
 
-                    UnityEditor.SceneManagement.Scene scene;
+                    UnityEngine.SceneManagement.Scene scene;
                     if (wasAlreadyOpen)
                         scene = EditorSceneManager.GetSceneByPath(scenePath);
                     else
