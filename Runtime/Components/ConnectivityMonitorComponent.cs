@@ -13,6 +13,7 @@ namespace GossipSDK.Components
         [Header("Speed Test")]
         public string testFileUrl = "https://speed.cloudflare.com/__down?bytes=200000";
         public float periodicTestInterval = 0f;
+        public int speedTestTimeoutSeconds = 5;
 
         private NetworkReachability lastReachability;
         private Coroutine periodicRoutine;
@@ -89,7 +90,7 @@ namespace GossipSDK.Components
         {
             float startTime = Time.realtimeSinceStartup;
             using var request = UnityWebRequest.Get(testFileUrl);
-            request.timeout = 5;
+            request.timeout = speedTestTimeoutSeconds;
             yield return request.SendWebRequest();
 
             if (request.result != UnityWebRequest.Result.Success)
