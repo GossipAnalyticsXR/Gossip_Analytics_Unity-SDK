@@ -894,7 +894,17 @@ namespace GossipSDK.Editor
                     var hwProp = so.FindProperty("targetHardware");
                     if (hwProp != null && (string.IsNullOrEmpty(hwProp.stringValue) || hwProp.stringValue == "Unity"))
                     {
-                        hwProp.stringValue = SystemInfo.deviceModel;
+                        string detectedHardware;
+                        switch (EditorUserBuildSettings.activeBuildTarget)
+                        {
+                                case BuildTarget.Android:             detectedHardware = "Android XR"; break;
+                                case BuildTarget.StandaloneWindows:
+                                case BuildTarget.StandaloneWindows64: detectedHardware = "PC VR";      break;
+                                case BuildTarget.StandaloneOSX:       detectedHardware = "Mac VR";     break;
+                                case BuildTarget.iOS:                 detectedHardware = "iOS";         break;
+                                default:                              detectedHardware = "Unknown";     break;
+                        }
+                        hwProp.stringValue = detectedHardware;
                         so.ApplyModifiedProperties();
                     }
                 };
