@@ -9,10 +9,12 @@ namespace GossipSDK.Heatmaps
     {
         [SerializeField] private int textureSize = 2048;
         [SerializeField] private float padding = 2f;
+        [SerializeField] private float captureDelay = 0.5f;
+        [SerializeField] private float cameraHeight = 100f;
 
         private IEnumerator Start()
         {
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSeconds(captureDelay);
 
             var gossip = GossipSDK.Core.Gossip.Instance;
             if (gossip == null || gossip.Settings == null)
@@ -46,7 +48,7 @@ namespace GossipSDK.Heatmaps
             float size = Mathf.Max(bounds.extents.x, bounds.extents.z) + padding;
             cam.orthographicSize = size;
 
-            cam.transform.position = bounds.center + Vector3.up * 100f;
+            cam.transform.position = bounds.center + Vector3.up * cameraHeight;
             cam.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
 
             RenderTexture rt = new RenderTexture(textureSize, textureSize, 24);
