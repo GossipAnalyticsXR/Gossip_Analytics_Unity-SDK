@@ -21,10 +21,17 @@ namespace GossipSDK.Editor
 
             if (settings.EnableDebug)
             {
-                settings.EnableDebug = false;
-                EditorUtility.SetDirty(settings);
-                AssetDatabase.SaveAssets();
-                UnityEngine.Debug.Log("[Gossip Analytics] EnableDebug auto-disabled for build.");
+                var so = new SerializedObject(settings);
+                so.Update();
+                var prop = so.FindProperty("enableDebug");
+                if (prop != null)
+                {
+                    prop.boolValue = false;
+                    so.ApplyModifiedProperties();
+                    EditorUtility.SetDirty(settings);
+                    AssetDatabase.SaveAssets();
+                    UnityEngine.Debug.Log("[Gossip Analytics] EnableDebug auto-disabled for build.");
+                }
             }
         }
     }
