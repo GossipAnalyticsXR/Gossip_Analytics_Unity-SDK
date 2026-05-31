@@ -38,6 +38,8 @@ namespace GossipSDK.Components
         private float baselineRms = 0.01f;
         private float lastTriggerTime;
         private float heatmapTimer;
+        private float _currentMovementIntensity = 0f;
+        private Vector3 _lastTrackedPos;
 
         void Start()
         {
@@ -51,6 +53,10 @@ namespace GossipSDK.Components
                 worldMaxXZ,
                 cellSizeMeters
             );
+
+            if (trackedTransform == null)
+                trackedTransform = Camera.main?.transform ?? transform;
+            _lastTrackedPos = trackedTransform != null ? trackedTransform.position : Vector3.zero;
 
             StartCoroutine(InitializeMicrophone());
         }
@@ -85,6 +91,14 @@ namespace GossipSDK.Components
             {
                 FlushHeatmap();
                 heatmapTimer = 0f;
+            }
+
+            if (trackedTransform != null)
+            {
+                float delta = Vector3.Distance(trackedTransform.position, _lastTrackedPos)
+                               / Mathf.Max(Time.deltaTime, 0.001f);
+                _currentMovementIntensity = Mathf.Clamp01(delta / 2f);
+                _lastTrackedPos = trackedTransform.position;
             }
         }
 
@@ -168,8 +182,8 @@ namespace GossipSDK.Components
             float voiceChange = Mathf.Clamp01((rms - baselineRms) / Mathf.Max(baselineRms, 0.001f));
             float V_eff = voiceChange * quality;
 
-            float E = 0.6f;
-            float M = 0.4f;
+            float E = Mathf.Clamp01(rms / 0.1f);
+            float M = _currentMovementIntensity;
 
             float score = 0.4f * E + 0.3f * V_eff + 0.3f * M;
 
@@ -197,6 +211,7 @@ namespace GossipSDK.Components
 
         async void TriggerSnippet(float E, float V, float Qv, float M, float score, int signals)
         {
+            if (trackedTransform == null) return;
             lastTriggerTime = Time.time;
 
             heatmapManager.RegisterHit(trackedTransform.position);
