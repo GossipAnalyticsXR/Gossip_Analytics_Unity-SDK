@@ -181,6 +181,9 @@ namespace GossipSDK.Editor
             foreach (var kvp in _sceneObjects)
                 foreach (var obj in kvp.Value)
                     if (obj.isChecked) trackedCount++;
+            int totalObjects = 0;
+            foreach (var kvp2 in _sceneObjects)
+                totalObjects += kvp2.Value.Count;
             if (EditorApplication.timeSinceStartup - _lastTrackerCountTime > 2.0)
             {
                 _cachedActiveTrackers = 0;
@@ -194,31 +197,54 @@ namespace GossipSDK.Editor
                 }
                 _lastTrackerCountTime = EditorApplication.timeSinceStartup;
             }
+            int totalTrackers = _recommendedTrackers.Count;
             int activeTrackers = _cachedActiveTrackers;
             var handler = Object.FindObjectOfType<VRPermissionsHandler>();
-            string permsLabel;
-            if (handler == null)
-                permsLabel = "disabled";
-            else
+            int enabledPerms = 0;
+            if (handler != null)
             {
-                bool allOn = handler.enableEyeTracking && handler.enableSpatialScene && handler.enableHeadsetCamera && handler.enableMicrophone;
-                permsLabel = allOn ? "enabled" : "partially enabled";
+                if (handler.enableEyeTracking)   enabledPerms++;
+                if (handler.enableSpatialScene)  enabledPerms++;
+                if (handler.enableHeadsetCamera) enabledPerms++;
+                if (handler.enableMicrophone)    enabledPerms++;
             }
-            string summary = string.Format("✅ {0} objects tracked  ·  {1} trackers active  ·  Permissions {2}", trackedCount, activeTrackers, permsLabel);
+            int totalPerms = 4;
+            string objColor  = (trackedCount == totalObjects) ? "#88ff88" : "#ffcc44";
+            string trkColor  = (activeTrackers == totalTrackers) ? "#88ff88"
+                               : (activeTrackers > 0 ? "#ffcc44" : "#ff6666");
+            string permColor = (handler == null)              ? "#ff6666"
+                               : (enabledPerms == totalPerms) ? "#88ff88"
+                               : (enabledPerms > 0)           ? "#ffcc44" : "#ff6666";
+            string summary = string.Format(
+                "<color={0}>{1}/{2} objects</color>  ·  " +
+                "<color={3}>{4}/{5} trackers</color>  ·  " +
+                "<color={6}>Permissions {7}/{8}</color>",
+                objColor,  trackedCount,   totalObjects,
+                trkColor,  activeTrackers, totalTrackers,
+                permColor, enabledPerms,   totalPerms);
             var summaryStyle = new GUIStyle(EditorStyles.label);
             summaryStyle.normal.textColor = Color.white;
             summaryStyle.alignment = TextAnchor.MiddleLeft;
             summaryStyle.fontSize = 11;
+            summaryStyle.richText = true;
             float btnW = 160f;
             Rect lblRect = new Rect(rect.x + 8, rect.y, rect.width - btnW - 20, rect.height);
             Rect btnRect = new Rect(rect.xMax - btnW - 8, rect.y + 4, btnW, rect.height - 8);
             GUI.Label(lblRect, summary, summaryStyle);
+            var hintStyle = new GUIStyle(EditorStyles.miniLabel);
+            hintStyle.normal.textColor = new Color(1f, 1f, 1f, 0.45f);
+            hintStyle.alignment = TextAnchor.MiddleRight;
+            Rect hintRect = new Rect(rect.xMax - btnW - 8 - 170, rect.y, 165f, rect.height);
+            GUI.Label(hintRect, "Click Done before building →", hintStyle);
             var doneStyle = new GUIStyle(GUI.skin.button);
             doneStyle.normal.textColor = Color.white;
             doneStyle.fontStyle = FontStyle.Bold;
             var prevBg = GUI.backgroundColor;
             GUI.backgroundColor = new Color(0.2f, 0.6f, 0.2f, 1f);
-            if (GUI.Button(btnRect, "✅ Done — Save & Close", doneStyle))
+            if (GUI.Button(btnRect,
+                new GUIContent("✅ Done — Save & Close",
+                    "Saves all instrumentation data and open scenes, then closes this window.\nRun this before building your APK."),
+                doneStyle))
             {
                 AssetDatabase.SaveAssets();
                 EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
@@ -866,7 +892,28 @@ namespace GossipSDK.Editor
                 EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
                 handler = go.GetComponent<VRPermissionsHandler>();
             }
-            EditorGUILayout.HelpBox("✅ VRPermissionsHandler active — Your app will request the selected permissions on Android VR device launch.", MessageType.Info);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.HelpBox("✔ VRPermissionsHandler active — Your app will request the selected permissions on Android VR device launch.", MessageType.Info);
+            var prevBgHandler = GUI.backgroundColor;
+            GUI.backgroundColor = new Color(0.7f, 0.3f, 0.3f);
+            if (GUILayout.Button("Deselect\nHandler", GUILayout.Width(90), GUILayout.Height(38)))
+            {
+                string msg = "Deselecting VRPermissionsHandler will disable the following on Android XR devices:" +
+                    System.Environment.NewLine + "• Eye Tracking — gaze data will not be captured" +
+                    System.Environment.NewLine + "• Spatial / Scene — heatmap environment data will be lost" +
+                    System.Environment.NewLine + "• Headset Camera — passthrough and MR will not work" +
+                    System.Environment.NewLine + "• Microphone — audio reaction tracking will be silent" +
+                    System.Environment.NewLine + System.Environment.NewLine + "Are you sure?";
+                bool confirm = EditorUtility.DisplayDialog("Deselect VRPermissionsHandler", msg, "Deselect Anyway", "Cancel");
+                if (confirm && handler != null)
+                {
+                    Undo.DestroyObjectImmediate(handler.gameObject);
+                    EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+                    _vrHandlerSO = null;
+                }
+            }
+            GUI.backgroundColor = prevBgHandler;
+            EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space(6);
             if (_vrHandlerSO == null || _vrHandlerSO.targetObject != handler)
                 _vrHandlerSO = new SerializedObject(handler);
@@ -928,30 +975,6 @@ namespace GossipSDK.Editor
                 }
             }
             EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.Space(12);
-            EditorGUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            var prevBg = GUI.backgroundColor;
-            GUI.backgroundColor = new Color(0.7f, 0.3f, 0.3f);
-            if (GUILayout.Button("Remove Handler", GUILayout.Width(110)))
-            {
-                string msg = "Deselecting VRPermissionsHandler will disable the following on Android XR devices:" +
-                System.Environment.NewLine + "• Eye Tracking — gaze data will not be captured" +
-                System.Environment.NewLine + "• Spatial / Scene — heatmap environment data will be lost" +
-                System.Environment.NewLine + "• Headset Camera — passthrough and MR will not work" +
-                System.Environment.NewLine + "• Microphone — audio reaction tracking will be silent" +
-                System.Environment.NewLine + System.Environment.NewLine + "Are you sure?";
-                bool confirm = EditorUtility.DisplayDialog("Deselect VRPermissionsHandler", msg, "Deselect Anyway", "Cancel");
-                if (confirm && handler != null)
-                {
-                    Undo.DestroyObjectImmediate(handler.gameObject);
-                    EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-                    _vrHandlerSO = null;
-                }
-            }
-            GUI.backgroundColor = prevBg;
-            EditorGUILayout.EndHorizontal();
         }
 
         // --- DrawPermissionRow ---
@@ -960,8 +983,14 @@ namespace GossipSDK.Editor
             if (prop == null) return;
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             EditorGUILayout.BeginHorizontal();
-            string icon = prop.boolValue ? "✅" : "○";
-            EditorGUILayout.LabelField(icon + "  " + label, GUILayout.ExpandWidth(true));
+            EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
+            var titleStyle = new GUIStyle(EditorStyles.label);
+            titleStyle.fontStyle = FontStyle.Bold;
+            EditorGUILayout.LabelField(label, titleStyle);
+            var descStyle = new GUIStyle(EditorStyles.miniLabel);
+            descStyle.wordWrap = true;
+            EditorGUILayout.LabelField(description, descStyle);
+            EditorGUILayout.EndVertical();
             bool newVal = EditorGUILayout.Toggle(prop.boolValue, GUILayout.Width(18));
             if (newVal != prop.boolValue)
             {
@@ -977,9 +1006,6 @@ namespace GossipSDK.Editor
                     prop.boolValue = true;
             }
             EditorGUILayout.EndHorizontal();
-            var descStyle = new GUIStyle(EditorStyles.miniLabel);
-            descStyle.wordWrap = true;
-            EditorGUILayout.LabelField(description, descStyle);
             EditorGUILayout.EndVertical();
         }
 
