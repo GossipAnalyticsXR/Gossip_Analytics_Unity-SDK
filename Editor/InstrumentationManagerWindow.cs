@@ -669,7 +669,29 @@ namespace GossipSDK.Editor
                 if (info.target == TrackerTarget.AnyObject)
                 {
                     var manager = Object.FindObjectOfType<GossipManager>();
-                    if (manager != null) Undo.AddComponent(manager.gameObject, trackerType);
+                    GameObject deviceHost;
+                    if (manager != null)
+                    {
+                        deviceHost = manager.gameObject;
+                    }
+                    else
+                    {
+                        // Fallback: use Player object; if also null, create a dedicated host
+                        if (_playerObject != null)
+                        {
+                            deviceHost = _playerObject;
+                        }
+                        else
+                        {
+                            deviceHost = GameObject.Find("Gossip Device Trackers");
+                            if (deviceHost == null)
+                            {
+                                deviceHost = new GameObject("Gossip Device Trackers");
+                                Undo.RegisterCreatedObjectUndo(deviceHost, "Create Device Tracker Host");
+                            }
+                        }
+                    }
+                    Undo.AddComponent(deviceHost, trackerType);
                 }
                 else if (info.target == TrackerTarget.Player && _playerObject != null)
                 {
@@ -835,10 +857,23 @@ namespace GossipSDK.Editor
                 if (_mainCamera == null) _mainCamera = Camera.main;
                 if (_mainCamera != null) target = _mainCamera.gameObject;
             }
-            else
+            else   // TrackerTarget.AnyObject
             {
                 var manager = Object.FindObjectOfType<GossipManager>();
-                if (manager != null) target = manager.gameObject;
+                if (manager != null)
+                    target = manager.gameObject;
+                else if (_playerObject != null)
+                    target = _playerObject;
+                else
+                {
+                    var host = GameObject.Find("Gossip Device Trackers");
+                    if (host == null)
+                    {
+                        host = new GameObject("Gossip Device Trackers");
+                        Undo.RegisterCreatedObjectUndo(host, "Create Device Tracker Host");
+                    }
+                    target = host;
+                }
             }
             if (target == null)
             {
