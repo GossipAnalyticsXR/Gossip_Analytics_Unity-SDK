@@ -344,19 +344,26 @@ namespace GossipSDK.Editor
                         allScenePaths.Add(scenePath);
                 }
 
+                // L6: track which scenes were already open before scanning
+                var alreadyOpen = new HashSet<string>();
+                for (int i = 0; i < EditorSceneManager.sceneCount; i++)
+                    alreadyOpen.Add(EditorSceneManager.GetSceneAt(i).path);
+
                 // Scan each scene path (deduplicated)
                 foreach (var scenePath in allScenePaths)
                 {
                     Scene scene;
-                    var loadedScene = SceneManager.GetSceneByPath(scenePath);
-                    if (loadedScene.IsValid() && loadedScene.isLoaded)
-                        scene = loadedScene;
-                    else
-                        scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+                    bool wasAlreadyOpen = alreadyOpen.Contains(scenePath);
+                    var scene = wasAlreadyOpen
+                        ? EditorSceneManager.GetSceneByPath(scenePath)
+                        : EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+
                     if (!scene.isLoaded) continue;
-                string sceneName = scene.name;
                 var sceneList = new List<ScannedObject>();
                 _sceneObjects[sceneName] = sceneList;
+
+                    if (!wasAlreadyOpen)
+                        EditorSceneManager.CloseScene(scene, true);
                 var storedPaths = allStoredPaths.ContainsKey(sceneName) ? allStoredPaths[sceneName] : new HashSet<string>();
                 var scannedPaths = new HashSet<string>();
                 foreach (var root in scene.GetRootGameObjects())
