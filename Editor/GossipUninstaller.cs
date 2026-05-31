@@ -261,6 +261,26 @@ namespace GossipAnalytics.Editor
             {
                 Debug.LogWarning("[GossipUninstaller] Could not remove package com.gossip.core: " + ex.Message);
             }
+
+            // Clean up all cached versions of com.gossip.core from Library/PackageCache
+            try
+            {
+                string projectRoot    = System.IO.Path.GetDirectoryName(Application.dataPath);
+                string packageCache   = System.IO.Path.Combine(projectRoot, "Library", "PackageCache");
+                if (System.IO.Directory.Exists(packageCache))
+                {
+                    var gossipDirs = System.IO.Directory.GetDirectories(packageCache, "com.gossip.core@*");
+                    foreach (var dir in gossipDirs)
+                    {
+                        System.IO.Directory.Delete(dir, true);
+                        Debug.Log("[GossipUninstaller] Deleted PackageCache entry: " + dir);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[GossipUninstaller] Could not clean PackageCache: " + ex.Message);
+            }
         }
     }
 }
