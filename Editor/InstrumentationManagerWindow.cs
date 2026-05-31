@@ -68,6 +68,8 @@ namespace GossipSDK.Editor
             public string category;
             public TrackerTarget target;
             public bool requiresConfiguration;
+            public string preAddHint;   // shown in Case A (before adding)
+            public string postAddHint;  // shown in Case B (after adding, when field may still be null)
         }
 
         private static readonly List<TrackerInfo> _recommendedTrackers = new List<TrackerInfo>
@@ -75,7 +77,16 @@ namespace GossipSDK.Editor
             // SPATIAL
             new TrackerInfo { componentTypeName = "PositionTrackerComponent", displayName = "Position Tracker", description = "Tracks player position (X,Y,Z) over time. Feeds heatmaps.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = false },
             new TrackerInfo { componentTypeName = "RotationAndVelocityTrackerComponent", displayName = "Rotation & Velocity", description = "Tracks player rotation, speed, and angular velocity.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = false },
-            new TrackerInfo { componentTypeName = "UserPostureComponent", displayName = "Posture Tracker", description = "Detects standing/sitting/crouching. Requires thresholds in Inspector.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = true },
+            new TrackerInfo {
+                componentTypeName = "UserPostureComponent",
+                displayName = "Posture Tracker",
+                description = "Detects standing/sitting/crouching. Requires thresholds in Inspector.",
+                category = "Spatial",
+                target = TrackerTarget.Player,
+                requiresConfiguration = true,
+                preAddHint = "The SDK will auto-assign the head camera. You must set sitThreshold and crouchThreshold (in metres) to match your player's real-world standing height.",
+                postAddHint = "Head Transform: auto-assigned ✔  |  You must still set sitThreshold and crouchThreshold (in metres) to match your player's real-world standing height before building."
+            },
             new TrackerInfo { componentTypeName = "UserBalanceTrackerComponent", displayName = "Balance Tracker", description = "Records body stability and oscillation.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = false },
             // DEVICE & PERFORMANCE
             new TrackerInfo { componentTypeName = "PerformanceMonitorComponent", displayName = "Performance Monitor", description = "Tracks FPS and memory usage automatically.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
@@ -84,7 +95,16 @@ namespace GossipSDK.Editor
             new TrackerInfo { componentTypeName = "HandControllerTrackingComponent", displayName = "Hand & Controller Tracking", description = "Tracks hand and controller movement.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
             new TrackerInfo { componentTypeName = "InputUsageTrackerComponent", displayName = "Input Usage Tracker", description = "Tracks time using controllers vs hand tracking.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
             // XR SPECIFIC
-            new TrackerInfo { componentTypeName = "EyeTrackingComponent", displayName = "Eye Tracking", description = "Tracks gaze hits and fixation. Attach to camera.", category = "XR", target = TrackerTarget.Camera, requiresConfiguration = true },
+            new TrackerInfo {
+                componentTypeName = "EyeTrackingComponent",
+                displayName = "Eye Tracking",
+                description = "Tracks gaze hits and fixation. Attach to camera.",
+                category = "XR",
+                target = TrackerTarget.Camera,
+                requiresConfiguration = true,
+                preAddHint = "The SDK will auto-assign the main camera. Set worldMinXZ and worldMaxXZ to your scene's play area bounds (in metres) for accurate heatmaps.",
+                postAddHint = "Cam: auto-assigned ✔  |  You must still set worldMinXZ and worldMaxXZ (in metres) to your scene's play area bounds before building."
+            },
         };
         private static Dictionary<string, Type> _trackerTypeCache = null;
 
@@ -269,7 +289,7 @@ namespace GossipSDK.Editor
             hintStyle.normal.textColor = new Color(1f, 1f, 1f, 0.45f);
             hintStyle.alignment = TextAnchor.MiddleRight;
             Rect hintRect = new Rect(rect.xMax - btnW - 8 - 170, rect.y, 165f, rect.height);
-            GUI.Label(hintRect, "Click Done before building →", hintStyle);
+            GUI.Label(hintRect, "▶ Play to test — then build →", hintStyle);
             var doneStyle = new GUIStyle(GUI.skin.button);
             doneStyle.normal.textColor = Color.white;
             doneStyle.fontStyle = FontStyle.Bold;
@@ -278,12 +298,12 @@ namespace GossipSDK.Editor
             bool trackersAllActive = (activeTrackers == totalTrackers);
             bool objectsAllTracked = (trackedCount == totalObjects);
             bool permsComplete = (handler != null && enabledPerms == totalPerms);
-            if (!permsComplete && handler == null)
-                doneColor = new Color(0.75f, 0.35f, 0.1f, 1f);
-            else if (!trackersAllActive)
-                doneColor = new Color(0.75f, 0.60f, 0.1f, 1f);
-            else
-                doneColor = new Color(0.2f, 0.60f, 0.2f, 1f);
+                if (handler == null)
+                    doneColor = new Color(0.75f, 0.35f, 0.1f, 1f);
+                else if (!permsComplete || !trackersAllActive)
+                    doneColor = new Color(0.75f, 0.60f, 0.1f, 1f);
+                else
+                    doneColor = new Color(0.2f, 0.60f, 0.2f, 1f);
             bool buildReady = trackersAllActive && permsComplete;
             string doneLabel = buildReady ? "✅ Done — Save & Close" : "⚠ Save & Close Anyway";
             var prevBg = GUI.backgroundColor;
@@ -744,6 +764,20 @@ namespace GossipSDK.Editor
                     if (_mainCamera == null) _mainCamera = Camera.main;
                     if (_mainCamera != null) Undo.AddComponent(_mainCamera.gameObject, trackerType);
                 }
+            // Queue auto-assign for trackers that have a transform field
+            if (info.componentTypeName == "UserPostureComponent" ||
+                info.componentTypeName == "EyeTrackingComponent")
+            {
+                string fieldName = info.componentTypeName == "UserPostureComponent" ? "headTransform" : "cam";
+                string typeName  = info.componentTypeName;
+                EditorApplication.delayCall += () =>
+                {
+                    var tp2 = GetTrackerType(typeName);
+                    if (tp2 == null) return;
+                    var comp = Object.FindObjectOfType(tp2) as Component;
+                    if (comp != null) AutoAssignCameraField(comp, fieldName);
+                };
+            }
             }
         }
 
@@ -755,6 +789,7 @@ namespace GossipSDK.Editor
                 "Trackers collect analytics data from your player and device. Spatial trackers " +
                 "require a Player object assigned below. Device trackers run automatically.",
                 MessageType.Info);
+            DrawSceneHealthCheck();
             EditorGUILayout.Space(4);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             EditorGUILayout.BeginHorizontal();
@@ -856,20 +891,38 @@ namespace GossipSDK.Editor
                 // Case A: not yet added, inform before clicking Add
                 if (!isPresent && info.requiresConfiguration)
                 {
-                    EditorGUILayout.HelpBox(
-                        "Requires Inspector configuration after adding — " +
-                        "the SDK cannot know your app's specific thresholds. " +
-                        "Add it, then open the Inspector to configure.",
-                        MessageType.Info);
+                    string hintA = !string.IsNullOrEmpty(info.preAddHint)
+                        ? info.preAddHint
+                        : "Requires Inspector configuration after adding — the SDK cannot know your app's specific thresholds. Add it, then open the Inspector to configure.";
+                    EditorGUILayout.HelpBox(hintA, MessageType.Info);
                 }
                 // Case B: already added, prompt action
                 if (isPresent && info.requiresConfiguration)
                 {
+                    // Detect whether the auto-assign transform field is still null
+                    bool needsAutoAssign = false;
+                    string autoAssignField = null;
+                    if (info.componentTypeName == "UserPostureComponent")   autoAssignField = "headTransform";
+                    else if (info.componentTypeName == "EyeTrackingComponent") autoAssignField = "cam";
+                    if (autoAssignField != null)
+                    {
+                        var checkSO = new SerializedObject(existing);
+                        var checkProp = checkSO.FindProperty(autoAssignField);
+                        needsAutoAssign = checkProp != null && checkProp.objectReferenceValue == null;
+                    }
+                    string hintB = !string.IsNullOrEmpty(info.postAddHint)
+                        ? info.postAddHint
+                        : "Requires configuration in Inspector — the SDK cannot know your app's specific thresholds. Open the Inspector and configure before building.";
+                    MessageType hintBType = needsAutoAssign ? MessageType.Warning : MessageType.Info;
                     EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.HelpBox(
-                        "Requires configuration in Inspector — the SDK cannot know your app's specific thresholds. Open the Inspector and configure before building.",
-                        MessageType.Warning);
-                    if (GUILayout.Button("Open\nInspector", GUILayout.Width(70), GUILayout.Height(38)))
+                    EditorGUILayout.HelpBox(hintB, hintBType);
+                    EditorGUILayout.BeginVertical(GUILayout.Width(70));
+                    if (needsAutoAssign)
+                    {
+                        if (GUILayout.Button("Auto-assign\nCamera", GUILayout.Width(70), GUILayout.Height(36)))
+                            AutoAssignCameraField(existing, autoAssignField);
+                    }
+                    if (GUILayout.Button("Open\nInspector", GUILayout.Width(70), GUILayout.Height(36)))
                     {
                         Selection.activeGameObject = existing.gameObject;
                         EditorApplication.delayCall += () =>
@@ -880,6 +933,7 @@ namespace GossipSDK.Editor
                                 EditorWindow.GetWindow(inspectorType).Focus();
                         };
                     }
+                    EditorGUILayout.EndVertical();
                     EditorGUILayout.EndHorizontal();
                 }
                 EditorGUILayout.EndVertical();
@@ -970,6 +1024,92 @@ namespace GossipSDK.Editor
             }
             if (_trackerTypeCache.TryGetValue(componentTypeName, out var tp)) return tp;
             return null;
+        }
+
+        // --- Auto-assign camera transform field ---
+        private void AutoAssignCameraField(Component comp, string fieldName)
+        {
+            var mainCam = Camera.main;
+            if (mainCam == null)
+            {
+                EditorUtility.DisplayDialog(
+                    "No Main Camera",
+                    "Camera.main not found. Make sure your scene has a camera tagged 'MainCamera'.",
+                    "OK");
+                return;
+            }
+            var so = new SerializedObject(comp);
+            so.Update();
+            var prop = so.FindProperty(fieldName);
+            if (prop != null)
+            {
+                prop.objectReferenceValue = mainCam.transform;
+                so.ApplyModifiedProperties();
+                EditorSceneManager.MarkSceneDirty(comp.gameObject.scene);
+            }
+        }
+
+        // --- Scene Health Check (XR config warnings) ---
+        private void DrawSceneHealthCheck()
+        {
+            // 1. XROrigin Tracking Origin Mode = Not Specified (0)
+            try
+            {
+                var xrOriginType = AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } })
+                    .FirstOrDefault(tp => tp.FullName == "UnityEngine.XR.Interaction.Toolkit.XROrigin" ||
+                            tp.FullName == "Unity.XR.CoreUtils.XROrigin");
+                if (xrOriginType != null)
+                {
+                    var xrOrigin = Object.FindObjectOfType(xrOriginType) as Component;
+                    if (xrOrigin != null)
+                    {
+                        var originSO = new SerializedObject(xrOrigin);
+                        var trackProp = originSO.FindProperty("m_TrackingOriginMode")
+                            ?? originSO.FindProperty("trackingOriginMode");
+                        if (trackProp != null && trackProp.intValue == 0)
+                        {
+                            EditorGUILayout.HelpBox(
+                                "⚠ XR Origin: Tracking Origin Mode is 'Not Specified'. " +
+                                "Set it to 'Floor' (standing / room-scale) or 'Device' (seated / head-level) " +
+                                "in the XR Origin Inspector before building.",
+                                MessageType.Warning);
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            // 2. XRInputModalityManager Left/Right Hand not assigned
+            try
+            {
+                var modalityType = AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => { try { return a.GetTypes(); } catch { return new Type[0]; } })
+                    .FirstOrDefault(tp => tp.Name == "XRInputModalityManager");
+                if (modalityType != null)
+                {
+                    var manager = Object.FindObjectOfType(modalityType) as Component;
+                    if (manager != null)
+                    {
+                        var modSO = new SerializedObject(manager);
+                        var leftProp  = modSO.FindProperty("m_LeftHand")  ?? modSO.FindProperty("leftHand");
+                        var rightProp = modSO.FindProperty("m_RightHand") ?? modSO.FindProperty("rightHand");
+                        bool leftMissing  = leftProp  != null && leftProp.objectReferenceValue  == null;
+                        bool rightMissing = rightProp != null && rightProp.objectReferenceValue == null;
+                        if (leftMissing || rightMissing)
+                        {
+                            string side = (leftMissing && rightMissing) ? "Left Hand and Right Hand are"
+                                        : leftMissing  ? "Left Hand is"
+                                        : "Right Hand is";
+                            EditorGUILayout.HelpBox(
+                                "⚠ XR Input Modality Manager: " + side + " not assigned. " +
+                                "Hand tracking will not function. Assign the hand prefabs in the Inspector.",
+                                MessageType.Warning);
+                        }
+                    }
+                }
+            }
+            catch { }
         }
 
         // --- Tab: Permissions ---
