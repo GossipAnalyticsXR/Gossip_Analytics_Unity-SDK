@@ -13,7 +13,6 @@ public class HandControllerTrackingComponent : MonoBehaviour
 
     private void Start()
     {
-        Send("left", Quaternion.identity);
     }
 
     private void Update()
