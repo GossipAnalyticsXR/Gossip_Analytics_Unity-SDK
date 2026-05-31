@@ -99,6 +99,8 @@ namespace GossipSDK.Editor
             {
                 win.LoadOrCreateDataAsset();
                 win.ScanNow();
+                win.AutoDetectPlayer();
+                win.AutoAddTrackers();
             } finally {
                 _isScanning = false;
             }
