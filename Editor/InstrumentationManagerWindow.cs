@@ -87,6 +87,16 @@ namespace GossipSDK.Editor
                 preAddHint = "The SDK will auto-assign the head camera. You must set sitThreshold and crouchThreshold (in metres) to match your player's real-world standing height.",
                 postAddHint = "Head Transform: auto-assigned ✔  |  You must still set sitThreshold and crouchThreshold (in metres) to match your player's real-world standing height before building."
             },
+            new TrackerInfo {
+                componentTypeName = "PlayerMovementHeatmapComponent",
+                displayName = "Movement Heatmap",
+                description = "Samples player position to build a spatial movement heatmap. Must be on the Player or XROrigin object.",
+                category = "Spatial",
+                target = TrackerTarget.Player,
+                requiresConfiguration = true,
+                preAddHint = "Requires a Player or XROrigin in the scene — the SDK will place it there automatically. Set worldMinXZ and worldMaxXZ to your scene bounds for accurate heatmap resolution.",
+                postAddHint = "Defaults: bounds ±50 m, cell 1 m, sample 0.25 s. Tighten worldMinXZ / worldMaxXZ to your actual play area for better heatmap resolution."
+            },
             new TrackerInfo { componentTypeName = "UserBalanceTrackerComponent", displayName = "Balance Tracker", description = "Records body stability and oscillation.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = false },
             // DEVICE & PERFORMANCE
             new TrackerInfo { componentTypeName = "PerformanceMonitorComponent", displayName = "Performance Monitor", description = "Tracks FPS and memory usage automatically.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
@@ -98,6 +108,40 @@ namespace GossipSDK.Editor
                 componentTypeName = "AudioVolumeTrackerComponent",
                 displayName = "Audio Volume Tracker",
                 description = "Tracks in-app audio volume (master, music, SFX). Assign an AudioMixer for per-channel tracking, or leave empty to use AudioListener.volume.",
+                category = "Device",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = false
+            },
+            new TrackerInfo {
+                componentTypeName = "ExperienceInfoComponent",
+                displayName = "Experience Info",
+                description = "Reports app version, target hardware, and scene load time (Awake-to-Start delta). App version is auto-filled from Player Settings.",
+                category = "Device",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = false,
+                postAddHint = "App version auto-filled from Player Settings (Application.version). Optionally set targetHardware to override the default value."
+            },
+            new TrackerInfo {
+                componentTypeName = "PauseComponent",
+                displayName = "Pause Tracker",
+                description = "Captures pause and resume events with duration. OS-level pauses (headset removal, Alt+Tab) are auto-detected via OnApplicationPause.",
+                category = "Device",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = false,
+                postAddHint = "OS-level pauses are auto-captured. For in-game pause menus, also call component.OnPause() and component.OnResume() from your pause UI code."
+            },
+            new TrackerInfo {
+                componentTypeName = "PeripheralAutoTrackerComponent",
+                displayName = "Peripheral Tracker",
+                description = "Auto-detects connected XR peripherals (controllers, headset) and records type, brand, and session duration. No configuration required.",
+                category = "Device",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = false
+            },
+            new TrackerInfo {
+                componentTypeName = "PlatformMonitorComponent",
+                displayName = "Platform Monitor",
+                description = "Reports platform, device model, screen resolution, and audio state on session start. All data is sourced from Unity system APIs.",
                 category = "Device",
                 target = TrackerTarget.AnyObject,
                 requiresConfiguration = false
@@ -122,6 +166,24 @@ namespace GossipSDK.Editor
                 requiresConfiguration = true,
                 preAddHint = "The SDK will auto-assign the tracked transform to the main camera. Set worldMinXZ and worldMaxXZ to your scene bounds. Ensure Microphone permission is enabled in the Permissions tab.",
                 postAddHint = "Tracked Transform: auto-assigned ✔  |  Set worldMinXZ and worldMaxXZ (in metres) to your scene bounds. Microphone permission must be enabled in the Permissions tab."
+            },
+            new TrackerInfo {
+                componentTypeName = "RealityModeMonitor",
+                displayName = "Reality Mode Monitor",
+                description = "Detects and records transitions between VR, MR, 2D, and unknown XR modes with per-mode duration. No configuration required.",
+                category = "XR",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = false
+            },
+            new TrackerInfo {
+                componentTypeName = "PassthroughComponent",
+                displayName = "Passthrough Tracker",
+                description = "Tracks MR passthrough enable/disable events and active duration. Requires wiring to your passthrough toggle logic.",
+                category = "XR",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = true,
+                preAddHint = "Call OnPassthroughEnabled() and OnPassthroughDisabled() on this component from your XR passthrough API callbacks or UI. Enable onActiveStart if passthrough is active from scene load.",
+                postAddHint = "Wire component.OnPassthroughEnabled() and component.OnPassthroughDisabled() to your passthrough toggle callbacks. Enable onActiveStart if passthrough begins at scene start."
             },
         };
         private static Dictionary<string, Type> _trackerTypeCache = null;
@@ -758,6 +820,7 @@ namespace GossipSDK.Editor
                 if (trackerType == null) continue;
                 bool isPresent = (Object.FindObjectOfType(trackerType) as Component) != null;
                 if (isPresent) continue;
+                Component addedComp = null;
                 if (info.target == TrackerTarget.AnyObject)
                 {
                     var manager = Object.FindObjectOfType<GossipManager>();
@@ -783,7 +846,7 @@ namespace GossipSDK.Editor
                             }
                         }
                     }
-                    Undo.AddComponent(deviceHost, trackerType);
+                    addedComp = (Component)Undo.AddComponent(deviceHost, trackerType);
                 }
                 else if (info.target == TrackerTarget.Player && _playerObject != null)
                 {
@@ -809,6 +872,25 @@ namespace GossipSDK.Editor
                     if (tp2 == null) return;
                     var comp = Object.FindObjectOfType(tp2) as Component;
                     if (comp != null) AutoAssignCameraField(comp, fieldName);
+                };
+            }
+
+            // Auto-fill appVersion for ExperienceInfoComponent
+            if (info.componentTypeName == "ExperienceInfoComponent" && addedComp != null)
+            {
+                var capturedComp = addedComp;
+                EditorApplication.delayCall += () =>
+                {
+                    if ((UnityEngine.Object)capturedComp == null) return;
+                    var so = new SerializedObject(capturedComp);
+                    so.Update();
+                    var prop = so.FindProperty("appVersion");
+                    if (prop != null && (string.IsNullOrEmpty(prop.stringValue) || prop.stringValue == "0.0.0"))
+                    {
+                        prop.stringValue = Application.version;
+                        so.ApplyModifiedProperties();
+                        EditorSceneManager.MarkSceneDirty(capturedComp.gameObject.scene);
+                    }
                 };
             }
             }
