@@ -324,13 +324,15 @@ namespace GossipSDK.Editor
                 // Source 1: active scene
                 var activeScenePath = EditorSceneManager.GetActiveScene().path;
                 if (!string.IsNullOrEmpty(activeScenePath))
-                    allScenePaths.Add(activeScenePath);
+                    if (!activeScenePath.Replace("\\", "/").Contains("/Samples/"))
+                        allScenePaths.Add(activeScenePath);
 
                 // Source 2: scenes enabled in Build Settings
                 foreach (var buildScene in EditorBuildSettings.scenes)
                 {
                     if (buildScene.enabled && !string.IsNullOrEmpty(buildScene.path))
-                        allScenePaths.Add(buildScene.path);
+                        if (!buildScene.path.Replace("\\", "/").Contains("/Samples/"))
+                            allScenePaths.Add(buildScene.path);
                 }
 
                 // Source 3: all .unity files in Assets/
@@ -338,7 +340,7 @@ namespace GossipSDK.Editor
                 foreach (var guid in guids)
                 {
                     var scenePath = AssetDatabase.GUIDToAssetPath(guid);
-                    if (!string.IsNullOrEmpty(scenePath))
+                    if (!string.IsNullOrEmpty(scenePath) && !scenePath.Replace("\\", "/").Contains("/Samples/"))
                         allScenePaths.Add(scenePath);
                 }
 
