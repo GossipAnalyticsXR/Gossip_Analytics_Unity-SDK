@@ -13,6 +13,7 @@ public class MistakeReporter : MonoBehaviour
     public int severity = 0;
 
     private MistakeTracker tracker;
+    private bool _disabled = false;
 
     private void Awake()
     {
@@ -24,7 +25,8 @@ public class MistakeReporter : MonoBehaviour
 
         if (tracker == null)
         {
-            tracker = new MistakeTracker();
+            Debug.LogError("[Gossip Analytics] MistakeReporter: GossipManager not ready or MistakeTracker unavailable. This component will be disabled. Ensure GossipManager is present and initialized before this component.");
+            _disabled = true;
         }
     }
 
@@ -36,6 +38,7 @@ public class MistakeReporter : MonoBehaviour
 
     public void ReportMistake(GameObject obj,string customType = null, int? customSeverity = null)
     {
+        if (_disabled) return;
         try
         {
             var pos = obj.transform.position;
