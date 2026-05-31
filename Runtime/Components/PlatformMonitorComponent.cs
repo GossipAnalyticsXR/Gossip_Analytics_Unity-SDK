@@ -35,8 +35,8 @@ namespace GossipSDK.Components
                 Device = SystemInfo.deviceName,
                 Resolution = $"{Screen.width}x{Screen.height}",
                 GeneralSound = AudioListener.volume > 0f,
-                ControllersLatency = false,
-                AmountDevicesInGame = false
+                ControllersLatency = false, // TODO: not yet measured
+                AmountDevicesInGame = false, // TODO: not yet measured
             };
 
             tracker.CapSession(data);
