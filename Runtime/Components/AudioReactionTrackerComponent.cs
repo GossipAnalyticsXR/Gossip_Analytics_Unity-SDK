@@ -28,6 +28,20 @@ namespace GossipSDK.Components
         public float cellSizeMeters = 0.5f;
         public float heatmapFlushInterval = 10f;
 
+        [Header("Scoring Weights (must sum to 1.0)")]
+        [SerializeField] private float scoreWeightEnergy = 0.4f;
+        [SerializeField] private float scoreWeightVoice = 0.3f;
+        [SerializeField] private float scoreWeightMovement = 0.3f;
+
+        [Header("Signal Gate Thresholds")]
+        [SerializeField] private float signalThresholdEnergy = 0.5f;
+        [SerializeField] private float signalThresholdVoice = 0.4f;
+        [SerializeField] private float signalThresholdMovement = 0.4f;
+
+        [Header("Normalisation Ceilings")]
+        [SerializeField] private float rmsNormCeiling = 0.1f;
+        [SerializeField] private float movementSpeedCeiling = 2f;
+
         private HeatmapManager heatmapManager;
         private AudioClip micClip;
         private float[] ringBuffer;
@@ -97,7 +111,7 @@ namespace GossipSDK.Components
             {
                 float delta = Vector3.Distance(trackedTransform.position, _lastTrackedPos)
                                / Mathf.Max(Time.deltaTime, 0.001f);
-                _currentMovementIntensity = Mathf.Clamp01(delta / 2f);
+                _currentMovementIntensity = Mathf.Clamp01(delta / movementSpeedCeiling);
                 _lastTrackedPos = trackedTransform.position;
             }
         }
@@ -182,17 +196,17 @@ namespace GossipSDK.Components
             float voiceChange = Mathf.Clamp01((rms - baselineRms) / Mathf.Max(baselineRms, 0.001f));
             float V_eff = voiceChange * quality;
 
-            float E = Mathf.Clamp01(rms / 0.1f);
+            float E = Mathf.Clamp01(rms / rmsNormCeiling);
             float M = _currentMovementIntensity;
 
-            float score = 0.4f * E + 0.3f * V_eff + 0.3f * M;
+            float score = scoreWeightEnergy * E + scoreWeightVoice * V_eff + scoreWeightMovement * M;
 
             int signals = 0;
-            if (E >= 0.5f)
+            if (E >= signalThresholdEnergy)
                 signals++;
-            if (V_eff >= 0.4f)
+            if (V_eff >= signalThresholdVoice)
                 signals++;
-            if (M >= 0.4f)
+            if (M >= signalThresholdMovement)
                 signals++;
 
             if (Time.time < lastTriggerTime + cooldownSeconds)
