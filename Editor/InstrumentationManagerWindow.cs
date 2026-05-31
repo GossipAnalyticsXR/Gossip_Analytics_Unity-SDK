@@ -722,7 +722,7 @@ namespace GossipSDK.Editor
                 return;
             }
             GameObject target = null;
-            if (info.target == TrackerTarget.Player && _playerObject != null)
+            if (info.target == TrackerTarget.Player)
                 target = _playerObject;
             else if (info.target == TrackerTarget.Camera)
             {
