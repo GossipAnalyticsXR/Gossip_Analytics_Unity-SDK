@@ -815,6 +815,16 @@ namespace GossipSDK.Editor
                 if (info.requiresConfiguration) desc += " ⚠ Requires configuration in Inspector after adding.";
                 if (playerNeeded && _playerObject == null && !isPresent) desc = "⚠ Assign Player first. " + desc;
                 EditorGUILayout.LabelField(desc, descStyle);
+                // Case A: not yet added, inform before clicking Add
+                if (!isPresent && info.requiresConfiguration)
+                {
+                    EditorGUILayout.HelpBox(
+                        "Requires Inspector configuration after adding — " +
+                        "the SDK cannot know your app's specific thresholds. " +
+                        "Add it, then open the Inspector to configure.",
+                        MessageType.Info);
+                }
+                // Case B: already added, prompt action
                 if (isPresent && info.requiresConfiguration)
                 {
                     EditorGUILayout.BeginHorizontal();
