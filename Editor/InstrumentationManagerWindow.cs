@@ -273,10 +273,23 @@ namespace GossipSDK.Editor
             var doneStyle = new GUIStyle(GUI.skin.button);
             doneStyle.normal.textColor = Color.white;
             doneStyle.fontStyle = FontStyle.Bold;
+            // Derive Done button color from worst state
+            Color doneColor;
+            bool trackersAllActive = (activeTrackers == totalTrackers);
+            bool objectsAllTracked = (trackedCount == totalObjects);
+            bool permsComplete = (handler != null && enabledPerms == totalPerms);
+            if (!permsComplete && handler == null)
+                doneColor = new Color(0.75f, 0.35f, 0.1f, 1f);
+            else if (!trackersAllActive)
+                doneColor = new Color(0.75f, 0.60f, 0.1f, 1f);
+            else
+                doneColor = new Color(0.2f, 0.60f, 0.2f, 1f);
             var prevBg = GUI.backgroundColor;
-            GUI.backgroundColor = new Color(0.2f, 0.6f, 0.2f, 1f);
+            GUI.backgroundColor = doneColor;
             if (GUI.Button(btnRect,
-                new GUIContent("✅ Done — Save & Close",
+            bool buildReady = trackersAllActive && permsComplete;
+            string doneLabel = buildReady ? "✅ Done — Save & Close" : "⚠ Save & Close Anyway";
+                new GUIContent(doneLabel,
                     "Saves all instrumentation data and open scenes, then closes this window.\nRun this before building your APK."),
                 doneStyle))
             {
