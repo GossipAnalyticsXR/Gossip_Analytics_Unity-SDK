@@ -75,7 +75,7 @@ namespace GossipSDK.Editor
             // SPATIAL
             new TrackerInfo { componentTypeName = "PositionTrackerComponent", displayName = "Position Tracker", description = "Tracks player position (X,Y,Z) over time. Feeds heatmaps.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = false },
             new TrackerInfo { componentTypeName = "RotationAndVelocityTrackerComponent", displayName = "Rotation & Velocity", description = "Tracks player rotation, speed, and angular velocity.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = false },
-            new TrackerInfo { componentTypeName = "UserPostureTrackerComponent", displayName = "Posture Tracker", description = "Detects standing/sitting/crouching. Requires thresholds in Inspector.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = true },
+            new TrackerInfo { componentTypeName = "UserPostureComponent", displayName = "Posture Tracker", description = "Detects standing/sitting/crouching. Requires thresholds in Inspector.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = true },
             new TrackerInfo { componentTypeName = "UserBalanceTrackerComponent", displayName = "Balance Tracker", description = "Records body stability and oscillation.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = false },
             // DEVICE & PERFORMANCE
             new TrackerInfo { componentTypeName = "PerformanceMonitorComponent", displayName = "Performance Monitor", description = "Tracks FPS and memory usage automatically.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
