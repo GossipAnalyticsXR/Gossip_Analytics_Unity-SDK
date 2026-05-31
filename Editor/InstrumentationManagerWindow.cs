@@ -262,9 +262,12 @@ namespace GossipSDK.Editor
                 var objs = kvp.Value;
                 if (!_sceneFoldouts.ContainsKey(sceneName)) _sceneFoldouts[sceneName] = true;
                 EditorGUILayout.BeginHorizontal();
+                int selectedCount = objs.Count(o => o.isChecked);
+                int totalCount = objs.Count;
+                string sceneLabel = $"{sceneName}  ({selectedCount} de {totalCount})";
                 _sceneFoldouts[sceneName] = EditorGUILayout.Foldout(
                     _sceneFoldouts[sceneName],
-                    sceneName + " (" + objs.Count + " objects)",
+                    sceneLabel,
                     true, EditorStyles.foldoutHeader);
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("All", GUILayout.Width(36)))
