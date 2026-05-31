@@ -54,7 +54,7 @@ namespace GossipSDK.Tracking.A11y
             {
                 platform = Application.platform.ToString(),
                 app_version = Application.version,
-                sdk_version = "1.0.0", 
+                sdk_version = Application.version,
                 locale = Application.systemLanguage.ToString(),
                 scene_id = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name
             };
