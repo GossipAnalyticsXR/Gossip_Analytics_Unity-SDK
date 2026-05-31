@@ -973,11 +973,18 @@ namespace GossipSDK.Editor
             var handler = _cachedPermHandler;
             if (handler == null)
             {
-                var go = new GameObject("VRPermissionsHandler");
-                Undo.RegisterCreatedObjectUndo(go, "Create VRPermissionsHandler");
-                Undo.AddComponent<VRPermissionsHandler>(go);
-                EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-                handler = go.GetComponent<VRPermissionsHandler>();
+                EditorGUILayout.HelpBox(
+                    "VRPermissionsHandler is not in the scene. Add it to enable Android XR permissions.",
+                    MessageType.Warning);
+                if (GUILayout.Button("Add VRPermissionsHandler", GUILayout.Height(30)))
+                {
+                    var go = new GameObject("VRPermissionsHandler");
+                    Undo.RegisterCreatedObjectUndo(go, "Create VRPermissionsHandler");
+                    Undo.AddComponent<VRPermissionsHandler>(go);
+                    EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+                    _cachedPermHandler = go.GetComponent<VRPermissionsHandler>();
+                }
+                return;
             }
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.HelpBox("✔ VRPermissionsHandler active — Your app will request the selected permissions on Android VR device launch.", MessageType.Info);
