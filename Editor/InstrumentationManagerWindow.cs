@@ -89,9 +89,13 @@ namespace GossipSDK.Editor
             _dataPreloaded = true;
             _isScanning = true;
             var win = GetWindow<InstrumentationManagerWindow>("Instrumentation Manager");
-            win.LoadOrCreateDataAsset();
-            win.ScanNow();
-            _isScanning = false;
+            try
+            {
+                win.LoadOrCreateDataAsset();
+                win.ScanNow();
+            } finally {
+                _isScanning = false;
+            }
         }
 
         // --- Lifecycle ---
