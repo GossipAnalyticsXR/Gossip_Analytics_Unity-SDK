@@ -24,6 +24,7 @@ namespace GossipSDK.Editor
         private double _lastTrackerCountTime = 0;
         private static bool _dataPreloaded = false;
         private SerializedObject _vrHandlerSO;
+        private VRPermissionsHandler _cachedPermHandler;
         private static int _selectedTab = 0;
         private readonly string[] _tabLabels = new string[] { "Interactables", "Trackers", "Permissions" };
         private GameObject _playerObject = null;
@@ -199,7 +200,9 @@ namespace GossipSDK.Editor
             }
             int totalTrackers = _recommendedTrackers.Count;
             int activeTrackers = _cachedActiveTrackers;
-            var handler = Object.FindObjectOfType<VRPermissionsHandler>();
+            if (_cachedPermHandler == null)
+                _cachedPermHandler = Object.FindObjectOfType<VRPermissionsHandler>();
+            var handler = _cachedPermHandler;
             int enabledPerms = 0;
             if (handler != null)
             {
@@ -883,7 +886,9 @@ namespace GossipSDK.Editor
                 "All are pre-enabled. Deselect only if your app does not use that feature.",
                 MessageType.Info);
             EditorGUILayout.Space(4);
-            var handler = Object.FindObjectOfType<VRPermissionsHandler>();
+            if (_cachedPermHandler == null)
+                _cachedPermHandler = Object.FindObjectOfType<VRPermissionsHandler>();
+            var handler = _cachedPermHandler;
             if (handler == null)
             {
                 var go = new GameObject("VRPermissionsHandler");
@@ -908,6 +913,7 @@ namespace GossipSDK.Editor
                 if (confirm && handler != null)
                 {
                     Undo.DestroyObjectImmediate(handler.gameObject);
+                    _cachedPermHandler = null;
                     EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
                     _vrHandlerSO = null;
                 }
