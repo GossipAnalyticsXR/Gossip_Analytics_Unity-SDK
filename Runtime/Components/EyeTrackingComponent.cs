@@ -20,6 +20,8 @@ namespace GossipSDK.Components
         [SerializeField] private float minDistanceDelta = 0.5f;
         [SerializeField] private float minRotationDelta = 10f;
         [SerializeField] private float minTimeBetweenImages = 5f;
+        [SerializeField] private float headFallbackCooldownMultiplier = 1.5f;
+        [SerializeField] private float headFallbackThresholdMultiplier = 2.5f;
 
         [Header("Heatmap")]
         [SerializeField] private Vector2 worldMinXZ = new(-25, -25);
@@ -137,7 +139,7 @@ namespace GossipSDK.Components
         private bool ShouldSendImage(RaycastHit hit, string source)
         {
             float cooldown = source == SOURCE_HEAD
-                ? minTimeBetweenImages * 1.5f
+                ? minTimeBetweenImages * headFallbackCooldownMultiplier
                 : minTimeBetweenImages;
 
             if (Time.time - lastImageTime < cooldown)
@@ -149,7 +151,7 @@ namespace GossipSDK.Components
             float dist = Vector3.Distance(cam.position, lastCamPos);
             float angle = Quaternion.Angle(cam.rotation, lastCamRot);
 
-            float mul = source == SOURCE_HEAD ? 2.5f : 1f;
+            float mul = source == SOURCE_HEAD ? headFallbackThresholdMultiplier : 1f;
 
             return dist > minDistanceDelta * mul
                 || angle > minRotationDelta * mul;
