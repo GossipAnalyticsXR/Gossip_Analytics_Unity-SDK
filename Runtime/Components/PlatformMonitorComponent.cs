@@ -34,11 +34,10 @@ namespace GossipSDK.Components
             bool hasDevicesInGame = xrDevices.Count > 0;
 
             float latencyMs = 0f;
-            var hmdDevices = new System.Collections.Generic.List<UnityEngine.XR.InputDevice>();
-            UnityEngine.XR.InputDevices.GetDevicesWithCharacteristics(
-                UnityEngine.XR.InputDeviceCharacteristics.HeadMounted, hmdDevices);
-            bool hasLatencyData = hmdDevices.Count > 0 &&
-                UnityEngine.XR.Provider.XRStats.TryGetStat(hmdDevices[0], "MotionToPhoton", out latencyMs);
+            var displaySubsystems = new System.Collections.Generic.List<UnityEngine.XR.XRDisplaySubsystem>();
+            SubsystemManager.GetInstances(displaySubsystems);
+            bool hasLatencyData = displaySubsystems.Count > 0 &&
+                UnityEngine.XR.Provider.XRStats.TryGetStat(displaySubsystems[0], "MotionToPhoton", out latencyMs);
 
             var data = new PlatformTracker.EntityData
             {
