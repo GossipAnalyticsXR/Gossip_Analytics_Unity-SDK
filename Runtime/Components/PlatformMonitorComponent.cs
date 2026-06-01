@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.XR;
+using UnityEngine.XR.Provider;
 using GossipSDK.Tracking.PlatformSpecification;
 using GossipSDK.Core;
 
@@ -27,6 +29,17 @@ namespace GossipSDK.Components
                 return;
             }
 
+            var xrDevices = new System.Collections.Generic.List<UnityEngine.XR.InputDevice>();
+            UnityEngine.XR.InputDevices.GetDevices(xrDevices);
+            bool hasDevicesInGame = xrDevices.Count > 0;
+
+            float latencyMs = 0f;
+            var hmdDevices = new System.Collections.Generic.List<UnityEngine.XR.InputDevice>();
+            UnityEngine.XR.InputDevices.GetDevicesWithCharacteristics(
+                UnityEngine.XR.InputDeviceCharacteristics.HeadMounted, hmdDevices);
+            bool hasLatencyData = hmdDevices.Count > 0 &&
+                UnityEngine.XR.Provider.XRStats.TryGetStat(hmdDevices[0], "MotionToPhoton", out latencyMs);
+
             var data = new PlatformTracker.EntityData
             {
                 Version = Application.version,
@@ -35,8 +48,8 @@ namespace GossipSDK.Components
                 Device = SystemInfo.deviceName,
                 Resolution = $"{Screen.width}x{Screen.height}",
                 GeneralSound = AudioListener.volume > 0f,
-                ControllersLatency = false, // TODO: not yet measured
-                AmountDevicesInGame = false, // TODO: not yet measured
+                ControllersLatency = hasLatencyData,
+                AmountDevicesInGame = hasDevicesInGame,
             };
 
             tracker.CapSession(data);
