@@ -17,6 +17,8 @@ namespace GossipSDK.Editor
         private GossipInstrumentationData _data;
         private Dictionary<string, List<ScannedObject>> _sceneObjects = new Dictionary<string, List<ScannedObject>>();
         private Dictionary<string, bool> _sceneFoldouts = new Dictionary<string, bool>();
+        private const int InteractablesPageSize = 50;
+        private readonly Dictionary<string, bool> _sceneShowAll = new Dictionary<string, bool>();
         private bool _hasNewObjects = false;
         private Vector2 _scrollPos;
         private static bool _isScanning = false;
@@ -484,8 +486,22 @@ namespace GossipSDK.Editor
                 if (_sceneFoldouts[sceneName])
                 {
                     var sorted = objs.OrderByDescending(o => o.isNew).ThenBy(o => o.objectName).ToList();
-                    foreach (var obj in sorted)
-                        DrawObjectRow(obj);
+                    int totalInScene = sorted.Count;
+                    bool showAll = _sceneShowAll.TryGetValue(sceneName, out var sa) && sa;
+                    int visibleCount = showAll ? totalInScene : Mathf.Min(InteractablesPageSize, totalInScene);
+                    for (int i = 0; i < visibleCount; i++)
+                        DrawObjectRow(sorted[i]);
+                    if (totalInScene > InteractablesPageSize)
+                    {
+                        EditorGUILayout.BeginHorizontal();
+                        GUILayout.FlexibleSpace();
+                        string btnLabel = showAll
+                            ? "Show less ▲"
+                            : $"Show all {totalInScene} objects ▼";
+                        if (GUILayout.Button(btnLabel, GUILayout.Width(180)))
+                            _sceneShowAll[sceneName] = !showAll;
+                        EditorGUILayout.EndHorizontal();
+                    }
                 }
             }
         }
@@ -544,6 +560,7 @@ namespace GossipSDK.Editor
         private void ScanNow()
         {
             _sceneObjects.Clear();
+            _sceneShowAll.Clear();
             var allStoredPaths = new Dictionary<string, HashSet<string>>();
             if (_data != null)
                 foreach (var entry in _data.scenes)
