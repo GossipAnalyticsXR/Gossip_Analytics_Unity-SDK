@@ -56,7 +56,7 @@ namespace GossipSDK.Components
                 Version = Application.version,
                 PlatformName = Application.platform.ToString(),
                 Model = SystemInfo.deviceModel,
-                Device = SystemInfo.deviceName,
+                Device = SystemInfo.deviceModel,
                 Resolution = $"{Screen.width}x{Screen.height}",
                 GeneralSound = AudioListener.volume > 0f,
                 ControllersLatency = hasLatencyData,
