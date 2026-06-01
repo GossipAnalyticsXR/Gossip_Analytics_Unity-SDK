@@ -64,6 +64,14 @@ namespace GossipSDK.Components
 
         void Start()
         {
+            if (!UnityEngine.XR.XRSettings.enabled)
+            {
+                Debug.LogWarning(
+                    "[AudioReactionTracker] XR not active - tracker requires " +
+                    "a headset for movement detection. Component disabled.", this);
+                enabled = false;
+                return;
+            }
             bufferSize = Mathf.CeilToInt(sampleRate * bufferSeconds);
             analysisWindowSize = Mathf.CeilToInt(sampleRate * analysisWindowSeconds);
             ringBuffer = new float[bufferSize];
@@ -233,6 +241,10 @@ namespace GossipSDK.Components
         async void TriggerSnippet(float E, float V, float Qv, float M, float score, int signals)
         {
             if (trackedTransform == null) return;
+            if (Gossip.Instance == null)
+            {
+                return;
+            }
             lastTriggerTime = Time.time;
 
             heatmapManager.RegisterHit(trackedTransform.position);
