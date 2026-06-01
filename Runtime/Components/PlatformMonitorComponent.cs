@@ -63,6 +63,11 @@ namespace GossipSDK.Components
                 brand = "Samsung";
             else
                 brand = rawModel.Contains(" ") ? rawModel.Split(' ')[0] : rawModel;
+            int xrW = UnityEngine.XR.XRSettings.eyeTextureWidth;
+            int xrH = UnityEngine.XR.XRSettings.eyeTextureHeight;
+            int resW = xrW > 0 ? xrW : Screen.width;
+            int resH = xrH > 0 ? xrH : Screen.height;
+
             var data = new PlatformTracker.EntityData
             {
                 Version = Application.version,
@@ -70,7 +75,7 @@ namespace GossipSDK.Components
                 Model = SystemInfo.deviceModel,
                 Device = SystemInfo.deviceModel,
                 Brand = brand,
-                Resolution = $"{Screen.width}x{Screen.height}",
+                Resolution = $"{resW}x{resH}",
                 GeneralSound = AudioListener.volume > 0f,
                 ControllersLatency = hasLatencyData,
                 AmountDevicesInGame = hasDevicesInGame,
