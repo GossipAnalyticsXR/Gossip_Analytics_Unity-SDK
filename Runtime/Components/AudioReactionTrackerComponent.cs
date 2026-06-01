@@ -38,9 +38,16 @@ namespace GossipSDK.Components
         [SerializeField] private float signalThresholdVoice = 0.4f;
         [SerializeField] private float signalThresholdMovement = 0.4f;
 
+        [Header("Fast Trigger Thresholds")]
+        [SerializeField] private float fastTriggerEnergyThreshold = 0.8f;
+        [SerializeField] private float fastTriggerConditionThreshold = 0.35f;
+
         [Header("Normalisation Ceilings")]
         [SerializeField] private float rmsNormCeiling = 0.1f;
         [SerializeField] private float movementSpeedCeiling = 2f;
+
+        [Header("Baseline Adaptation")]
+        [SerializeField] private float baselineLerpRate = 0.02f;
 
         private HeatmapManager heatmapManager;
         private AudioClip micClip;
@@ -213,13 +220,13 @@ namespace GossipSDK.Components
                 return;
 
             if ((signals >= 2 && score >= minEmotionalScore) ||
-                (E >= 0.8f && (V_eff >= 0.35f || M >= 0.35f)))
+                (E >= fastTriggerEnergyThreshold && (V_eff >= fastTriggerConditionThreshold || M >= fastTriggerConditionThreshold)))
             {
                 TriggerSnippet(E, voiceChange, quality, M, score, signals);
             }
             else
             {
-                baselineRms = Mathf.Lerp(baselineRms, rms, 0.02f);
+                baselineRms = Mathf.Lerp(baselineRms, rms, baselineLerpRate);
             }
         }
 
