@@ -1,3 +1,4 @@
+using System.Collections;
 using System;
 using UnityEngine;
 using GossipSDK.Core;
@@ -17,9 +18,21 @@ namespace GossipSDK.Components
 
         private void Start()
         {
+            if (Gossip.Instance == null)
+            {
+                enabled = false;
+                StartCoroutine(WaitAndSend());
+                return;
+            }
             lastTime = Time.realtimeSinceStartup;
             frames = 0;
             fpsTimer = 0f;
+        }
+
+        private IEnumerator WaitAndSend()
+        {
+            yield return new WaitUntil(() => Gossip.Instance != null);
+            enabled = true;
         }
 
         private void Update()
