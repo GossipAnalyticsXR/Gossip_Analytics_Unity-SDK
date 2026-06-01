@@ -425,7 +425,7 @@ namespace GossipSDK.Editor
                     "Saves all instrumentation data and open scenes, then closes this window.\nRun this before building your APK.");
             _doneButtonContent.text = doneLabel;
             if (GUI.Button(btnRect,
-                _doneButtonContent
+                _doneButtonContent,
                 doneStyle))
             {
                 AssetDatabase.SaveAssets();
@@ -496,8 +496,8 @@ namespace GossipSDK.Editor
                         EditorGUILayout.BeginHorizontal();
                         GUILayout.FlexibleSpace();
                         string btnLabel = showAll
-                            ? "Show less ▲"
-                            : $"Show all {totalInScene} objects ▼";
+                            ? "Show less "
+                            : $"Show all {totalInScene} objects ";
                         if (GUILayout.Button(btnLabel, GUILayout.Width(180)))
                             _sceneShowAll[sceneName] = !showAll;
                         EditorGUILayout.EndHorizontal();
