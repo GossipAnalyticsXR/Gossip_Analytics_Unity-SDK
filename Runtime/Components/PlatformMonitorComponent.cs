@@ -68,6 +68,26 @@ namespace GossipSDK.Components
             int resW = xrW > 0 ? xrW : Screen.width;
             int resH = xrH > 0 ? xrH : Screen.height;
 
+            var controllerChars = UnityEngine.XR.InputDeviceCharacteristics.Controller;
+            var controllers = new System.Collections.Generic.List<UnityEngine.XR.InputDevice>();
+            UnityEngine.XR.InputDevices.GetDevicesWithCharacteristics(controllerChars, controllers);
+            float trackingAccuracy = 0f;
+            if (controllers.Count > 0)
+            {
+                int fullyTracked = 0;
+                foreach (var ctrl in controllers)
+                {
+                    if (ctrl.TryGetFeatureValue(UnityEngine.XR.CommonUsages.trackingState,
+                        out UnityEngine.XR.InputTrackingState state))
+                    {
+                        bool hasPos = (state & UnityEngine.XR.InputTrackingState.Position) != 0;
+                        bool hasRot = (state & UnityEngine.XR.InputTrackingState.Rotation) != 0;
+                        if (hasPos && hasRot) fullyTracked++;
+                    }
+                }
+                trackingAccuracy = (float)fullyTracked / controllers.Count;
+            }
+
             var data = new PlatformTracker.EntityData
             {
                 Version = (string.IsNullOrEmpty(Application.version) || Application.version == "0.0.0")
@@ -82,6 +102,7 @@ namespace GossipSDK.Components
                 ControllersLatency = hasLatencyData,
                 MotionToPhotonMs = hasLatencyData ? latencyMs : 0f,
                 AmountDevicesInGame = hasDevicesInGame,
+                TrackingAccuracy = trackingAccuracy,
             };
 
             tracker.CapSession(data);
