@@ -10,12 +10,23 @@ namespace GossipSDK.Components
     public class SessionManager : MonoBehaviour
     {
         [SerializeField] private string sessionId;
+        [Tooltip("Leave empty to auto-detect from Player tag count. Set 'single' or 'multi' to override.")]
+        [SerializeField] private string sessionTypeOverride = "";
+
 
         private string persistentPlayerId;
 
         private string playerId;
         private double sessionStartTimeRealtime;
         private bool sessionStarted = false;
+
+        private string ResolveSessionType()
+        {
+            if (!string.IsNullOrEmpty(sessionTypeOverride))
+                return sessionTypeOverride;
+            var players = GameObject.FindGameObjectsWithTag("Player");
+            return players.Length > 1 ? "multi" : "single";
+        }
 
         private void Awake()
         {
@@ -130,10 +141,10 @@ namespace GossipSDK.Components
                     return;
                 }
 
-                var recordMethod = tracker.GetType().GetMethod("RecordEvent", new Type[] { typeof(string), typeof(double) });
+                var recordMethod = tracker.GetType().GetMethod("RecordEvent", new Type[] { typeof(string), typeof(double), typeof(string) });
                 if (recordMethod != null)
                 {
-                    recordMethod.Invoke(tracker, new object[] { eventType, durationSeconds });
+                    recordMethod.Invoke(tracker, new object[] { eventType, durationSeconds, ResolveSessionType() });
                     return;
                 }
 
@@ -144,7 +155,8 @@ namespace GossipSDK.Components
                     DurationSeconds = durationSeconds,
                     SceneName = SceneManager.GetActiveScene().name,
                     PlayerId = playerId,
-                    SessionId = sessionId
+                    SessionId = sessionId,
+                    SessionType = ResolveSessionType()
                 };
 
                 var capMethod = tracker.GetType().GetMethod("CapSession");
