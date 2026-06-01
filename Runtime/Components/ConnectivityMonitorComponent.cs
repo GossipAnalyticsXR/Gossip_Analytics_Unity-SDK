@@ -74,7 +74,7 @@ namespace GossipSDK.Components
                 }
                 else
                 {
-                    mbps = -1f;
+                    mbps = null;
                 }
             }
 
