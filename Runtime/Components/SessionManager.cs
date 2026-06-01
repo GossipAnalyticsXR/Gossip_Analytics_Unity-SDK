@@ -39,8 +39,8 @@ namespace GossipSDK.Components
             // Check for orphaned session from previous run (e.g., editor Stop)
             if (PlayerPrefs.HasKey("gossip_pending_session_id"))
             {
-                double orphanStart = double.Parse(PlayerPrefs.GetString("gossip_pending_session_start", "0"));
-                double orphanDuration = System.Math.Max(0.0, Time.realtimeSinceStartupAsDouble - orphanStart);
+                long orphanStartUnix = long.Parse(PlayerPrefs.GetString("gossip_pending_session_start", "0"));
+                double orphanDuration = System.Math.Max(0.0, (double)(System.DateTimeOffset.UtcNow.ToUnixTimeSeconds() - orphanStartUnix));
                 SendSessionEvent("session_end", orphanDuration);
                 PlayerPrefs.DeleteKey("gossip_pending_session_id");
                 PlayerPrefs.DeleteKey("gossip_pending_session_start");
@@ -53,7 +53,7 @@ namespace GossipSDK.Components
             sessionStartTimeRealtime = Time.realtimeSinceStartupAsDouble;
             sessionStarted = true;
             PlayerPrefs.SetString("gossip_pending_session_id", sessionId);
-            PlayerPrefs.SetString("gossip_pending_session_start", sessionStartTimeRealtime.ToString("R"));
+            PlayerPrefs.SetString("gossip_pending_session_start", System.DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString());
             PlayerPrefs.Save();
         }
 
