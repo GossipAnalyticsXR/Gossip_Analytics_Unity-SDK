@@ -65,15 +65,17 @@ namespace GossipSDK.Components
 
             float? mbps = null;
             if (isOnline)
-            bool runSpeedTest = (Time.realtimeSinceStartup - _lastSpeedTestTime) >= SpeedTestCooldownSeconds;
-            if (runSpeedTest)
             {
-                _lastSpeedTestTime = Time.realtimeSinceStartup;
-                yield return MeasureDownloadSpeed(v => mbps = v);
-            }
-            else
-            {
-                mbps = -1f;
+                bool runSpeedTest = (Time.realtimeSinceStartup - _lastSpeedTestTime) >= SpeedTestCooldownSeconds;
+                if (runSpeedTest)
+                {
+                    _lastSpeedTestTime = Time.realtimeSinceStartup;
+                    yield return MeasureDownloadSpeed(v => mbps = v);
+                }
+                else
+                {
+                    mbps = -1f;
+                }
             }
 
             var tracker = Gossip.Instance?.ConnectivityTracker;
