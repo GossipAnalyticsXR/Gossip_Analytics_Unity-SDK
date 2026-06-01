@@ -78,6 +78,7 @@ namespace GossipSDK.Components
                 Resolution = $"{resW}x{resH}",
                 GeneralSound = AudioListener.volume > 0f,
                 ControllersLatency = hasLatencyData,
+                MotionToPhotonMs = hasLatencyData ? latencyMs : 0f,
                 AmountDevicesInGame = hasDevicesInGame,
             };
 
