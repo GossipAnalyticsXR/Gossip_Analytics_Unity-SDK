@@ -278,12 +278,15 @@ namespace GossipSDK.Components
                 TimestampUtc = DateTime.UtcNow.ToString("o")
             };
 
-            await Gossip.Instance.EndpointClient.UploadAudioReaction(
+            var endpointClient = Gossip.Instance?.EndpointClient;
+            if (endpointClient == null) return;
+
+            await endpointClient.UploadAudioReaction(
                 data,
                 audio,
                 success =>
                 {
-                    if (Gossip.Instance.Settings.EnableDebug)
+                    if (Gossip.Instance?.Settings?.EnableDebug == true)
                         Debug.Log(success
                             ? "[AudioReaction] Uploaded via endpoint"
                             : "[AudioReaction] Upload failed");
