@@ -93,8 +93,11 @@ namespace GossipSDK.Components
             }
 
             double totalDuration = Time.realtimeSinceStartupAsDouble - sessionStartTimeRealtime;
-            SendSessionEvent("session_end", totalDuration);
             sessionStarted = false;
+            if ((UnityEngine.Object)Gossip.Instance != null)
+                SendSessionEvent("session_end", totalDuration);
+            else
+                Debug.LogWarning("[SessionManager] Gossip.Instance null on quit -- session_end not sent");
             PlayerPrefs.DeleteKey("gossip_pending_session");
             PlayerPrefs.Save();
         }
@@ -108,7 +111,11 @@ namespace GossipSDK.Components
             }
 
             double totalDuration = Time.realtimeSinceStartupAsDouble - sessionStartTimeRealtime;
-            SendSessionEvent("session_end", totalDuration);
+            sessionStarted = false;
+            if ((UnityEngine.Object)Gossip.Instance != null)
+                SendSessionEvent("session_end", totalDuration);
+            else
+                Debug.LogWarning("[SessionManager] Gossip.Instance null on destroy -- session_end not sent");
         }
 
         private void SendSessionEvent(string eventType, double durationSeconds)
