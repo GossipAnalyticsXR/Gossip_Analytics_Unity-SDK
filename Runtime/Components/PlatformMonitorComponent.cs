@@ -70,7 +70,9 @@ namespace GossipSDK.Components
 
             var data = new PlatformTracker.EntityData
             {
-                Version = Application.version,
+                Version = (string.IsNullOrEmpty(Application.version) || Application.version == "0.0.0")
+                    ? "1.0.0"
+                    : Application.version,
                 PlatformName = Application.platform.ToString(),
                 Model = SystemInfo.deviceModel,
                 Device = SystemInfo.deviceModel,
