@@ -1029,6 +1029,18 @@ namespace GossipSDK.Editor
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space(4);
 
+            int spatialActive = 0, spatialTotal = 0;
+            int deviceActive  = 0, deviceTotal  = 0;
+            int xrActive      = 0, xrTotal      = 0;
+            foreach (var _ci in _recommendedTrackers)
+            {
+                bool _isActive = _trackerComponentCache.TryGetValue(_ci.componentTypeName, out var _cmp)
+                                && (UnityEngine.Object)_cmp != null;
+                if      (_ci.category == "Spatial") { spatialTotal++; if (_isActive) spatialActive++; }
+                else if (_ci.category == "Device")  { deviceTotal++;  if (_isActive) deviceActive++;  }
+                else if (_ci.category == "XR")      { xrTotal++;      if (_isActive) xrActive++;      }
+            }
+
             string currentCategory = null;
             bool _currentCategoryExpanded = true;
             if (_wordWrapMiniLabel == null)
@@ -1042,7 +1054,10 @@ namespace GossipSDK.Editor
                                   : currentCategory == "Device"  ? _deviceExpanded
                                   : _xrExpanded;
                     EditorGUILayout.Space(4);
-                    expanded = EditorGUILayout.Foldout(expanded, currentCategory, true, EditorStyles.foldoutHeader);
+                    string catLabel = currentCategory == "Spatial" ? string.Format("Spatial  ({0} de {1})", spatialActive, spatialTotal)
+                                    : currentCategory == "Device"  ? string.Format("Device  ({0} de {1})", deviceActive, deviceTotal)
+                                    :                                string.Format("XR  ({0} de {1})", xrActive, xrTotal);
+                    expanded = EditorGUILayout.Foldout(expanded, catLabel, true, EditorStyles.foldoutHeader);
                     if (currentCategory == "Spatial") _spatialExpanded = expanded;
                     else if (currentCategory == "Device") _deviceExpanded = expanded;
                     else _xrExpanded = expanded;
