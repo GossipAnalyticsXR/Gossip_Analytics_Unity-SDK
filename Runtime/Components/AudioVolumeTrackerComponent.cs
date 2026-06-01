@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Audio;
 using GossipSDK.Core;
@@ -22,11 +23,20 @@ namespace GossipSDK.Components
         public float changeThreshold = 0.05f;
 
         private float lastMaster, lastMusic, lastSfx;
+        private float _volumeReportTimer = 0f;
+        private const float VolumeReportInterval = 60f;
 
         private void Start()
         {
             if (autoReportOnStart)
-                Report("Init");
+                StartCoroutine(WaitAndSend());
+        }
+
+        private IEnumerator WaitAndSend()
+        {
+            yield return new WaitUntil(() => Gossip.Instance != null);
+            yield return null;   // extra frame: AudioMixer needs one frame to initialize
+            Report("Init");
         }
 
         private void Update()
@@ -40,6 +50,13 @@ namespace GossipSDK.Components
                 Mathf.Abs(s - lastSfx) > changeThreshold)
             {
                 Report("Change");
+            }
+
+            _volumeReportTimer += Time.deltaTime;
+            if (_volumeReportTimer >= VolumeReportInterval)
+            {
+                _volumeReportTimer = 0f;
+                Report("Periodic");
             }
         }
 
