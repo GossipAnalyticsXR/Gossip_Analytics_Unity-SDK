@@ -22,6 +22,7 @@ namespace GossipSDK.Tracking.PlatformSpecification
             [field: SerializeField] public bool GeneralSound { get; set; }
             [field: SerializeField] public bool ControllersLatency { get; set; }
             [field: SerializeField] public float MotionToPhotonMs { get; set; }
+            [field: SerializeField] public float TrackingAccuracy { get; set; }
             [field: SerializeField] public bool AmountDevicesInGame { get; set; }
             [field: SerializeField] public bool HandStatus { get; set; }
             [field: SerializeField] public bool ControllerStatus { get; set; }
