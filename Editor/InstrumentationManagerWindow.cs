@@ -1040,8 +1040,7 @@ namespace GossipSDK.Editor
                 bool isPresent = (UnityEngine.Object)existing != null;
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
                 EditorGUILayout.BeginHorizontal();
-                string statusIcon = isPresent ? "✅" : "○";
-                EditorGUILayout.LabelField(statusIcon + "  " + info.displayName, GUILayout.ExpandWidth(true));
+                EditorGUILayout.LabelField(info.displayName, GUILayout.ExpandWidth(true));
                 bool playerNeeded = info.target == TrackerTarget.Player || info.target == TrackerTarget.Camera;
                 bool canAdd = true; // opt-out model: always allow adding; warnings inform about missing Player
                 if (!isPresent)
@@ -1428,6 +1427,7 @@ namespace GossipSDK.Editor
             if (prop == null) return;
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             EditorGUILayout.BeginHorizontal();
+            bool newVal = EditorGUILayout.Toggle(prop.boolValue, GUILayout.Width(18));
             EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
             var titleStyle = new GUIStyle(EditorStyles.label);
             titleStyle.fontStyle = FontStyle.Bold;
@@ -1436,7 +1436,6 @@ namespace GossipSDK.Editor
             descStyle.wordWrap = true;
             EditorGUILayout.LabelField(description, descStyle);
             EditorGUILayout.EndVertical();
-            bool newVal = EditorGUILayout.Toggle(prop.boolValue, GUILayout.Width(18));
             if (newVal != prop.boolValue)
             {
                 if (!newVal)
