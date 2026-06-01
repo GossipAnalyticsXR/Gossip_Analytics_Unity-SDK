@@ -266,16 +266,19 @@ namespace GossipSDK.Editor
             // Refresh tracker component cache (max once every 2s)
             if (EditorApplication.timeSinceStartup - _lastTrackerCountTime > 2.0)
             {
-                _cachedActiveTrackers = 0;
-                _trackerComponentCache.Clear();
-                foreach (var t in _recommendedTrackers)
+                if (_selectedTab == 1)
                 {
-                    var tp = GetTrackerType(t.componentTypeName);
-                    var comp = tp != null ? (Object.FindObjectOfType(tp) as Component) : null;
-                    if (comp != null)
+                    _cachedActiveTrackers = 0;
+                    _trackerComponentCache.Clear();
+                    foreach (var t in _recommendedTrackers)
                     {
-                        _cachedActiveTrackers++;
-                        _trackerComponentCache[t.componentTypeName] = comp;
+                        var tp = GetTrackerType(t.componentTypeName);
+                        var comp = tp != null ? (Object.FindObjectOfType(tp) as Component) : null;
+                        if (comp != null)
+                        {
+                            _cachedActiveTrackers++;
+                            _trackerComponentCache[t.componentTypeName] = comp;
+                        }
                     }
                 }
                 _lastTrackerCountTime = EditorApplication.timeSinceStartup;
@@ -579,30 +582,48 @@ namespace GossipSDK.Editor
                 for (int i = 0; i < EditorSceneManager.sceneCount; i++)
                     alreadyOpen.Add(EditorSceneManager.GetSceneAt(i).path);
 
+                int totalScenes = allScenePaths.Count;
+                int sceneIndex = 0;
                 // Scan each scene path (deduplicated)
                 foreach (var scenePath in allScenePaths)
                 {
+                    EditorUtility.DisplayProgressBar(
+                        "Gossip Analytics",
+                        $"Scanning {System.IO.Path.GetFileNameWithoutExtension(scenePath)} ({sceneIndex + 1}/{totalScenes})",
+                        totalScenes > 0 ? (float)sceneIndex / totalScenes : 0f);
+                    sceneIndex++;
                     bool wasAlreadyOpen = alreadyOpen.Contains(scenePath);
                     string sceneName = System.IO.Path.GetFileNameWithoutExtension(scenePath);
 
-                    UnityEngine.SceneManagement.Scene scene;
-                    if (wasAlreadyOpen)
-                        scene = EditorSceneManager.GetSceneByPath(scenePath);
-                    else
-                        scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+                    UnityEngine.SceneManagement.Scene scene = default;
+                    try
+                    {
+                        if (wasAlreadyOpen)
+                            scene = EditorSceneManager.GetSceneByPath(scenePath);
+                        else
+                            scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
 
-                    if (!scene.isLoaded) continue;
-                    var sceneList = new List<ScannedObject>();
-                    _sceneObjects[sceneName] = sceneList;
+                        if (!scene.isLoaded) continue;
+                        var sceneList = new List<ScannedObject>();
+                        _sceneObjects[sceneName] = sceneList;
 
-                    var storedPaths = allStoredPaths.ContainsKey(sceneName) ? allStoredPaths[sceneName] : new HashSet<string>();
-                    var scannedPaths = new HashSet<string>();
-                    foreach (var root in scene.GetRootGameObjects())
-                        CollectInteractableObjectsForScan(root, sceneName, scannedPaths, storedPaths, sceneList);
+                        var storedPaths = allStoredPaths.ContainsKey(sceneName) ? allStoredPaths[sceneName] : new HashSet<string>();
+                        var scannedPaths = new HashSet<string>();
+                        foreach (var root in scene.GetRootGameObjects())
+                            CollectInteractableObjectsForScan(root, sceneName, scannedPaths, storedPaths, sceneList);
 
-                    if (!wasAlreadyOpen)
-                        EditorSceneManager.CloseScene(scene, true);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogWarning($"[Gossip Analytics] Could not scan scene {scenePath}: {ex.Message}");
+                    }
+                    finally
+                    {
+                        if (!wasAlreadyOpen && scene.IsValid())
+                            EditorSceneManager.CloseScene(scene, true);
+                    }
                 }
+                EditorUtility.ClearProgressBar();
             _hasNewObjects = false;
         }
 
