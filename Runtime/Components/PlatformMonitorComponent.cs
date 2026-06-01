@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.XR;
 using UnityEngine.XR.Provider;
@@ -15,8 +16,19 @@ namespace GossipSDK.Components
         {
             if (autoReportOnStart)
             {
+                if (Gossip.Instance == null)
+                {
+                    StartCoroutine(WaitAndSend());
+                    return;
+                }
                 SendPlatformInfo();
             }
+        }
+
+        private IEnumerator WaitAndSend()
+        {
+            yield return new WaitUntil(() => Gossip.Instance != null);
+            SendPlatformInfo();
         }
 
         public void SendPlatformInfo()
