@@ -1317,10 +1317,10 @@ namespace GossipSDK.Editor
                 "All are pre-enabled. Deselect only if your app does not use that feature.",
                 MessageType.Info);
             EditorGUILayout.Space(4);
-            if (_cachedPermHandler == null)
+            if ((UnityEngine.Object)_cachedPermHandler == null)
                 _cachedPermHandler = Object.FindObjectOfType<VRPermissionsHandler>();
             var handler = _cachedPermHandler;
-            if (handler == null)
+            if ((UnityEngine.Object)handler == null)
             {
                 EditorGUILayout.HelpBox(
                     "VRPermissionsHandler is not in the scene. Add it to enable Android XR permissions.",
@@ -1359,9 +1359,16 @@ namespace GossipSDK.Editor
             GUI.backgroundColor = prevBgHandler;
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space(6);
-            if (_vrHandlerSO == null || _vrHandlerSO.targetObject != handler)
-                _vrHandlerSO = new SerializedObject(handler);
-            _vrHandlerSO.Update();
+            if ((UnityEngine.Object)handler != null)
+            {
+                if (_vrHandlerSO == null || _vrHandlerSO.targetObject != handler)
+                    _vrHandlerSO = new SerializedObject(handler);
+                _vrHandlerSO.Update();
+            }
+            else
+            {
+                _vrHandlerSO = null;
+            }
             var propEye = _vrHandlerSO.FindProperty("enableEyeTracking");
             var propSpatial = _vrHandlerSO.FindProperty("enableSpatialScene");
             var propCamera = _vrHandlerSO.FindProperty("enableHeadsetCamera");
