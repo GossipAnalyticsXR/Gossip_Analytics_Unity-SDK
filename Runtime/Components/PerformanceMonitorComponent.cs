@@ -33,6 +33,9 @@ namespace GossipSDK.Components
         {
             yield return new WaitUntil(() => Gossip.Instance != null);
             enabled = true;
+            lastTime = Time.realtimeSinceStartup;
+            frames = 0;
+            fpsTimer = 0f;
         }
 
         private void Update()
