@@ -1015,11 +1015,13 @@ namespace GossipSDK.Editor
                 _trackerComponentCache.TryGetValue(info.componentTypeName, out var cachedComp);
                 if ((UnityEngine.Object)cachedComp != null) presentCount++; else missingCount++;
             }
+            bool showAddAll     = missingCount > 0;
+            bool showDeselectAll = presentCount > 0;
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            if (missingCount > 0 && GUILayout.Button("Add All to Scene", GUILayout.Width(130)))
+            if (showAddAll && GUILayout.Button("Add All to Scene", GUILayout.Width(130)))
                 AddAllTrackers();
-            if (presentCount > 0 && GUILayout.Button("Deselect All", GUILayout.Width(90)))
+            if (showDeselectAll && GUILayout.Button("Deselect All", GUILayout.Width(90)))
             {
                 bool confirm = EditorUtility.DisplayDialog("Deselect All Trackers", "Remove all tracker components from the scene?", "Deselect All", "Cancel");
                 if (confirm) RemoveAllTrackers();
@@ -1051,6 +1053,7 @@ namespace GossipSDK.Editor
                 _trackerComponentCache.TryGetValue(info.componentTypeName, out Component existing);
                 bool isPresent = (UnityEngine.Object)existing != null;
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                bool showInspectorBtn = isPresent && info.requiresConfiguration;
                 EditorGUILayout.BeginHorizontal();
                 bool wasPresent = isPresent;
                 bool nowSelected = EditorGUILayout.Toggle(wasPresent, GUILayout.Width(20));
@@ -1077,7 +1080,7 @@ namespace GossipSDK.Editor
                 EditorGUILayout.LabelField(info.displayName, EditorStyles.boldLabel);
                 EditorGUILayout.LabelField(info.description, _wordWrapMiniLabel);
                 EditorGUILayout.EndVertical();
-                if (isPresent && info.requiresConfiguration)
+                if (showInspectorBtn)
                 {
                     if (GUILayout.Button("Open Inspector", GUILayout.Width(110)))
                     {
@@ -1112,10 +1115,11 @@ namespace GossipSDK.Editor
                         ? info.postAddHint
                         : "Requires configuration in Inspector — the SDK cannot know your app's specific thresholds. Open the Inspector and configure before building.";
                     MessageType hintBType = needsAutoAssign ? MessageType.Warning : MessageType.Info;
+                    bool showAutoAssignBtn = needsAutoAssign;
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.HelpBox(hintB, hintBType);
                     EditorGUILayout.BeginVertical(GUILayout.Width(70));
-                    if (needsAutoAssign)
+                    if (showAutoAssignBtn)
                     {
                         if (GUILayout.Button("Auto-assign\nCamera", GUILayout.Width(70), GUILayout.Height(36)))
                             AutoAssignCameraField(existing, autoAssignField);
