@@ -18,6 +18,22 @@ public class PauseComponent : MonoBehaviour
 
     private bool isPausedLocal = false;
 
+    private void OnEnable()
+    {
+    #if UNITY_ANDROID && !UNITY_EDITOR
+        OVRManager.HMDUnmounted += OnHMDUnmountedHandler;
+        OVRManager.HMDMounted   += OnHMDMountedHandler;
+    #endif
+    }
+
+    private void OnDisable()
+    {
+    #if UNITY_ANDROID && !UNITY_EDITOR
+        OVRManager.HMDUnmounted -= OnHMDUnmountedHandler;
+        OVRManager.HMDMounted   -= OnHMDMountedHandler;
+    #endif
+    }
+
     public void OnPause()
     {
         try
@@ -48,6 +64,8 @@ public class PauseComponent : MonoBehaviour
 
     public void OnResume()
     {
+        if (!isPausedLocal) return;
+
         try
         {
             double duration = 0.0;
@@ -76,6 +94,11 @@ public class PauseComponent : MonoBehaviour
         }
         catch (Exception ex) { Debug.LogException(ex); }
     }
+
+    #if UNITY_ANDROID && !UNITY_EDITOR
+    private void OnHMDUnmountedHandler() => OnPause();
+    private void OnHMDMountedHandler()   => OnResume();
+    #endif
 
     private void OnApplicationPause(bool paused)
     {
