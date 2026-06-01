@@ -11,10 +11,15 @@ namespace GossipSDK.Components
         [SerializeField] private float sampleInterval = 0.5f;
         [SerializeField] private string postureState = "";
 
+        [SerializeField] private float swayMagnitudeCeiling = 0.05f;
         private Vector3 lastPosition;
         private float lastSampleTime;
         private bool started;
 
+        private float _swayFreqTimer = 0f;
+        private int _swayDirectionChanges = 0;
+        private float _lastSwayDeltaX = 0f;
+        private float _measuredSwayFrequency = 0f;
         private void Start()
         {
             lastPosition = transform.position;
@@ -35,9 +40,22 @@ namespace GossipSDK.Components
 
             Vector3 currentPos = transform.position;
 
-            float swayMagnitude = Vector3.Distance(currentPos, lastPosition);
+            float deltaX = currentPos.x - lastPosition.x;
+            if (Mathf.Abs(deltaX) > 0.001f && Mathf.Sign(deltaX) != Mathf.Sign(_lastSwayDeltaX))
+                _swayDirectionChanges++;
+            _lastSwayDeltaX = deltaX;
+            _swayFreqTimer += dt;
+            if (_swayFreqTimer >= 1f)
+            {
+                _measuredSwayFrequency = _swayDirectionChanges / 2f;
+                _swayDirectionChanges = 0;
+                _swayFreqTimer = 0f;
+            }
 
-            float swayFrequency = dt > 0f ? 1f / dt : 0f;
+            float rawSwayMagnitude = Vector3.Distance(currentPos, lastPosition);
+            float swayMagnitude = Mathf.Clamp01(rawSwayMagnitude / swayMagnitudeCeiling);
+
+            float swayFrequency = _measuredSwayFrequency;
 
             lastPosition = currentPos;
             lastSampleTime = now;
