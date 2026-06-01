@@ -51,12 +51,25 @@ namespace GossipSDK.Components
             bool hasLatencyData = displaySubsystems.Count > 0 &&
                 UnityEngine.XR.Provider.XRStats.TryGetStat(displaySubsystems[0], "MotionToPhoton", out latencyMs);
 
+            string rawModel = SystemInfo.deviceModel;
+            string brand;
+            if (rawModel.StartsWith("Oculus") || rawModel.StartsWith("Meta"))
+                brand = "Meta";
+            else if (rawModel.StartsWith("Pico"))
+                brand = "PICO";
+            else if (rawModel.StartsWith("HTC") || rawModel.StartsWith("Vive"))
+                brand = "HTC";
+            else if (rawModel.StartsWith("Samsung"))
+                brand = "Samsung";
+            else
+                brand = rawModel.Contains(" ") ? rawModel.Split(' ')[0] : rawModel;
             var data = new PlatformTracker.EntityData
             {
                 Version = Application.version,
                 PlatformName = Application.platform.ToString(),
                 Model = SystemInfo.deviceModel,
                 Device = SystemInfo.deviceModel,
+                Brand = brand,
                 Resolution = $"{Screen.width}x{Screen.height}",
                 GeneralSound = AudioListener.volume > 0f,
                 ControllersLatency = hasLatencyData,
