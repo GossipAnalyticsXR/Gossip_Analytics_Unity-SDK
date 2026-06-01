@@ -31,6 +31,9 @@ namespace GossipSDK.Editor
         private SerializedObject _vrHandlerSO;
         private VRPermissionsHandler _cachedPermHandler;
         private static int _selectedTab = 0;
+        private static bool _spatialExpanded = true;
+        private static bool _deviceExpanded  = true;
+        private static bool _xrExpanded      = true;
         private readonly string[] _tabLabels = new string[] { "Interactables", "Trackers", "Permissions" };
         private GameObject _playerObject = null;
         private Camera _mainCamera = null;
@@ -87,7 +90,7 @@ namespace GossipSDK.Editor
                 target = TrackerTarget.Player,
                 requiresConfiguration = true,
                 preAddHint = "The SDK will auto-assign the head camera. You must set sitThreshold and crouchThreshold (in metres) to match your player's real-world standing height.",
-                postAddHint = "Head Transform: auto-assigned ✔  |  You must still set sitThreshold and crouchThreshold (in metres) to match your player's real-world standing height before building."
+                postAddHint = "Head Transform: auto-assigned ✔  |  You must still set sitThreshold and crouchThreshold (in metres) to match your player's real-world standing height before building. Thresholds are world-space head Y in meters (sit=0.9 m, crouch=1.2 m default)."
             },
             new TrackerInfo {
                 componentTypeName = "PlayerMovementHeatmapComponent",
@@ -166,7 +169,7 @@ namespace GossipSDK.Editor
                 category = "XR",
                 target = TrackerTarget.Camera,
                 requiresConfiguration = true,
-                preAddHint = "The SDK will auto-assign the tracked transform to the main camera. Set worldMinXZ and worldMaxXZ to your scene bounds. Ensure Microphone permission is enabled in the Permissions tab.",
+                preAddHint = "The SDK will auto-assign the tracked transform to the main camera. Set worldMinXZ and worldMaxXZ to your scene bounds. Ensure Microphone permission is enabled in the Permissions tab. On Android, also add RECORD_AUDIO to your AndroidManifest.xml.",
                 postAddHint = "Tracked Transform: auto-assigned ✔  |  Set worldMinXZ and worldMaxXZ (in metres) to your scene bounds. Microphone permission must be enabled in the Permissions tab."
             },
             new TrackerInfo {
@@ -1025,6 +1028,7 @@ namespace GossipSDK.Editor
             EditorGUILayout.Space(4);
 
             string currentCategory = null;
+            bool _currentCategoryExpanded = true;
             if (_wordWrapMiniLabel == null)
                 _wordWrapMiniLabel = new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
             foreach (var info in _recommendedTrackers)
@@ -1032,9 +1036,17 @@ namespace GossipSDK.Editor
                 if (info.category != currentCategory)
                 {
                     currentCategory = info.category;
+                    bool expanded = currentCategory == "Spatial" ? _spatialExpanded
+                                  : currentCategory == "Device"  ? _deviceExpanded
+                                  : _xrExpanded;
                     EditorGUILayout.Space(4);
-                    EditorGUILayout.LabelField(currentCategory, EditorStyles.boldLabel);
+                    expanded = EditorGUILayout.Foldout(expanded, currentCategory, true, EditorStyles.foldoutHeader);
+                    if (currentCategory == "Spatial") _spatialExpanded = expanded;
+                    else if (currentCategory == "Device") _deviceExpanded = expanded;
+                    else _xrExpanded = expanded;
+                    _currentCategoryExpanded = expanded;
                 }
+                if (!_currentCategoryExpanded) continue;
                 var trackerType = GetTrackerType(info.componentTypeName);
                 _trackerComponentCache.TryGetValue(info.componentTypeName, out Component existing);
                 bool isPresent = (UnityEngine.Object)existing != null;
