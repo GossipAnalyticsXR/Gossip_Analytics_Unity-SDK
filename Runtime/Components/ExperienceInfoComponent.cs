@@ -1,3 +1,4 @@
+using System.Collections;
 using System;
 using UnityEngine;
 using GossipSDK.Tracking.GameplayMetrics;
@@ -24,6 +25,17 @@ namespace GossipSDK.Components
         private void Start()
         {
             if (!autoReportOnStart) return;
+            if (Gossip.Instance == null)
+            {
+                StartCoroutine(WaitAndSend());
+                return;
+            }
+            SendLoadInfoInternal();
+        }
+
+        private IEnumerator WaitAndSend()
+        {
+            yield return new WaitUntil(() => Gossip.Instance != null);
             SendLoadInfoInternal();
         }
 
@@ -40,6 +52,22 @@ namespace GossipSDK.Components
             var tracker = GossipSDK.Core.Gossip.Instance?.ExperienceInfoTracker;
             if (tracker != null)
             {
+                // Runtime fallbacks if developer did not configure via Instrumentation Manager
+                if (string.IsNullOrEmpty(appVersion) || appVersion == "0.0.0")
+                    appVersion = Application.version;
+                if (string.IsNullOrEmpty(targetHardware) || targetHardware == "Unity")
+                {
+                    #if UNITY_ANDROID
+                    targetHardware = "Android XR";
+                    #elif UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
+                    targetHardware = "PC VR";
+                    #elif UNITY_IOS
+                    targetHardware = "iOS";
+                    #else
+                    targetHardware = Application.platform.ToString();
+                    #endif
+                }
+
                 tracker.CapExperienceInfo(loadMs, appVersion, targetHardware);
                 if (sendImmediately)
                     tracker.SendDataToSocket();
