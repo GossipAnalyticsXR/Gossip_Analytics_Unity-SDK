@@ -17,14 +17,27 @@ namespace GossipSDK.Components
 
         private NetworkReachability lastReachability;
         private Coroutine periodicRoutine;
+        private float _lastSpeedTestTime = -999f;
+        private const float SpeedTestCooldownSeconds = 30f;
 
         private void Start()
         {
             lastReachability = Application.internetReachability;
+            if (Gossip.Instance == null)
+            {
+                StartCoroutine(WaitAndSend());
+                return;
+            }
             StartCoroutine(SendConnectivitySnapshot());
 
             if (periodicTestInterval > 0)
                 periodicRoutine = StartCoroutine(PeriodicCheck());
+        }
+
+        private IEnumerator WaitAndSend()
+        {
+            yield return new WaitUntil(() => Gossip.Instance != null);
+            yield return SendConnectivitySnapshot();
         }
 
         private void Update()
@@ -52,7 +65,16 @@ namespace GossipSDK.Components
 
             float? mbps = null;
             if (isOnline)
+            bool runSpeedTest = (Time.realtimeSinceStartup - _lastSpeedTestTime) >= SpeedTestCooldownSeconds;
+            if (runSpeedTest)
+            {
+                _lastSpeedTestTime = Time.realtimeSinceStartup;
                 yield return MeasureDownloadSpeed(v => mbps = v);
+            }
+            else
+            {
+                mbps = -1f;
+            }
 
             var tracker = Gossip.Instance?.ConnectivityTracker;
             if (tracker == null)
