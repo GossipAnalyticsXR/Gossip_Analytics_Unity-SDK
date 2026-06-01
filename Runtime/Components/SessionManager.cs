@@ -36,11 +36,25 @@ namespace GossipSDK.Components
                 Debug.LogWarning($"[SessionManager] Could not set Gossip current ids: {ex.Message}");
             }
 
+            // Check for orphaned session from previous run (e.g., editor Stop)
+            if (PlayerPrefs.HasKey("gossip_pending_session_id"))
+            {
+                double orphanStart = double.Parse(PlayerPrefs.GetString("gossip_pending_session_start", "0"));
+                double orphanDuration = System.Math.Max(0.0, Time.realtimeSinceStartupAsDouble - orphanStart);
+                SendSessionEvent("session_end", orphanDuration);
+                PlayerPrefs.DeleteKey("gossip_pending_session_id");
+                PlayerPrefs.DeleteKey("gossip_pending_session_start");
+                PlayerPrefs.Save();
+            }
+            
             double duration = 0;
             SendSessionEvent("start_session", duration);
 
             sessionStartTimeRealtime = Time.realtimeSinceStartupAsDouble;
             sessionStarted = true;
+            PlayerPrefs.SetString("gossip_pending_session_id", sessionId);
+            PlayerPrefs.SetString("gossip_pending_session_start", sessionStartTimeRealtime.ToString("R"));
+            PlayerPrefs.Save();
         }
 
         private string TryGetPlatformUserId()
@@ -80,6 +94,9 @@ namespace GossipSDK.Components
 
             double totalDuration = Time.realtimeSinceStartupAsDouble - sessionStartTimeRealtime;
             SendSessionEvent("session_end", totalDuration);
+            sessionStarted = false;
+            PlayerPrefs.DeleteKey("gossip_pending_session");
+            PlayerPrefs.Save();
         }
 
         private void OnDestroy()
