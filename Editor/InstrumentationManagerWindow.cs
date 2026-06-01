@@ -1137,6 +1137,10 @@ namespace GossipSDK.Editor
                     EditorGUILayout.EndVertical();
                     EditorGUILayout.EndHorizontal();
                 }
+                if (isPresent && !info.requiresConfiguration && !string.IsNullOrEmpty(info.postAddHint))
+                {
+                    EditorGUILayout.HelpBox(info.postAddHint, MessageType.Info);
+                }
                 EditorGUILayout.EndVertical();
             }
         }
