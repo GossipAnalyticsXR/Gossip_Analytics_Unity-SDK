@@ -1052,21 +1052,13 @@ namespace GossipSDK.Editor
                 bool isPresent = (UnityEngine.Object)existing != null;
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
                 EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField(info.displayName, GUILayout.ExpandWidth(true));
-                bool playerNeeded = info.target == TrackerTarget.Player || info.target == TrackerTarget.Camera;
-                bool canAdd = true; // opt-out model: always allow adding; warnings inform about missing Player
-                if (!isPresent)
+                bool wasPresent = isPresent;
+                bool nowSelected = EditorGUILayout.Toggle(wasPresent, GUILayout.Width(20));
+                if (nowSelected != wasPresent)
                 {
-                    EditorGUI.BeginDisabledGroup(!canAdd);
-                    if (GUILayout.Button("Add", GUILayout.Width(50)))
+                    if (nowSelected)
                         AddTracker(info);
-                    EditorGUI.EndDisabledGroup();
-                }
-                else
-                {
-                    var prevBg = GUI.backgroundColor;
-                    GUI.backgroundColor = new Color(0.9f, 0.3f, 0.3f);
-                    if (GUILayout.Button("Deselect", GUILayout.Width(65)))
+                    else
                     {
                         bool confirm = EditorUtility.DisplayDialog(
                             "Deselect " + info.displayName + "?",
@@ -1080,15 +1072,20 @@ namespace GossipSDK.Editor
                             EditorSceneManager.MarkSceneDirty(existing.gameObject.scene);
                         }
                     }
-                    GUI.backgroundColor = prevBg;
+                }
+                EditorGUILayout.BeginVertical();
+                EditorGUILayout.LabelField(info.displayName, EditorStyles.boldLabel);
+                EditorGUILayout.LabelField(info.description, _wordWrapMiniLabel);
+                EditorGUILayout.EndVertical();
+                if (isPresent && info.requiresConfiguration)
+                {
+                    if (GUILayout.Button("Open Inspector", GUILayout.Width(110)))
+                    {
+                        Selection.activeGameObject = existing.gameObject;
+                        EditorGUIUtility.PingObject(existing);
+                    }
                 }
                 EditorGUILayout.EndHorizontal();
-                var descStyle = _wordWrapMiniLabel;
-                string desc = info.description;
-                if (info.requiresConfiguration) desc += " ⚠ Requires configuration in Inspector after adding.";
-                if (playerNeeded && _playerObject == null && !isPresent) desc = "⚠ Assign Player first. " + desc;
-                EditorGUILayout.LabelField(desc, descStyle);
-                // Case A: not yet added, inform before clicking Add
                 if (!isPresent && info.requiresConfiguration)
                 {
                     string hintA = !string.IsNullOrEmpty(info.preAddHint)
