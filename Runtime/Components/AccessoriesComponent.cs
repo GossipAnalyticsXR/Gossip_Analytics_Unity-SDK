@@ -1,4 +1,5 @@
 using UnityEngine;
+using GossipSDK;
 using GossipSDK.Core;
 using GossipSDK.Tracking.GameplayMetrics;
 
@@ -6,7 +7,7 @@ using GossipSDK.Tracking.GameplayMetrics;
 public class AccessoriesComponent : MonoBehaviour
 {
     [Header("Accessory Info")]
-    [SerializeField] private string accessoryName  = "Default Item";
+    [SerializeField] private string accessoryName = "Default Item";
     [SerializeField] private string accessoryPrice = "0.00";
     [SerializeField] private string accessoryBrand = "";
     [SerializeField] private string totalPurchased = "0.00";
@@ -15,8 +16,8 @@ public class AccessoriesComponent : MonoBehaviour
     [SerializeField] private PaymentType paymentType = PaymentType.Card;
 
     [Header("Settings")]
-    [SerializeField] private bool sendImmediately    = false;
-    [SerializeField] private bool autoReportOnStart  = false;
+    [SerializeField] private bool sendImmediately = false;
+    [SerializeField] private bool autoReportOnStart = false;
 
     private void Start()
     {
@@ -25,16 +26,16 @@ public class AccessoriesComponent : MonoBehaviour
     }
 
     public void ReportPurchased(
-        string name          = null,
-        string price         = null,
-        string brand         = null,
+        string name = null,
+        string price = null,
+        string brand = null,
         PaymentType? typePay = null,
-        string total         = null)
+        string total = null)
     {
         var tracker = Gossip.Instance?.AccessoriesTracker;
         if (tracker == null) return;
 
-        string n = string.IsNullOrEmpty(name)  ? accessoryName  : name;
+        string n = string.IsNullOrEmpty(name) ? accessoryName : name;
         string p = string.IsNullOrEmpty(price) ? accessoryPrice : price;
         string b = string.IsNullOrEmpty(brand) ? accessoryBrand : brand;
         string tp = (typePay ?? paymentType).ToString();
