@@ -69,6 +69,7 @@ namespace GossipSDK.Core
 
         public NetworkUsageTracker NetworkUsageTracker { get; private set; }
         public CrashTracker CrashTracker { get; private set; }
+        public FreezeTracker FreezeTracker { get; private set; }
 
         public string CurrentPlayerId { get; private set; }
         public string CurrentSessionId { get; private set; }
@@ -119,6 +120,7 @@ namespace GossipSDK.Core
             if (DistanceTracker == null) DistanceTracker = new DistanceTracker();
             if (MistakeTracker == null) MistakeTracker = new MistakeTracker();
             if (CrashTracker == null) CrashTracker = new CrashTracker();
+            if (FreezeTracker == null) FreezeTracker = new FreezeTracker();
             if (AvatarTracker == null) AvatarTracker = new AvatarTracker();
             if (DifficultyTracker == null) DifficultyTracker = new DifficultyTracker();
             if (PauseTracker == null) PauseTracker = new PauseTracker();
