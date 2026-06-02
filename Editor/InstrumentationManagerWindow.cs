@@ -220,6 +220,16 @@ namespace GossipSDK.Editor
                 preAddHint = "captureExceptions is on by default. Enable captureErrors only if needed -- errors can be noisy.",
                 postAddHint = "Crash Reporter active. Unity exceptions are captured automatically and sent to the Issues dashboard."
             },
+            new TrackerInfo {
+                componentTypeName    = "AdComponent",
+                displayName          = "Ad Tracker",
+                description          = "Tracks ad impressions, interactions, rewards and session duration. Configure Ad ID, network and placement in Inspector. Call RecordImpression(), RecordInteraction() or RecordReward() from your ad SDK callbacks.",
+                category             = "Device",
+                target               = TrackerTarget.AnyObject,
+                requiresConfiguration = false,
+                preAddHint           = "Set adId, adNetwork and placementId in Inspector. Enable autoStartOnEnable if the ad starts immediately. Call OnAdOpened()/OnAdClosed() from your ad SDK callbacks.",
+                postAddHint          = "Call RecordImpression(), RecordInteraction() or RecordReward() from your ad network SDK callbacks. OnAdOpened() and OnAdClosed() handle session timing automatically."
+            },
         };
         private static Dictionary<string, Type> _trackerTypeCache = null;
         private static Type _cachedXROriginType;
