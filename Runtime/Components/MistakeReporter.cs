@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using GossipSDK.Core;
 using GossipSDK.Tracking.GameplayMetrics;
@@ -15,8 +16,12 @@ public class MistakeReporter : MonoBehaviour
     private MistakeTracker tracker;
     private bool _disabled = false;
 
-    private void Awake()
+    private void Awake() { StartCoroutine(WaitAndInit()); }
+
+    private IEnumerator WaitAndInit()
     {
+        yield return new WaitUntil(() => Gossip.Instance != null);
+
         try
         {
             tracker = Gossip.Instance?.GetType().GetProperty("MistakeTracker")?.GetValue(Gossip.Instance) as MistakeTracker;
@@ -25,16 +30,15 @@ public class MistakeReporter : MonoBehaviour
 
         if (tracker == null)
         {
-            Debug.LogError("[Gossip Analytics] MistakeReporter: GossipManager not ready or MistakeTracker unavailable. This component will be disabled. Ensure GossipManager is present and initialized before this component.");
+            Debug.LogError("[Gossip Analytics] MistakeReporter: MistakeTracker unavailable even after Gossip.Instance ready. This component will be disabled.");
             _disabled = true;
+            yield break;
         }
-    }
 
-    private void Start()
-    {
         if (autoReportOnStart)
             ReportMistake(this.gameObject, "Demo Mistake");
     }
+
 
     public void ReportMistake(GameObject obj,string customType = null, int? customSeverity = null)
     {
