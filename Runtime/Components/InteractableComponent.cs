@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using GossipSDK.Core;
@@ -68,11 +69,15 @@ namespace GossipSDK.Components
 
         private void Start()
         {
-            if (autoTriggerOnStart)
-                OnInteractInstant("Demo Shoot");
+            StartCoroutine(WaitAndSend());
+        }
 
-            if (autoStartOnEnable)
-                OnInteractStart("Demo Start Interaction");
+        private IEnumerator WaitAndSend()
+        {
+            yield return new WaitUntil(() => Gossip.Instance != null);
+
+            if (autoTriggerOnStart)  OnInteractInstant("Demo Shoot");
+            if (autoStartOnEnable)   OnInteractStart("Demo Start Interaction");
         }
 
         private void Update()
