@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using GossipSDK;
 using GossipSDK.Core;
 using GossipSDK.Tracking.GameplayMetrics;
 
@@ -7,12 +8,12 @@ using GossipSDK.Tracking.GameplayMetrics;
 public class AvatarTrackerComponent : MonoBehaviour
 {
     [Header("Avatar Info")]
-    [SerializeField] private string avatarId   = "avatar_01";
+    [SerializeField] private string avatarId = "avatar_01";
     [SerializeField] private string avatarName = "Default Avatar";
-    [SerializeField] private string variant    = "";
-    [SerializeField] private string brand      = "";
-    [SerializeField] private string price      = "0.00";
-    [SerializeField] private Color  color      = Color.white;
+    [SerializeField] private string variant = "";
+    [SerializeField] private string brand = "";
+    [SerializeField] private string price = "0.00";
+    [SerializeField] private Color color = Color.white;
 
     [Header("Payment")]
     [SerializeField] private PaymentType paymentType = PaymentType.Card;
@@ -27,23 +28,23 @@ public class AvatarTrackerComponent : MonoBehaviour
     }
 
     public void NotifyAvatar(
-        string id           = null,
+        string id = null,
         PaymentType? typePay = null,
-        string name         = null,
-        string variantVal   = null,
-        string brnd         = null,
-        string pr           = null,
-        Color? col          = null)
+        string name = null,
+        string variantVal = null,
+        string brnd = null,
+        string pr = null,
+        Color? col = null)
     {
         try
         {
-            string aId   = string.IsNullOrEmpty(id)   ? avatarId   : id;
-            string aP    = (typePay ?? paymentType).ToString();
+            string aId = string.IsNullOrEmpty(id) ? avatarId : id;
+            string aP = (typePay ?? paymentType).ToString();
             string aName = string.IsNullOrEmpty(name) ? avatarName : name;
-            string varr  = string.IsNullOrEmpty(variantVal) ? variant : variantVal;
-            string Brnd  = string.IsNullOrEmpty(brnd) ? brand : brnd;
-            string PR    = string.IsNullOrEmpty(pr)   ? price  : pr;
-            string hex   = ColorUtility.ToHtmlStringRGB(col ?? color);
+            string varr = string.IsNullOrEmpty(variantVal) ? variant : variantVal;
+            string Brnd = string.IsNullOrEmpty(brnd) ? brand : brnd;
+            string PR = string.IsNullOrEmpty(pr) ? price : pr;
+            string hex = ColorUtility.ToHtmlStringRGB(col ?? color);
 
             var direct = Gossip.Instance?.AvatarTracker;
             if (direct != null)
