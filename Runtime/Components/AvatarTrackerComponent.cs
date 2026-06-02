@@ -6,24 +6,19 @@ using GossipSDK.Tracking.GameplayMetrics;
 [DisallowMultipleComponent]
 public class AvatarTrackerComponent : MonoBehaviour
 {
-    public bool autoReportOnStart = true;
+    [Header("Avatar Info")]
+    [SerializeField] private string avatarId   = "avatar_01";
+    [SerializeField] private string avatarName = "Default Avatar";
+    [SerializeField] private string variant    = "";
+    [SerializeField] private string brand      = "";
+    [SerializeField] private string price      = "0.00";
+    [SerializeField] private Color  color      = Color.white;
 
-    [Header("Avatar (optional prefill)")]
-    public string avatarId;
-    public string avatarPay;
-    public string avatarName;
-    public string variant;
-    public string brand;
-    public string price;
-    public Color color = Color.white;
+    [Header("Payment")]
+    [SerializeField] private PaymentType paymentType = PaymentType.Card;
 
-    [Tooltip("Enviar automáticamente la información de avatar al Start()")]
-
-    private string ToHex(Color c)
-    {
-        Color32 cc = c;
-        return $"#{cc.r:X2}{cc.g:X2}{cc.b:X2}";
-    }
+    [Header("Settings")]
+    [SerializeField] private bool autoReportOnStart = false;
 
     private void Start()
     {
@@ -31,33 +26,29 @@ public class AvatarTrackerComponent : MonoBehaviour
             NotifyAvatar();
     }
 
-    public void NotifyAvatar(string id = null, string typePay = null, string name = null, string variantVal = null, string brnd = null, string pr = null, Color? col = null)
+    public void NotifyAvatar(
+        string id           = null,
+        PaymentType? typePay = null,
+        string name         = null,
+        string variantVal   = null,
+        string brnd         = null,
+        string pr           = null,
+        Color? col          = null)
     {
         try
         {
-            var aId = string.IsNullOrEmpty(id) ? avatarId : id;
-            var aP = string.IsNullOrEmpty(typePay) ? avatarPay : typePay;
-            var aName = string.IsNullOrEmpty(name) ? avatarName : name;
-            var varr = string.IsNullOrEmpty(variantVal) ? variant : variantVal;
-            var Brnd = string.IsNullOrEmpty(brnd) ? brand : brnd;
-            var PR = string.IsNullOrEmpty(pr) ? price : pr;
-            var c = col ?? color;
-            string hex = ToHex(c);
-
-            var tracker = Gossip.Instance?.GetType().GetProperty("AvatarTracker")?.GetValue(Gossip.Instance) as AvatarTracker;
-            if (tracker == null)
-            {
-                tracker = Gossip.Instance?.GetType().GetProperty("AvatarTracker")?.GetValue(Gossip.Instance) as AvatarTracker;
-            }
+            string aId   = string.IsNullOrEmpty(id)   ? avatarId   : id;
+            string aP    = (typePay ?? paymentType).ToString();
+            string aName = string.IsNullOrEmpty(name) ? avatarName : name;
+            string varr  = string.IsNullOrEmpty(variantVal) ? variant : variantVal;
+            string Brnd  = string.IsNullOrEmpty(brnd) ? brand : brnd;
+            string PR    = string.IsNullOrEmpty(pr)   ? price  : pr;
+            string hex   = ColorUtility.ToHtmlStringRGB(col ?? color);
 
             var direct = Gossip.Instance?.AvatarTracker;
             if (direct != null)
             {
                 direct.CapAvatar(aId, aP, aName, varr, Brnd, PR, hex, null);
-            }
-            else if (tracker != null)
-            {
-                tracker.CapAvatar(aId, aP, aName, varr, Brnd, PR, hex, null);
             }
             else
             {
