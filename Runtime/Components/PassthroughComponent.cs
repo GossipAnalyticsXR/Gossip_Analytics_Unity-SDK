@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using GossipSDK.Core;
 using GossipSDK.Tracking.GameplayMetrics;
 using UnityEngine.SceneManagement;
@@ -28,8 +29,13 @@ public class PassthroughComponent : MonoBehaviour
 
     private void Start()
     {
-        if(onActiveStart)
-            OnPassthroughEnabled();
+        if (onActiveStart) StartCoroutine(WaitAndEnable());
+    }
+
+    private IEnumerator WaitAndEnable()
+    {
+        yield return new WaitUntil(() => Gossip.Instance != null);
+        OnPassthroughEnabled();
     }
 
     private void Update()
