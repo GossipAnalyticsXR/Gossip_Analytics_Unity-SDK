@@ -190,6 +190,26 @@ namespace GossipSDK.Editor
                 preAddHint = "Call OnPassthroughEnabled() and OnPassthroughDisabled() on this component from your XR passthrough API callbacks or UI. Enable onActiveStart if passthrough is active from scene load.",
                 postAddHint = "Wire component.OnPassthroughEnabled() and component.OnPassthroughDisabled() to your passthrough toggle callbacks. Enable onActiveStart if passthrough begins at scene start."
             },
+            new TrackerInfo {
+                componentTypeName = "AvatarTrackerComponent",
+                displayName = "Avatar Tracker",
+                description = "Tracks avatar selections and purchases. Configure in Inspector. Call NotifyAvatar() from your purchase code -- no parameters needed.",
+                category = "Device",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = false,
+                preAddHint = "Set avatar name, price and payment type in the Inspector. Call NotifyAvatar() from your purchase button -- or enable autoReportOnStart to fire automatically on scene load.",
+                postAddHint = "Call GetComponent<AvatarTrackerComponent>().NotifyAvatar() from your purchase UI. No parameters required."
+            },
+            new TrackerInfo {
+                componentTypeName = "AccessoriesComponent",
+                displayName = "Accessories Tracker",
+                description = "Tracks in-app item and accessory purchases. Configure in Inspector. Call ReportPurchased() from your purchase code -- no parameters needed.",
+                category = "Device",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = false,
+                preAddHint = "Set item name, price and payment type in the Inspector. Call ReportPurchased() from your purchase button.",
+                postAddHint = "Call GetComponent<AccessoriesComponent>().ReportPurchased() from your purchase UI. No parameters required."
+            },
         };
         private static Dictionary<string, Type> _trackerTypeCache = null;
         private static Type _cachedXROriginType;
