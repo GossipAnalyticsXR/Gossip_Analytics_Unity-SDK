@@ -33,7 +33,6 @@ namespace GossipSDK.Components
                 float height = bounds.size.y;
                 float depth = bounds.size.z;
 
-                float area = width * depth;
                 float area   = GetPlayableAreaSquareMeters();
                 var data = new PlayableAreaTracker.EntityData
                 {
