@@ -210,6 +210,16 @@ namespace GossipSDK.Editor
                 preAddHint = "Set item name, price and payment type in the Inspector. Call ReportPurchased() from your purchase button.",
                 postAddHint = "Call GetComponent<AccessoriesComponent>().ReportPurchased() from your purchase UI. No parameters required."
             },
+            new TrackerInfo {
+                componentTypeName = "CrashReporterComponent",
+                displayName = "Crash Reporter",
+                description = "Auto-captures Unity exceptions and errors. Subscribes to Application.logMessageReceived. captureExceptions = true by default.",
+                category = "Device",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = false,
+                preAddHint = "captureExceptions is on by default. Enable captureErrors only if needed -- errors can be noisy.",
+                postAddHint = "Crash Reporter active. Unity exceptions are captured automatically and sent to the Issues dashboard."
+            },
         };
         private static Dictionary<string, Type> _trackerTypeCache = null;
         private static Type _cachedXROriginType;
