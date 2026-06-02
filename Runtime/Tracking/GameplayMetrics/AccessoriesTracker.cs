@@ -26,7 +26,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
             [JsonProperty("GeneralAccessoryBrand")]
             public string AccessoryBrand { get; set; }
 
-            [JsonProperty("GaneralAccesoryTypePay")]
+            [JsonProperty("GeneralAccessoryTypePay")]
             public string AccessoryTypePay { get; set; }
 
             public Dictionary<string, string> Meta { get; set; } = new Dictionary<string, string>();
