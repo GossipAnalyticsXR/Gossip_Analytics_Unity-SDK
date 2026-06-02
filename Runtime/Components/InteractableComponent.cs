@@ -34,6 +34,7 @@ namespace GossipSDK.Components
 
         private string currentInteractionId;
         private double currentInteractionStartTimeRealtime;
+        private string _lastInteractionType;
 
         [Header("Heatmap Flush")]
         public float flushIntervalSeconds = 10f;
@@ -94,8 +95,21 @@ namespace GossipSDK.Components
 
         private void OnDisable()
         {
-            if (autoStartOnEnable && !string.IsNullOrEmpty(currentInteractionId))
-                OnInteractEnd("Demo end Interaction");
+            if (string.IsNullOrEmpty(currentInteractionId)) return;
+
+            // Close any open interaction -- developer-called or auto-started
+            var t = Tracker;
+            if (t == null) { currentInteractionId = null; return; }
+
+            t.CapInteractionCancelled(
+                gameObject.name, gameObject.tag,
+                _lastInteractionType ?? "Unknown",
+                XRInteractionInputResolver.GetCurrentInputType().ToString(),
+                transform.position.x, transform.position.y, transform.position.z,
+                SceneManager.GetActiveScene().name,
+                currentInteractionId);
+
+            currentInteractionId = null;
         }
 
         public void OnInteractInstant(string interactionType)
@@ -134,6 +148,7 @@ namespace GossipSDK.Components
                     OnInteractEnd(interactionType);
 
                 currentInteractionId = Guid.NewGuid().ToString();
+                _lastInteractionType = interactionType;
                 currentInteractionStartTimeRealtime = Time.realtimeSinceStartupAsDouble;
 
                 var inputType = XRInteractionInputResolver.GetCurrentInputType().ToString();
