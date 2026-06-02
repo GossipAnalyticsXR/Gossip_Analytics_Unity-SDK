@@ -150,6 +150,45 @@ namespace GossipSDK.Tracking.GameplayMetrics
             }
         }
 
+        public void CapInteractionCancelled(string objectName, string objectTag, string interactionType, string inputType, float x, float y, float z, string sceneName, string interactionId)
+        {
+            try
+            {
+                int seq = TryGetSequence(interactionId);
+                if (seq == 0)
+                {
+                    seq = AllocateSequenceFor(interactionId);
+                }
+
+                var data = new EntityData
+                {
+                    InteractionId = interactionId,
+                    SequenceIndex = seq,
+                    Action = "cancelled",
+                    ObjectName = objectName ?? string.Empty,
+                    ObjectTag = objectTag ?? string.Empty,
+                    InputType = inputType ?? string.Empty,
+                    InteractionType = interactionType ?? string.Empty,
+                    X = x,
+                    Y = y,
+                    Z = z,
+                    DurationSeconds = null,
+                    StartTimestampUtc = null,
+                    EndTimestampUtc = DateTime.UtcNow.ToString("o"),
+                    SceneName = sceneName ?? UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
+                    TimestampUtc = DateTime.UtcNow.ToString("o")
+                };
+
+                RemoveSequence(interactionId);
+
+                CapSession(data);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(new Exception("[InteractionTracker] CapInteractionCancelled failed", ex));
+            }
+        }
+
         public void CapInteractionInstant(string objectName, string objectTag, string inputType, string interactionType, Vector3 worldPos, string sceneName, string timestampUtc)
         {
             try
