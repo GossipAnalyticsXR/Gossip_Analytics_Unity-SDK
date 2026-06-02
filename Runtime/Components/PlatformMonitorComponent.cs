@@ -61,6 +61,10 @@ namespace GossipSDK.Components
                 brand = "HTC";
             else if (rawModel.StartsWith("Samsung"))
                 brand = "Samsung";
+            else if (rawModel.StartsWith("MacBook") || rawModel.StartsWith("iMac") ||
+                     rawModel.StartsWith("Mac") || rawModel.StartsWith("iPhone") ||
+                     rawModel.StartsWith("iPad"))
+                brand = "Apple";
             else
                 brand = rawModel.Contains(" ") ? rawModel.Split(' ')[0] : rawModel;
             int xrW = UnityEngine.XR.XRSettings.eyeTextureWidth;
