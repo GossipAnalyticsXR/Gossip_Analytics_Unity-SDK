@@ -12,6 +12,7 @@ namespace GossipSDK.Components
         [SerializeField] private string sessionId;
         [Tooltip("Leave empty to auto-detect from Player tag count. Set 'single' or 'multi' to override.")]
         [SerializeField] private string sessionTypeOverride = "";
+        [SerializeField] private string subscriptionTypeOverride = "";
 
 
         private string persistentPlayerId;
@@ -26,6 +27,13 @@ namespace GossipSDK.Components
                 return sessionTypeOverride;
             var players = GameObject.FindGameObjectsWithTag("Player");
             return players.Length > 1 ? "multi" : "single";
+        }
+
+        private string ResolveSubscriptionType()
+        {
+            if (!string.IsNullOrEmpty(subscriptionTypeOverride))
+                return subscriptionTypeOverride;
+            return "free_trial";
         }
 
         private void Awake()
@@ -141,10 +149,10 @@ namespace GossipSDK.Components
                     return;
                 }
 
-                var recordMethod = tracker.GetType().GetMethod("RecordEvent", new Type[] { typeof(string), typeof(double), typeof(string) });
+                var recordMethod = tracker.GetType().GetMethod("RecordEvent", new Type[] { typeof(string), typeof(double), typeof(string), typeof(string) });
                 if (recordMethod != null)
                 {
-                    recordMethod.Invoke(tracker, new object[] { eventType, durationSeconds, ResolveSessionType() });
+                    recordMethod.Invoke(tracker, new object[] { eventType, durationSeconds, ResolveSessionType(), ResolveSubscriptionType() });
                     return;
                 }
 
@@ -156,7 +164,8 @@ namespace GossipSDK.Components
                     SceneName = SceneManager.GetActiveScene().name,
                     PlayerId = playerId,
                     SessionId = sessionId,
-                    SessionType = ResolveSessionType()
+                    SessionType = ResolveSessionType(),
+                    SubscriptionType = ResolveSubscriptionType()
                 };
 
                 var capMethod = tracker.GetType().GetMethod("CapSession");
