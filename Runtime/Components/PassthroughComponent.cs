@@ -1,6 +1,7 @@
 using UnityEngine;
 using GossipSDK.Core;
 using GossipSDK.Tracking.GameplayMetrics;
+using UnityEngine.SceneManagement;
 
 [DisallowMultipleComponent]
 public class PassthroughComponent : MonoBehaviour
@@ -87,7 +88,14 @@ public class PassthroughComponent : MonoBehaviour
             return;
         }
 
-        Tracker.CapPassthrough(enabled, passthroughMode, exposure > 0f ? (float?)exposure : null, qualityMetric > 0f ? (float?)qualityMetric : null);
+        Tracker.CapPassthrough(
+            enabled,
+            passthroughMode,
+            exposure > 0f ? (float?)exposure : null,
+            qualityMetric > 0f ? (float?)qualityMetric : null,
+            duration > 0f ? (float?)duration : null,
+            gameObject.name,
+            UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
 
         if (sendImmediately)
             Tracker.SendDataToSocket();
