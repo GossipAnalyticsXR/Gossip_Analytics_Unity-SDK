@@ -1,6 +1,7 @@
 using System.Collections;
 using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using GossipSDK.Core;
 using GossipSDK.Tracking.GameplayMetrics;
 
@@ -11,6 +12,13 @@ namespace GossipSDK.Components
     {
         [Tooltip("Seconds between samples")]
         [SerializeField] private float sampleInterval = 5f;
+
+        [Header("Freeze Detection")]
+        [SerializeField] private float freezeFpsThreshold       = 10f;
+        [SerializeField] private int   freezeConsecutiveSamples = 2;
+
+        private int   _consecutiveLowFpsSamples = 0;
+        private float _lowFpsStartTime          = 0f;
 
         private float lastTime;
         private int frames;
@@ -95,6 +103,25 @@ namespace GossipSDK.Components
                 if (Gossip.Instance?.Settings?.EnableDebug == true)
                 {
                     Debug.Log($"[PerformanceMonitor] CapSession memAlloc={totalAllocated} reserved={totalReserved} mono={monoUsed} fps={currentFps:F1}");
+                }
+
+                // ----- Freeze detection -----
+                FreezeTracker freezeTracker = Gossip.Instance?.FreezeTracker;
+                if (currentFps > 0f && currentFps < freezeFpsThreshold)
+                {
+                    _consecutiveLowFpsSamples++;
+                    if (_consecutiveLowFpsSamples == 1) _lowFpsStartTime = Time.realtimeSinceStartup;
+                    if (_consecutiveLowFpsSamples >= freezeConsecutiveSamples && freezeTracker != null)
+                    {
+                        float durationMs = (Time.realtimeSinceStartup - _lowFpsStartTime) * 1000f;
+                        string scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+                        freezeTracker.CapFreeze(currentFps, durationMs, scene);
+                        _consecutiveLowFpsSamples = 0;
+                    }
+                }
+                else
+                {
+                    _consecutiveLowFpsSamples = 0;
                 }
             }
             catch (Exception ex)
