@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using GossipSDK.Core;
 using GossipSDK.Tracking.GameplayMetrics;
@@ -32,8 +33,13 @@ namespace GossipSDK.Components
             else
                 resolvedAdId = adId;
 
-            if (autoStartOnEnable)
-                StartAd();
+            if (autoStartOnEnable) StartCoroutine(WaitAndStart());
+        }
+
+        private IEnumerator WaitAndStart()
+        {
+            yield return new WaitUntil(() => Gossip.Instance != null);
+            StartAd();
         }
 
         private void OnDisable()
