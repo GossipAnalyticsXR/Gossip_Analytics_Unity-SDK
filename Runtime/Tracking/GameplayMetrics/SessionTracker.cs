@@ -23,6 +23,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
             [field: SerializeField] public string PlayerId { get; set; }
             [field: SerializeField] public string SessionId { get; set; }
             [field: SerializeField] public string SessionType { get; set; }
+            [field: SerializeField] public string SubscriptionType { get; set; }
             public EntityData() { }
         }
 
@@ -33,7 +34,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
         private DateTime lastEventTime = DateTime.MinValue;
         private readonly double dedupeWindowSeconds = 0.5;
 
-        public void RecordEvent(string eventType, double durationSeconds = 0.0, string sessionType = "single")
+        public void RecordEvent(string eventType, double durationSeconds = 0.0, string sessionType = "single", string subscriptionType = "free_trial")
         {
             try
             {
@@ -60,7 +61,8 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     SceneName = SceneManager.GetActiveScene().name,
                     PlayerId = Gossip.Instance?.PlayerID,
                     SessionId = Gossip.Instance?.SessionID,
-                    SessionType = sessionType
+                    SessionType = sessionType,
+                    SubscriptionType = subscriptionType,
                 };
 
                 CapSession(data);
