@@ -53,11 +53,11 @@ public class AvatarTrackerComponent : MonoBehaviour
             var direct = Gossip.Instance?.AvatarTracker;
             if (direct != null)
             {
-                direct.CapAvatar(aId, aName, varr, Brnd, PR, hex, null);
+                direct.CapAvatar(aId, aP, aName, varr, Brnd, PR, hex, null);
             }
             else if (tracker != null)
             {
-                tracker.CapAvatar(aId, aName, varr, Brnd, PR, hex, null);
+                tracker.CapAvatar(aId, aP, aName, varr, Brnd, PR, hex, null);
             }
             else
             {
