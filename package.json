@@ -8,7 +8,7 @@
     {
       "displayName": "Step 2 — Import to Complete Setup",
       "description": "Import this to finish setting up the SDK. Once imported:\n-> Step 3: Window -> Gossip Analytics -> 1 - Quick Setup (places the manager and opens settings)\n-> Step 4: Enter your 3 API Keys (Dev, Beta, Production) -> press Check Connection to verify\n-> Step 5: Window -> Gossip Analytics -> 2 - Instrumentation Manager - select which objects to track\n-> Step 6: Press Play and verify your data appears in the Gossip Analytics dashboard",
-      "path": "Samples~"
+      "path": "Samples~/Complete Setup"
     }
   ],
   "unity": "2022.3",
