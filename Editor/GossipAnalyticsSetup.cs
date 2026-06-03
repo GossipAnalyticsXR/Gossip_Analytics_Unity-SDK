@@ -14,13 +14,68 @@ namespace GossipSDK.Editor
                 public static void RunQuickSetup()
                 {
                                 // STEP 1 — Check if GossipManager is already in the scene
-                                GossipManager manager = null;
-                                var existingManagers = Object.FindObjectsByType<GossipManager>(FindObjectsSortMode.None);
 
-                                if (existingManagers.Length > 0)
+                                // B — do not run during recompile (avoids the missing-script transient that duplicates)
+                                if (EditorApplication.isCompiling)
                                 {
-                                                    manager = existingManagers[0];
-                                                    Debug.Log("[Gossip Analytics] GossipManager already exists in the scene. Using existing instance.");
+                                    EditorUtility.DisplayDialog("Gossip Analytics",
+                                        "Unity is still compiling. Wait until it finishes, then run Quick Setup again.", "OK");
+                                    return;
+                                }
+
+                                GossipManager manager = null;
+
+                                // Resolve the manager prefab GUID dynamically (to detect broken instances)
+                                string managerPrefabGuid = null;
+                                {
+                                    var pg = AssetDatabase.FindAssets("GossipAnalyticsManager t:Prefab", new[] { "Assets/Samples" });
+                                    if (pg.Length > 0) managerPrefabGuid = pg[0];
+                                }
+
+                                // A — healthy managers (includes inactive)
+                                var healthy = Object.FindObjectsByType<GossipManager>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+                                // C — broken instances: prefab instance of the manager prefab WITHOUT the GossipManager component
+                                var strays = new System.Collections.Generic.List<GameObject>();
+                                if (!string.IsNullOrEmpty(managerPrefabGuid))
+                                {
+                                    foreach (var root in SceneManager.GetActiveScene().GetRootGameObjects())
+                                    {
+                                        foreach (var tr in root.GetComponentsInChildren<Transform>(true))
+                                        {
+                                            var go = tr.gameObject;
+                                            if (go.GetComponent<GossipManager>() != null) continue;            // healthy, handled below
+                                            if (!PrefabUtility.IsPartOfPrefabInstance(go)) continue;
+                                            if (PrefabUtility.GetNearestPrefabInstanceRoot(go) != go) continue; // only instance roots
+                                            var src = PrefabUtility.GetCorrespondingObjectFromSource(go);
+                                            if (src == null) continue;
+                                            var srcGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(src));
+                                            if (srcGuid == managerPrefabGuid) strays.Add(go);                   // broken instance
+                                        }
+                                    }
+                                }
+
+                                // A — extra healthy managers (beyond the first) are also strays
+                                for (int idx = 1; idx < healthy.Length; idx++)
+                                    if (healthy[idx] != null) strays.Add(healthy[idx].gameObject);
+
+                                // Cleanup with explicit CONFIRMATION (destructive operation)
+                                if (strays.Count > 0)
+                                {
+                                    bool clean = EditorUtility.DisplayDialog(
+                                        "Gossip Analytics - Clean up",
+                                        "Found " + strays.Count + " extra or broken GossipAnalyticsManager object(s) (from previous runs or a package re-import). Remove them and keep a single clean manager?",
+                                        "Remove", "Keep");
+                                    if (clean)
+                                        foreach (var s in strays)
+                                            if (s != null) Undo.DestroyObjectImmediate(s);
+                                }
+
+                                // Reuse the first healthy manager if any remain
+                                if (healthy.Length > 0 && healthy[0] != null)
+                                {
+                                    manager = healthy[0];
+                                    Debug.Log("[Gossip Analytics] Using existing GossipManager.");
                                 }
                                 else
                                 {
