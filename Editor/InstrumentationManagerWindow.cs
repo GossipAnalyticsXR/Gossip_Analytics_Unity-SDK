@@ -1413,20 +1413,25 @@ namespace GossipSDK.Editor
             GUI.backgroundColor = new Color(0.7f, 0.3f, 0.3f);
             if (GUILayout.Button("Deselect\nHandler", GUILayout.Width(90), GUILayout.Height(38)))
             {
-                string msg = "Deselecting VRPermissionsHandler will disable the following on Android XR devices:" +
+                var h = handler;
+                EditorApplication.delayCall += () =>
+                {
+                    if ((UnityEngine.Object)h == null) return;
+                    string msg = "Deselecting VRPermissionsHandler will disable the following on Android XR devices:" +
                     System.Environment.NewLine + "• Eye Tracking — gaze data will not be captured" +
                     System.Environment.NewLine + "• Spatial / Scene — heatmap environment data will be lost" +
                     System.Environment.NewLine + "• Headset Camera — passthrough and MR will not work" +
                     System.Environment.NewLine + "• Microphone — audio reaction tracking will be silent" +
                     System.Environment.NewLine + System.Environment.NewLine + "Are you sure?";
-                bool confirm = EditorUtility.DisplayDialog("Deselect VRPermissionsHandler", msg, "Deselect Anyway", "Cancel");
-                if (confirm && handler != null)
-                {
-                    Undo.DestroyObjectImmediate(handler.gameObject);
-                    _cachedPermHandler = null;
-                    EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-                    _vrHandlerSO = null;
-                }
+                    if (EditorUtility.DisplayDialog("Deselect VRPermissionsHandler", msg, "Deselect Anyway", "Cancel"))
+                    {
+                        Undo.DestroyObjectImmediate(h.gameObject);
+                        _cachedPermHandler = null;
+                        _vrHandlerSO = null;
+                        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+                    }
+                    Repaint();
+                };
             }
             GUI.backgroundColor = prevBgHandler;
             EditorGUILayout.EndHorizontal();
@@ -1441,6 +1446,7 @@ namespace GossipSDK.Editor
             {
                 _vrHandlerSO = null;
             }
+            if (_vrHandlerSO == null || (UnityEngine.Object)handler == null) return;
             var propEye = _vrHandlerSO.FindProperty("enableEyeTracking");
             var propSpatial = _vrHandlerSO.FindProperty("enableSpatialScene");
             var propCamera = _vrHandlerSO.FindProperty("enableHeadsetCamera");
@@ -1517,13 +1523,19 @@ namespace GossipSDK.Editor
             EditorGUILayout.EndVertical();
             if (newVal != prop.boolValue)
             {
-                if (!newVal)
                 {
-                    bool confirm = EditorUtility.DisplayDialog(
-                        "Deselect " + label + " permission?",
-                        deselectImpact,
-                        "Deselect", "Cancel");
-                    if (confirm) prop.boolValue = false;
+                    string propPath = prop.propertyPath; var soRef = so; string lbl = label, impact = deselectImpact;
+                    EditorApplication.delayCall += () =>
+                    {
+                        if (soRef == null || (UnityEngine.Object)soRef.targetObject == null) return;
+                        if (EditorUtility.DisplayDialog("Deselect " + lbl + " permission?", impact, "Deselect", "Cancel"))
+                        {
+                            soRef.Update();
+                            var p = soRef.FindProperty(propPath);
+                            if (p != null) { p.boolValue = false; soRef.ApplyModifiedProperties(); }
+                        }
+                        Repaint();
+                    };
                 }
                 else
                     prop.boolValue = true;
