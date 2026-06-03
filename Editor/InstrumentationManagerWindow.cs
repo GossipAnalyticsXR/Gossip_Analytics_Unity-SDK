@@ -1523,6 +1523,7 @@ namespace GossipSDK.Editor
             EditorGUILayout.EndVertical();
             if (newVal != prop.boolValue)
             {
+                if (!newVal)
                 {
                     string propPath = prop.propertyPath; var soRef = so; string lbl = label, impact = deselectImpact;
                     EditorApplication.delayCall += () =>
