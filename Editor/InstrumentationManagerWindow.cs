@@ -1085,7 +1085,7 @@ namespace GossipSDK.Editor
             bool _currentCategoryExpanded = true;
             if (_wordWrapMiniLabel == null)
                 _wordWrapMiniLabel = new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
-            foreach (var info in _recommendedTrackers)
+            foreach (var info in _recommendedTrackers.OrderBy(t => t.category == "Spatial" ? 0 : t.category == "Device" ? 1 : 2))
             {
                 if (info.category != currentCategory)
                 {
