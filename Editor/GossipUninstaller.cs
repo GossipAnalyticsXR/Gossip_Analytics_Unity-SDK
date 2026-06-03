@@ -48,83 +48,147 @@ namespace GossipAnalytics.Editor
 
         // ---- Step 1: Remove SDK components from all build scenes ----
 
-        private static void RunStep1_RemoveSceneComponents()
+private static void RunStep1_RemoveSceneComponents()
         {
-            var scenes = EditorBuildSettings.scenes;
-            int total = scenes.Length;
             string originalScenePath = SceneManager.GetActiveScene().path;
+            var processed = new HashSet<string>();
 
-            for (int i = 0; i < total; i++)
+            // 1) Clean ALL open scenes in-place (covers active scene even if NOT in Build Settings).
+            var open = new List<Scene>();
+            for (int i = 0; i < SceneManager.sceneCount; i++)
             {
-                var sceneRef = scenes[i];
-                if (!sceneRef.enabled) continue;
+                var sc = SceneManager.GetSceneAt(i);
+                if (sc.isLoaded) open.Add(sc);
+            }
+            foreach (var sc in open)
+            {
+                try
+                {
+                    RemoveGossipComponentsFromScene(sc);
+                    if (!string.IsNullOrEmpty(sc.path)) { EditorSceneManager.SaveScene(sc); processed.Add(sc.path); }
+                }
+                catch (Exception ex) { Debug.LogWarning("[GossipUninstaller] Open scene " + sc.path + ": " + ex.Message); }
+            }
 
-                EditorUtility.DisplayProgressBar(
-                    "Gossip Analytics — Uninstalling...",
-                    string.Format("Removing Gossip components from scenes... (scene {0} of {1})", i + 1, total),
-                    (float)(i + 1) / (total + 2));
+            // 2) Build Settings scenes not yet processed.
+            var buildScenes = EditorBuildSettings.scenes;
+            for (int i = 0; i < buildScenes.Length; i++)
+            {
+                var sceneRef = buildScenes[i];
+                if (!sceneRef.enabled || processed.Contains(sceneRef.path)) continue;
+
+                EditorUtility.DisplayProgressBar("Gossip Analytics - Uninstalling...",
+                    string.Format("Removing Gossip components... ({0} of {1})", i + 1, buildScenes.Length),
+                    (float)(i + 1) / (buildScenes.Length + 2));
 
                 try
                 {
                     var scene = EditorSceneManager.OpenScene(sceneRef.path, OpenSceneMode.Single);
                     RemoveGossipComponentsFromScene(scene);
                     EditorSceneManager.SaveScene(scene);
+                    processed.Add(sceneRef.path);
                 }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning("[GossipUninstaller] Could not process scene: " + sceneRef.path + "\n" + ex.Message);
-                }
+                catch (Exception ex) { Debug.LogWarning("[GossipUninstaller] Scene " + sceneRef.path + ": " + ex.Message); }
             }
 
-            // Restore original scene if possible
-            if (!string.IsNullOrEmpty(originalScenePath))
+            if (!string.IsNullOrEmpty(originalScenePath) && SceneManager.GetActiveScene().path != originalScenePath)
             {
-                try { EditorSceneManager.OpenScene(originalScenePath, OpenSceneMode.Single); }
-                catch { /* scene may have been removed or renamed */ }
+                try { EditorSceneManager.OpenScene(originalScenePath, OpenSceneMode.Single); } catch { }
             }
         }
 
         private static void RemoveGossipComponentsFromScene(Scene scene)
         {
-            // Collect all root GameObjects (including inactive)
-            var roots = scene.GetRootGameObjects();
-
-            // Build list of Gossip-specific types to remove explicitly
             var gossipTypes = GetGossipComponentTypes();
+            string managerPrefabGuid = ResolveManagerPrefabGuid();
 
-            foreach (var root in roots)
+            // Step A — destroy SDK-owned GameObjects entirely (guards verified before destruction).
+            var toDestroy = new List<GameObject>();
+            foreach (var root in scene.GetRootGameObjects())
+                foreach (var tr in root.GetComponentsInChildren<Transform>(true))
+                {
+                    var go = tr.gameObject;
+                    if (go.transform.childCount != 0) continue;             // never destroy a GO with children
+                    if (IsSdkOwnedGameObject(go, managerPrefabGuid, gossipTypes)) toDestroy.Add(go);
+                }
+
+            foreach (var go in toDestroy)
+                if (go != null) { try { Undo.DestroyObjectImmediate(go); } catch (Exception ex) { Debug.LogWarning("[GossipUninstaller] GO: " + ex.Message); } }
+
+            // Step B — remove SDK components remaining on USER objects (component only).
+            foreach (var root in scene.GetRootGameObjects())
             {
-                var allComponents = root.GetComponentsInChildren<Component>(true);
-                foreach (var comp in allComponents)
+                if (root == null) continue;
+                foreach (var comp in root.GetComponentsInChildren<Component>(true))
                 {
                     if (comp == null) continue;
-                    var compType = comp.GetType();
-                    if (IsGossipComponent(compType, gossipTypes))
+                    if (IsGossipComponent(comp.GetType(), gossipTypes))
                     {
-                        try
-                        {
-                            Undo.DestroyObjectImmediate(comp);
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.LogWarning("[GossipUninstaller] Failed to remove component " + compType.Name + ": " + ex.Message);
-                        }
+                        try { Undo.DestroyObjectImmediate(comp); }
+                        catch (Exception ex) { Debug.LogWarning("[GossipUninstaller] Comp " + comp.GetType().Name + ": " + ex.Message); }
                     }
                 }
             }
         }
 
-        private static bool IsGossipComponent(Type compType, List<Type> explicitTypes)
+        private static string ResolveManagerPrefabGuid()
         {
-            // Match explicit known types
-            if (explicitTypes.Contains(compType)) return true;
-            // Match any MonoBehaviour whose namespace starts with GossipSDK
-            var ns = compType.Namespace ?? string.Empty;
-            if (ns.StartsWith("GossipSDK") && typeof(MonoBehaviour).IsAssignableFrom(compType)) return true;
+            var pg = AssetDatabase.FindAssets("GossipAnalyticsManager t:Prefab", new[] { "Assets/Samples" });
+            if (pg.Length > 0) return pg[0];
+            return "29e83dfafdc2bf442a91a4129b076e3e"; // fallback to known prefab GUID
+        }
+
+        private static bool IsSdkOwnedGameObject(GameObject go, string managerPrefabGuid, List<Type> gossipTypes)
+        {
+            // Manager (healthy or with core removed): match by source prefab GUID — most robust.
+            if (PrefabUtility.IsPartOfPrefabInstance(go))
+            {
+                var src = PrefabUtility.GetCorrespondingObjectFromSource(go);
+                if (src != null)
+                {
+                    var g = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(src));
+                    if (!string.IsNullOrEmpty(managerPrefabGuid) && g == managerPrefabGuid) return true;
+                }
+            }
+
+            // Standalone SDK hosts: only if ALL non-Transform components are SDK-owned.
+            if (!AllComponentsAreSdk(go, gossipTypes)) return false;
+            if (GoHasComponentNamed(go, "GossipManager")) return true;
+            if (go.name == "VRPermissionsHandler" && GoHasComponentNamed(go, "VRPermissionsHandler")) return true;
+            if (go.name == "Gossip Device Trackers") return true;
             return false;
         }
 
-        private static List<Type> GetGossipComponentTypes()
+        private static bool AllComponentsAreSdk(GameObject go, List<Type> gossipTypes)
+        {
+            foreach (var comp in go.GetComponents<Component>())
+            {
+                if (comp == null) continue;      // missing script (core removed) -> ignore
+                if (comp is Transform) continue;
+                if (!IsGossipComponent(comp.GetType(), gossipTypes)) return false; // user component present
+            }
+            return true;
+        }
+
+        private static bool GoHasComponentNamed(GameObject go, string typeName)
+        {
+            foreach (var comp in go.GetComponents<Component>())
+                if (comp != null && comp.GetType().Name == typeName) return true;
+            return false;
+        }
+
+        private static bool IsGossipComponent(Type compType, List<Type> explicitTypes)
+        {
+            if (explicitTypes.Contains(compType)) return true;
+            if (!typeof(MonoBehaviour).IsAssignableFrom(compType)) return false;
+            var asmName = compType.Assembly.GetName().Name;
+            if (asmName == "GossipSDK.Runtime" || asmName == "GossipSDK.Editor") return true; // robust catch-all
+            var ns = compType.Namespace ?? string.Empty;
+            if (ns.StartsWith("GossipSDK")) return true;
+            return false;
+        }
+
+                private static List<Type> GetGossipComponentTypes()
         {
             var result = new List<Type>();
             var assemblies = AppDomain.CurrentDomain.GetAssemblies();
@@ -141,7 +205,9 @@ namespace GossipAnalytics.Editor
                 "GossipPostureTracker",
                 "GossipHeadsetTracker",
                 "GossipControllerTracker",
-                "GossipEyeTracker"
+                "GossipEyeTracker",
+                "PauseComponent",
+                "PassthroughComponent",
             };
 
             foreach (var asm in assemblies)
