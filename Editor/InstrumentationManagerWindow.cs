@@ -40,8 +40,9 @@ namespace GossipSDK.Editor
 
         private static readonly string[] InteractableKeywords = new[]
         {
-            "Interactable", "Grabbable", "Pickup", "Interactor", "Button", "Lever", "Trigger"
+            "Interactable", "Grabbable", "Pickup", "Button", "Lever", "Trigger"
         };
+
 
         private static readonly string[] ExcludeNameKeywords = new[]
         {
@@ -49,6 +50,31 @@ namespace GossipSDK.Editor
             "ambient", "light", "camera", "canvas", "event",
             "trigger", "collider", "volume", "bounds", "hitbox", "detector", "zone"
         };
+
+        // --- XR Interaction Toolkit types (resolved at runtime via reflection) ---
+        private static System.Type _xrOriginType;
+        private static System.Type _ixrInteractableType;
+        private static System.Type _ixrInteractorType;
+        private static bool _xrTypesResolved;
+        private static void ResolveXrTypes()
+        {
+            if (_xrTypesResolved) return;
+            _xrTypesResolved = true;
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    foreach (var t in asm.GetTypes())
+                    {
+                        if (_xrOriginType == null && t.Name == "XROrigin") _xrOriginType = t;
+                        if (_ixrInteractableType == null && t.Name == "IXRInteractable") _ixrInteractableType = t;
+                        if (_ixrInteractorType == null && t.Name == "IXRInteractor") _ixrInteractorType = t;
+                    }
+                }
+                catch { }
+                if (_xrOriginType != null && _ixrInteractableType != null && _ixrInteractorType != null) break;
+            }
+        }
 
         // --- Inner type ---
         private class ScannedObject
@@ -705,6 +731,8 @@ namespace GossipSDK.Editor
             HashSet<string> storedPaths, List<ScannedObject> sceneList)
         {
             if (go == null) return;
+            ResolveXrTypes();
+            if (_xrOriginType != null && go.GetComponent(_xrOriginType) != null) return; // skip XR rig
             string path = GetHierarchyPath(go);
             if (IsInteractable(go) && !scannedPaths.Contains(path))
             {
@@ -749,9 +777,14 @@ namespace GossipSDK.Editor
         private bool IsInteractable(GameObject go)
         {
             if (go == null) return false;
+            ResolveXrTypes();
+            // Exclude XR Interactors (tools, not targets)
+            if (_ixrInteractorType != null && go.GetComponent(_ixrInteractorType) != null) return false;
             string lowerName = go.name.ToLower();
             foreach (var keyword in ExcludeNameKeywords)
                 if (lowerName.Contains(keyword)) return false;
+            // Authoritative signal: XR Interactable component
+            if (_ixrInteractableType != null && go.GetComponent(_ixrInteractableType) != null) return true;
             foreach (var keyword in InteractableKeywords)
                 if (lowerName.Contains(keyword.ToLower())) return true;
             if (go.GetComponent<Rigidbody>() != null) return true;
