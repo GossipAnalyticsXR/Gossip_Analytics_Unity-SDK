@@ -37,7 +37,7 @@ namespace GossipSDK.Utilities
             }
 
             // Mobile touch device
-            if (Input.touchSupported)
+            if (Input.touchSupported && !XRSettings.isDeviceActive)
             {
                 peripherals.Add(new DetectedPeripheral
                 {
