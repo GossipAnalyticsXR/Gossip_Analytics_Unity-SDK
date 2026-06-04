@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using System.Reflection;
 using GossipSDK.Core;
 using GossipSDK.Tracking.GameplayMetrics;
 using UnityEngine.SceneManagement;
@@ -35,6 +36,7 @@ public class PassthroughComponent : MonoBehaviour
     private IEnumerator WaitAndEnable()
     {
         yield return new WaitUntil(() => Gossip.Instance != null);
+        TrySubscribeGuardianBoundary();
         OnPassthroughEnabled();
     }
 
@@ -76,6 +78,7 @@ public class PassthroughComponent : MonoBehaviour
         {
             OnPassthroughDisabled();
         }
+        UnsubscribeGuardianBoundary();
     }
 
     private void OnDestroy()
@@ -84,6 +87,7 @@ public class PassthroughComponent : MonoBehaviour
         {
             OnPassthroughDisabled();
         }
+        UnsubscribeGuardianBoundary();
     }
 
     public void ReportPassthrough(bool enabled, float duration = 0f)
@@ -108,5 +112,76 @@ public class PassthroughComponent : MonoBehaviour
 
         if (Gossip.Instance?.Settings?.EnableDebug == true)
             Debug.Log($"[PassthroughComponent] Reported passthrough. enabled={enabled} duration={duration:F2}s mode={passthroughMode}");
+        }
+
+    // ── Guardian-boundary passthrough (system signal) ─────────────────────
+    // Uses reflection so OVR types are never referenced directly;
+    // compiles cleanly when Meta XR SDK is absent.
+
+    private System.Reflection.EventInfo  _guardianEvtInfo;
+    private System.Delegate              _guardianHandler;
+
+    private void TrySubscribeGuardianBoundary()
+    {
+        try
+        {
+            var ovrManagerType = System.Type.GetType(
+                "OVRManager, OVRPlugin", throwOnError: false);
+            if (ovrManagerType == null) return;          // Meta XR SDK absent
+
+            _guardianEvtInfo = ovrManagerType.GetEvent(
+                "BoundaryVisibilityChanged",
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.Static);
+            if (_guardianEvtInfo == null) return;        // API not available
+
+            var handlerType  = _guardianEvtInfo.EventHandlerType;
+            var handlerMethod = typeof(PassthroughComponent)
+                .GetMethod("OnGuardianBoundaryChanged",
+                    System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.NonPublic);
+            if (handlerMethod == null) return;
+
+            _guardianHandler = System.Delegate.CreateDelegate(
+                handlerType, this, handlerMethod);
+            _guardianEvtInfo.AddEventHandler(null, _guardianHandler);
+        }
+        catch (System.Exception ex)
+        {
+            UnityEngine.Debug.LogWarning(
+                "[PassthroughComponent] Guardian-boundary subscription failed: " + ex.Message);
+        }
     }
+
+    private void UnsubscribeGuardianBoundary()
+    {
+        if (_guardianEvtInfo != null && _guardianHandler != null)
+        {
+            try { _guardianEvtInfo.RemoveEventHandler(null, _guardianHandler); }
+            catch { /* best-effort */ }
+            _guardianEvtInfo  = null;
+            _guardianHandler  = null;
+        }
+    }
+
+    // Called by the reflected delegate when OVR guardian boundary visibility changes.
+    // visible=true  => player has left/is approaching the guardian boundary (system passthrough on).
+    // visible=false => player back in safe zone (system passthrough off).
+    private void OnGuardianBoundaryChanged(bool visible)
+    {
+        if (Tracker == null) return;
+        Tracker.CapPassthrough(
+            enabled:    visible,
+            mode:       "system_guardian",
+            objectName: gameObject.name,
+            sceneName:  UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+
+        if (sendImmediately)
+            Tracker.SendDataToSocket();
+
+        if (Gossip.Instance?.Settings?.EnableDebug == true)
+            UnityEngine.Debug.Log(
+                $"[PassthroughComponent] Guardian boundary visible={visible} => passthrough Source=system_guardian");
+    }
+
 }

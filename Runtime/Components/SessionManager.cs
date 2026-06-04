@@ -67,7 +67,7 @@ namespace GossipSDK.Components
             }
             
             double duration = 0;
-            SendSessionEvent("start_session", duration);
+            SendSessionEvent("session_start", duration);
 
             sessionStartTimeRealtime = Time.realtimeSinceStartupAsDouble;
             sessionStarted = true;

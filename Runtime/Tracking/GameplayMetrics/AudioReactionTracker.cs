@@ -10,7 +10,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
     public class AudioReactionTracker
         : GenericSocketConnection<AudioReactionTracker.EntityData, AudioReactionTracker.TrackerMessage>
     {
-        protected override string EventName => "TrackingAudioReaction";
+        protected override string EventName => "AudioReactionTracker";
 
         [Serializable]
         public class EntityData : Data

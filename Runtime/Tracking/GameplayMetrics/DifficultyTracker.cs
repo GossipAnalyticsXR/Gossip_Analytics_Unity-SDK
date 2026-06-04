@@ -10,7 +10,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
     [Serializable]
     public class DifficultyTracker : GenericSocketConnection<DifficultyTracker.EntityData, DifficultyTracker.TrackerMessage>
     {
-        protected override string EventName { get; } = "TrackingDifficulty";
+        protected override string EventName { get; } = "TRACKING_DIFFICULTY_CHANGE";
 
         public string EventTypeForEndpoint => "TRACKING_DIFFICULTY_CHANGE";
 
