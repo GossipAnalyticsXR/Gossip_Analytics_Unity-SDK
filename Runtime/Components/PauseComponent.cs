@@ -1,4 +1,5 @@
 using System;
+using GossipSDK.Components;
 using UnityEngine;
 using GossipSDK.Core;
 using GossipSDK.Tracking.GameplayMetrics;
@@ -17,6 +18,7 @@ public class PauseComponent : MonoBehaviour
     private double pauseStartRealtime = -1.0;
 
     private bool isPausedLocal = false;
+    private SessionManager _sessionManager;
 
     private void OnEnable()
     {
@@ -24,6 +26,7 @@ public class PauseComponent : MonoBehaviour
         OVRManager.HMDUnmounted += OnHMDUnmountedHandler;
         OVRManager.HMDMounted   += OnHMDMountedHandler;
     #endif
+        _sessionManager = FindObjectOfType<SessionManager>();
     }
 
     private void OnDisable()
@@ -54,6 +57,7 @@ public class PauseComponent : MonoBehaviour
             isPausedLocal = true;
 
             tracker?.CapPauseEvent("pause", 0.0);
+            if ((UnityEngine.Object)_sessionManager != null) _sessionManager.RecordPause();
             if (sendImmediately) tracker?.SendDataToSocket();
 
             if (Gossip.Instance?.Settings?.EnableDebug == true)
@@ -87,6 +91,7 @@ public class PauseComponent : MonoBehaviour
             }
 
             tracker?.CapPauseEvent("resume", duration);
+            if ((UnityEngine.Object)_sessionManager != null) _sessionManager.RecordResume(duration);
             if (sendImmediately) tracker?.SendDataToSocket();
 
             if (Gossip.Instance?.Settings?.EnableDebug == true)
