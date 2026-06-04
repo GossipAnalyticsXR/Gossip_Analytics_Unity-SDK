@@ -1105,13 +1105,20 @@ namespace GossipSDK.Editor
             bool showDeselectAll = presentCount > 0;
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            if (showAddAll && GUILayout.Button("Add All to Scene", GUILayout.Width(130)))
+            EditorGUI.BeginDisabledGroup(!showAddAll);
+            if (GUILayout.Button("Add All to Scene", GUILayout.Width(130)))
                 AddAllTrackers();
-            if (showDeselectAll && GUILayout.Button("Deselect All", GUILayout.Width(90)))
+            EditorGUI.EndDisabledGroup();
+            EditorGUI.BeginDisabledGroup(!showDeselectAll);
+            if (GUILayout.Button("Deselect All", GUILayout.Width(90)))
             {
-                bool confirm = EditorUtility.DisplayDialog("Deselect All Trackers", "Remove all tracker components from the scene?", "Deselect All", "Cancel");
-                if (confirm) RemoveAllTrackers();
+                EditorApplication.delayCall += () =>
+                {
+                    bool confirm = EditorUtility.DisplayDialog("Deselect All Trackers", "Remove all tracker components from the scene?", "Deselect All", "Cancel");
+                    if (confirm) RemoveAllTrackers();
+                };
             }
+            EditorGUI.EndDisabledGroup();
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space(4);
 
