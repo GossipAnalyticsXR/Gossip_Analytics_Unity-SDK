@@ -193,5 +193,8 @@ namespace GossipSDK.Components
                 Debug.LogException(new Exception($"[SessionManager] SendSessionEvent failed for {eventType}: {ex.Message}", ex));
             }
         }
+
+        public void RecordPause()                        => SendSessionEvent("session_pause", 0.0);
+        public void RecordResume(double durationSeconds) => SendSessionEvent("session_resume", durationSeconds);
     }
 }
