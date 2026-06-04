@@ -665,12 +665,14 @@ namespace GossipSDK.Editor
 
                         if (!scene.isLoaded) continue;
                         var sceneList = new List<ScannedObject>();
-                        _sceneObjects[sceneName] = sceneList;
 
-                        var storedPaths = allStoredPaths.ContainsKey(sceneName) ? allStoredPaths[sceneName] : new HashSet<string>();
+                        var storedPaths = allStoredPaths.ContainsKey(sceneName)
+                            ? allStoredPaths[sceneName] : new HashSet<string>();
                         var scannedPaths = new HashSet<string>();
                         foreach (var root in scene.GetRootGameObjects())
                             CollectInteractableObjectsForScan(root, sceneName, scannedPaths, storedPaths, sceneList);
+                        if (sceneList.Count > 0)
+                            _sceneObjects[sceneName] = sceneList;
 
                     }
                     catch (System.Exception ex)
