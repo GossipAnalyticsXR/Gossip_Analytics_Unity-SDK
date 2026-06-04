@@ -558,15 +558,26 @@ namespace GossipSDK.Editor
             {
                 if (!newChecked && obj.hasInteractable)
                 {
-                    bool confirm = EditorUtility.DisplayDialog(
-                        "Deselect " + obj.objectName + "?",
-                        "InteractableComponent will be removed from this object. It will no longer track interactions.",
-                        "Deselect", "Cancel");
-                    if (!confirm) { EditorGUILayout.EndHorizontal(); return; }
-                    RemoveInstrumentationForObject(obj);
-                    obj.hasInteractable = false;
+                    var captured = obj;
+                    EditorApplication.delayCall += () =>
+                    {
+                        bool confirm = EditorUtility.DisplayDialog(
+                            "Deselect " + captured.objectName + "?",
+                            "InteractableComponent will be removed from this object. It will no longer track interactions.",
+                            "Deselect", "Cancel");
+                        if (confirm)
+                        {
+                            RemoveInstrumentationForObject(captured);
+                            captured.hasInteractable = false;
+                            captured.isChecked = false;
+                        }
+                        Repaint();
+                    };
                 }
-                obj.isChecked = newChecked;
+                else
+                {
+                    obj.isChecked = newChecked;
+                }
             }
             EditorGUILayout.LabelField(obj.objectName, GUILayout.ExpandWidth(true));
             if (obj.hasInteractable && !obj.isNew)
