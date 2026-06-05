@@ -11,6 +11,8 @@ namespace GossipSDK.Components
     {
         private InputUsageTracker tracker;
         private float lastSampleTime;
+        private float captureTimer = 0f;
+        private const float captureInterval = 5f;
 
         private void Start()
         {
@@ -28,6 +30,14 @@ namespace GossipSDK.Components
                 tracker.RegisterControllerUsage(delta);
             else if (IsUsingHands())
                 tracker.RegisterHandUsage(delta);
+
+            captureTimer += delta;
+            if (captureTimer >= captureInterval)
+            {
+                captureTimer = 0f;
+                if ((UnityEngine.Object)tracker != null)
+                    tracker.CaptureSnapshot();
+            }
         }
 
         private bool IsUsingController()
@@ -52,16 +62,22 @@ namespace GossipSDK.Components
 
         private void OnDisable()
         {
+            if ((UnityEngine.Object)tracker != null)
+                tracker.CaptureSnapshot();
             tracker?.SendDataToSocket();
         }
 
         private void OnApplicationQuit()
         {
+            if ((UnityEngine.Object)tracker != null)
+                tracker.CaptureSnapshot();
             tracker?.SendDataToSocket();
         }
 
         private void OnDestroy()
         {
+            if ((UnityEngine.Object)tracker != null)
+                tracker.CaptureSnapshot();
             tracker?.SendDataToSocket();
         }
     }
