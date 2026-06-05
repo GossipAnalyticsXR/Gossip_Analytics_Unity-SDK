@@ -143,7 +143,7 @@ namespace GossipSDK.Core
             UserInfoTracker.CaptureOnce();
             if (!string.IsNullOrEmpty(Settings?.GetActiveServerUrl()))
             {
-                UserInfoTracker.SendDataToSocket();
+                StartCoroutine(SendUserInfoAfterCapture());
             }
 
             if (UserPostureTracker == null) UserPostureTracker = new UserPostureTracker();
@@ -169,6 +169,12 @@ namespace GossipSDK.Core
                 if (Settings.EnableDebug)
                     Debug.Log("[Gossip] EndpointTransport registered (HTTP).");
             }
+        }
+
+        private System.Collections.IEnumerator SendUserInfoAfterCapture()
+        {
+            yield return new WaitForEndOfFrame();
+            UserInfoTracker.SendDataToSocket();
         }
 
         public void InvalidateApiKey(long responseCode)
