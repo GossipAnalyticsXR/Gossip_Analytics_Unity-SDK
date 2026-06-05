@@ -18,7 +18,7 @@ namespace GossipSDK.Components
         public float analysisWindowSeconds = 0.3f;
 
         [Header("Decision thresholds")]
-        [Range(0, 1)] public float minEmotionalScore = 0.6f;
+        [Range(0, 1)] public float minEmotionalScore = 0.45f;
         public float cooldownSeconds = 6f;
 
         [Header("Heatmap Settings")]
@@ -34,17 +34,17 @@ namespace GossipSDK.Components
         [SerializeField] private float scoreWeightMovement = 0.3f;
 
         [Header("Signal Gate Thresholds")]
-        [SerializeField] private float signalThresholdEnergy = 0.5f;
-        [SerializeField] private float signalThresholdVoice = 0.4f;
-        [SerializeField] private float signalThresholdMovement = 0.4f;
+        [SerializeField] private float signalThresholdEnergy = 0.40f;
+        [SerializeField] private float signalThresholdVoice = 0.35f;
+        [SerializeField] private float signalThresholdMovement = 0.30f;
 
         [Header("Fast Trigger Thresholds")]
-        [SerializeField] private float fastTriggerEnergyThreshold = 0.8f;
-        [SerializeField] private float fastTriggerConditionThreshold = 0.35f;
+        [SerializeField] private float fastTriggerEnergyThreshold = 0.6f;
+        [SerializeField] private float fastTriggerConditionThreshold = 0.30f;
 
         [Header("Normalisation Ceilings")]
         [SerializeField] private float rmsNormCeiling = 0.1f;
-        [SerializeField] private float movementSpeedCeiling = 2f;
+        [SerializeField] private float movementSpeedCeiling = 1.5f;
 
         [Header("Baseline Adaptation")]
         [SerializeField] private float baselineLerpRate = 0.02f;
