@@ -173,18 +173,18 @@ namespace GossipSDK.Editor
                             throw new BuildFailedException("Build cancelled. Change Gossip Analytics environment before building.");
                         if (choice == 2)
                         {
-                            var guids = AssetDatabase.FindAssets("t:GossipAnalyticsSettings");
-                            if (guids.Length > 0)
+                            EditorApplication.delayCall += () =>
                             {
-                                var path = AssetDatabase.GUIDToAssetPath(guids[0]);
-                                var asset = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
-                                Selection.activeObject = asset;
-                                EditorGUIUtility.PingObject(asset);
-                                var inspectorType = typeof(UnityEditor.Editor).Assembly
-                                    .GetType("UnityEditor.InspectorWindow");
-                                if (inspectorType != null)
-                                    EditorWindow.GetWindow(inspectorType);
-                            }
+                                var guids = AssetDatabase.FindAssets("t:GossipSettings");
+                                if (guids.Length > 0)
+                                {
+                                    var path  = AssetDatabase.GUIDToAssetPath(guids[0]);
+                                    var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
+                                    Selection.activeObject = asset;
+                                    EditorGUIUtility.PingObject(asset);
+                                    EditorApplication.ExecuteMenuItem("Window/General/Inspector");
+                                }
+                            };
                             throw new BuildFailedException("Build cancelled. Change Gossip Analytics environment and rebuild.");
                         }
                     }
