@@ -131,7 +131,11 @@ namespace GossipSDK.Components
                 _selectionPropInfo = _resolvedTypes[i].GetProperty(
                     _adapters[i].SelectionMember,
                     BindingFlags.Public | BindingFlags.Instance);
-                _xrLabel           = comp.GetType().Name;
+                string raw = comp.GetType().Name;
+                string lbl = raw;
+                if (lbl.EndsWith("Interactable")) lbl = lbl.Substring(0, lbl.Length - "Interactable".Length);
+                if (lbl.StartsWith("XR")) lbl = lbl.Substring(2);
+                _xrLabel = string.IsNullOrEmpty(lbl) ? raw : lbl;
                 break; // use first matching framework
             }
         }
