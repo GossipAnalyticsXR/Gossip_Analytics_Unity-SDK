@@ -50,7 +50,7 @@ A live dashboard at [app.gossipanalytics.com](https://app.gossipanalytics.com) w
 
 ## Requirements
 
-- Unity 2022.3 (minimum).
+- Unity 2022.3 or newer (declared in the package manifest; developed and tested on Unity 6 / 6000.x).
 
 - An XR provider: OpenXR or Oculus XR Plugin (you install one, based on your target device).
 
@@ -62,7 +62,6 @@ A live dashboard at [app.gossipanalytics.com](https://app.gossipanalytics.com) w
 ## Install (≈6 steps)
 
 1. Add the package. Unity → Window ▸ Package Manager ▸ + ▸ Add package from git URL… and paste:
-
    https://github.com/GossipAnalyticsXR/Gossip_Analytics_Unity-SDK.git
 
 2. Install dependencies. On first load the SDK detects what’s missing and offers to install it —
@@ -72,7 +71,7 @@ A live dashboard at [app.gossipanalytics.com](https://app.gossipanalytics.com) w
    manager prefab).
 
 4. Run Quick Setup. Window ▸ Gossip Analytics ▸ Quick Setup — adds the manager and settings to
-   your scene.
+   your scene (once; it persists across scenes).
 
 5. Paste your API key & choose an environment. In the GossipSettings Inspector, paste your
    Dev/Beta/Prod key and pick the matching Environment. (Get keys at app.gossipanalytics.com.)
@@ -87,6 +86,9 @@ A live dashboard at [app.gossipanalytics.com](https://app.gossipanalytics.com) w
 Almost everything is automatic, but a few things need your input for accurate data:
 
 - API key + environment — required (step 5).
+
+- Enable Heatmaps — keep the Enable Heatmaps toggle on in GossipSettings (on by default) for
+  spatial / gaze / hand heatmaps.
 
 - Play-area bounds — set worldMinXZ / worldMaxXZ on the heatmap / eye / audio trackers to your
   actual play area, so heatmaps line up.
@@ -118,20 +120,23 @@ Dev reports.
 
 ---
 
+## Notes
+
+- Active subscription required — data is collected and shown on the dashboard while your Gossip
+  Analytics subscription is active.
+
+- Image captures (scene / gaze / interaction snapshots that power image heatmaps) are uploaded
+  only in the Production environment.
+
+---
+
 ## Support
 
 - Dashboard & API keys: [app.gossipanalytics.com](https://app.gossipanalytics.com)
-
 - Docs: see the SDK’s GitHub repository
-
 - Issues / contact: support@gossipanalytics.com
 
 ---
 
-Privacy note: audio-reaction detection processes brief microphone samples *on-device* for emotion
-signals; no audio recordings are stored or transmitted.
-
----
-
-[Changelog](https://github.com/GossipAnalyticsXR/Gossip_Analytics_Unity-SDK/blob/main/CHANGELOG) ·
-[License](https://github.com/GossipAnalyticsXR/Gossip_Analytics_Unity-SDK/blob/main/LICENSE.md)
+*Privacy note: audio-reaction detection processes brief microphone samples *on-device* for emotion
+signals; no audio recordings are stored or transmitted.*
