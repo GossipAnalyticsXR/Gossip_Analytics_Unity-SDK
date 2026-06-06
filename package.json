@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "displayName": "Gossip Analytics SDK",
   "organization": "Gossip Analytics",
-  "description": "-- QUICK SETUP --\nStep 1 SDK installed - you are here.\nStep 2 -> Click the Samples tab above -> Import.\nStep 3 -> Window -> Gossip Analytics -> 1 - Quick Setup.\nStep 4 -> Enter your 3 API Keys (Dev, Beta, Production) -> press Check Connection to verify.\nStep 5 -> Window -> Gossip Analytics -> 2 - Instrumentation Manager -> select which objects to track.\nStep 6 -> Press Play and verify your data appears in the Gossip Analytics dashboard.",
+  "description": "Analytics for VR/XR in Unity. In ~6 steps you are sending real user behavior to your dashboard: heatmaps, gaze, hand and controller use, comfort, and UX issues. Most setup is auto-assigned (trackers, interactable detection, permissions) - you just deselect what you do not need. Works with Unity XRI and Meta Interaction SDK. Non-destructive, 2-click uninstall.\n\nQUICK START\n1. Window -> Package Manager -> + -> Add package from git URL -> paste the SDK git URL\n2. Install dependencies (one-click prompt on first load)\n3. Import the Sample (Package Manager -> Gossip Analytics SDK -> Samples -> Import)\n4. Run Quick Setup (Window -> Gossip Analytics -> Quick Setup)\n5. Paste your API key and choose an environment in GossipSettings\n6. Open Instrumentation Manager, deselect what you do not need, then Play or Build & Run",
   "samples": [
     {
       "displayName": "Step 2 - Import to Complete Setup",
