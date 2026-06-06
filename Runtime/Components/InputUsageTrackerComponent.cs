@@ -35,7 +35,7 @@ namespace GossipSDK.Components
             if (captureTimer >= captureInterval)
             {
                 captureTimer = 0f;
-                if ((UnityEngine.Object)tracker != null)
+                if (tracker != null)
                     tracker.CaptureSnapshot();
             }
         }
@@ -62,21 +62,21 @@ namespace GossipSDK.Components
 
         private void OnDisable()
         {
-            if ((UnityEngine.Object)tracker != null)
+            if (tracker != null)
                 tracker.CaptureSnapshot();
             tracker?.SendDataToSocket();
         }
 
         private void OnApplicationQuit()
         {
-            if ((UnityEngine.Object)tracker != null)
+            if (tracker != null)
                 tracker.CaptureSnapshot();
             tracker?.SendDataToSocket();
         }
 
         private void OnDestroy()
         {
-            if ((UnityEngine.Object)tracker != null)
+            if (tracker != null)
                 tracker.CaptureSnapshot();
             tracker?.SendDataToSocket();
         }
