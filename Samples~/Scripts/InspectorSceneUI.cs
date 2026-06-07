@@ -165,7 +165,7 @@ public class InspectorSceneUI : MonoBehaviour
 
         var btn    = MakePanel("DashboardBtn", btnRow, AccentBlue, flexibleWidth: 1, height: 32);
         var btnBtn = btn.gameObject.AddComponent<Button>();
-        btnBtn.onClick.AddListener(() => Application.OpenURL("https://gossipanalytics.com"));
+        btnBtn.onClick.AddListener(() => Application.OpenURL("https://app.gossipanalytics.com"));
         var btnTMP = MakeTMP("BtnLabel", btn,
             "Verify in Gossip Analytics Dashboard \u2192", 11, White);
         btnTMP.alignment = TextAlignmentOptions.Center;

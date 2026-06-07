@@ -103,18 +103,11 @@ namespace GossipSDK.Core.Connection
 
         public void CapSession(T1 entityData)
         {
-            _ = CapSessionAsync(entityData);
-        }
-
-        private async UniTaskVoid CapSessionAsync(T1 entityData)
-        {
             if (string.IsNullOrEmpty(localDBPath))
                 Initialize();
 
             try
             {
-                await UniTask.SwitchToMainThread();
-
                 lock (dbLock)
                 {
                     using var db = CreateLiteDatabaseWithRetry();
