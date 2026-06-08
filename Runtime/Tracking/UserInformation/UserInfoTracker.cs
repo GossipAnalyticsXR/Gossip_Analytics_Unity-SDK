@@ -41,14 +41,29 @@ namespace GossipSDK.Tracking.UserInformation
 
         private string GetCountryCode()
         {
+#if UNITY_ANDROID
             try
             {
-                return RegionInfo.CurrentRegion.TwoLetterISORegionName;
+                using (var locale = new AndroidJavaClass("java.util.Locale"))
+                using (var defaultLocale = locale.CallStatic<AndroidJavaObject>("getDefault"))
+                {
+                    string country = defaultLocale.Call<string>("getCountry");
+                    if (country != null && country.Length == 2)
+                        return country.ToUpperInvariant();
+                }
             }
-            catch
+            catch { }
+            return "UN";
+#else
+            try
             {
-                return "UN";
+                string region = RegionInfo.CurrentRegion.TwoLetterISORegionName;
+                if (region != null && region.Length == 2)
+                    return region.ToUpperInvariant();
             }
+            catch { }
+            return "UN";
+#endif
         }
 
         private string GetDeviceBrand()
