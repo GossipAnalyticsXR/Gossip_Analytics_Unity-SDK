@@ -610,14 +610,14 @@ namespace GossipSDK.Editor
             {
                 var prevC = GUI.color;
                 GUI.color = new Color(0.4f, 0.9f, 0.4f);
-                GUILayout.Label("✅ Tracked", GUILayout.Width(80));
+                GUILayout.Label("New Tracked", GUILayout.Width(80));
                 GUI.color = prevC;
             }
             else if (obj.isNew)
             {
                 var prevC = GUI.color;
                 GUI.color = new Color(0.4f, 0.6f, 1.0f);
-                GUILayout.Label(" New", GUILayout.Width(80));
+                GUILayout.Label("New Tracked", GUILayout.Width(80));
                 GUI.color = prevC;
             }
             EditorGUILayout.EndHorizontal();
