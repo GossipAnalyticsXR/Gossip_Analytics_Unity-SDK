@@ -71,7 +71,7 @@ namespace GossipSDK.Tracking.UserInformation
         [Serializable]
         public class EntityData : Data
         {
-            [JsonProperty("GeneralDeviceLanguage")]
+            [JsonProperty("GeneralDeviceLanguaje")]
             public string DeviceLanguage { get; set; }
 
             [JsonProperty("GeneralUserName")]
