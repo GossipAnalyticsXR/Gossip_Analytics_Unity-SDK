@@ -289,6 +289,7 @@ namespace GossipSDK.Core
                     {
                         var trackers = new List<object>
                 {
+                    UserInfoTracker,
                     UserPostureTracker,
                     UserEventTracker,
                     UserBalanceTracker,
