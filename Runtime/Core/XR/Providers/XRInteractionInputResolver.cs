@@ -7,13 +7,11 @@ namespace GossipSDK.Core.XR
     {
         public static InteractionInputType GetCurrentInputType()
         {
-#if UNITY_XR
             if (OpenXRHandTrackingActive())
                 return InteractionInputType.Hand;
 
             if (XRControllerActive())
                 return InteractionInputType.Controller;
-#endif
             return InteractionInputType.Unknown;
         }
 
