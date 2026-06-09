@@ -1177,10 +1177,16 @@ namespace GossipSDK.Editor
                             "Deselect", "Cancel");
                         if (confirm)
                         {
+                            var _scnRem = existing.gameObject.scene;
                             Undo.DestroyObjectImmediate(existing);
                             _lastTrackerCountTime = 0;
                             _trackerComponentCache.Clear();
-                            EditorSceneManager.MarkSceneDirty(existing.gameObject.scene);
+                            EditorSceneManager.MarkSceneDirty(_scnRem);
+                            EditorApplication.delayCall += () =>
+                            {
+                                if (_scnRem.IsValid() && _scnRem.isLoaded)
+                                    EditorSceneManager.SaveScene(_scnRem);
+                            };
                         }
                     }
                 }
@@ -1296,9 +1302,15 @@ namespace GossipSDK.Editor
                 target = go;
             }
             Undo.AddComponent(target, trackerType);
-            EditorSceneManager.MarkSceneDirty(target.scene);
+            var _scnAdd = target.scene;
+            EditorSceneManager.MarkSceneDirty(_scnAdd);
             _lastTrackerCountTime = 0;
             _trackerComponentCache.Clear();
+            EditorApplication.delayCall += () =>
+            {
+                if (_scnAdd.IsValid() && _scnAdd.isLoaded)
+                    EditorSceneManager.SaveScene(_scnAdd);
+            };
         }
 
         private void AddAllTrackers()
