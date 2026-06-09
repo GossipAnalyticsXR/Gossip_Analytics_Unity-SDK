@@ -12,8 +12,8 @@ namespace GossipSDK.XR
 
         public bool IsAvailable => eyeDevice.isValid;
 
-        public string TrackingSource =>
-            eyeDevice.isValid ? "eye" : "head";
+        private string _lastSource = "head";
+        public string TrackingSource => _lastSource;
 
         public OpenXREyeGazeProvider(Transform cameraTransform)
         {
@@ -33,6 +33,7 @@ namespace GossipSDK.XR
             {
                 Vector3 origin = fallbackCamera.position;
                 gaze = new Ray(origin, (fixationPoint - origin).normalized);
+                _lastSource = "eye";
                 return true;
             }
 
@@ -42,6 +43,7 @@ namespace GossipSDK.XR
                     fallbackCamera.position,
                     fallbackCamera.forward
                 );
+                _lastSource = "head";
                 return true;
             }
 
