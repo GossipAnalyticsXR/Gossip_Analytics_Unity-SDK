@@ -107,6 +107,7 @@ namespace GossipSDK.Components
                 MotionToPhotonMs = hasLatencyData ? latencyMs : 0f,
                 AmountDevicesInGame = hasDevicesInGame,
                 TrackingAccuracy = trackingAccuracy,
+                OsVersion = SystemInfo.operatingSystem,
             };
 
             tracker.CapSession(data);
