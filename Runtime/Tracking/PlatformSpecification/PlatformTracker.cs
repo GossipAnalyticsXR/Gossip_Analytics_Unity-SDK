@@ -29,6 +29,7 @@ namespace GossipSDK.Tracking.PlatformSpecification
             [field: SerializeField] public string Model { get; set; }
             [field: SerializeField] public string Device { get; set; }
             [field: SerializeField] public string Brand { get; set; }
+            [field: SerializeField] public string OsVersion { get; set; }
             [field: SerializeField] public string Resolution { get; set; }
             [field: SerializeField] public string PlatformName { get; set; }
             [JsonConstructor] public EntityData() { }
