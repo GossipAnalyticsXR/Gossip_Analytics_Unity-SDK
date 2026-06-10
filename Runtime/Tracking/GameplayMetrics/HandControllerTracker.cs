@@ -35,6 +35,10 @@ namespace GossipSDK.Tracking.GameplayMetrics
             {
                 get; set;
             }
+            public float HandElevation
+            {
+                get; set;
+            }
 
             public string SceneName
             {
