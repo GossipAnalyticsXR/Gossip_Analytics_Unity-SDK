@@ -383,6 +383,9 @@ namespace GossipSDK.Editor
                 EditorGUILayout.LabelField("Scanning scenes, please wait...",
                     EditorStyles.centeredGreyMiniLabel, GUILayout.ExpandWidth(true));
                 GUILayout.FlexibleSpace();
+                EditorGUILayout.EndScrollView();
+                GUILayout.EndArea();
+                DrawFooter(footerRect);
                 Repaint();
                 return;
             }
