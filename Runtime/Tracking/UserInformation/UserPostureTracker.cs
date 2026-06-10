@@ -22,6 +22,8 @@ namespace GossipSDK.Tracking.GameplayMetrics
             public float HeadY { get; set; }
             public float HeadX { get; set; }
             public float HeadZ { get; set; }
+            public float HeadPitch { get; set; }
+            public float HeadYaw   { get; set; }
             public string SceneName { get; set; }
             public string TimestampUtc { get; set; }
 
