@@ -109,6 +109,10 @@ namespace GossipSDK.Components
                             TrySet("HeadX", headPos.x);
                             TrySet("HeadY", headPos.y);
                             TrySet("HeadZ", headPos.z);
+                            Transform _h = headTransform != null ? headTransform : transform;
+                            Vector3 _fwd = _h.forward;
+                            TrySet("HeadPitch", Mathf.Asin(Mathf.Clamp(_fwd.y, -1f, 1f)) * Mathf.Rad2Deg);
+                            TrySet("HeadYaw",   _h.eulerAngles.y);
                             TrySet("TimestampUtc", DateTime.UtcNow.ToString("o"));
                             TrySet("SceneName", UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
                             TrySet("PlayerId", gossip.PlayerID ?? "");
@@ -158,6 +162,10 @@ namespace GossipSDK.Components
                         trySet("HeadX", headPos.x);
                         trySet("HeadY", headPos.y);
                         trySet("HeadZ", headPos.z);
+                        Transform _h = headTransform != null ? headTransform : transform;
+                        Vector3 _fwd = _h.forward;
+                        trySet("HeadPitch", Mathf.Asin(Mathf.Clamp(_fwd.y, -1f, 1f)) * Mathf.Rad2Deg);
+                        trySet("HeadYaw",   _h.eulerAngles.y);
                         trySet("TimestampUtc", DateTime.UtcNow.ToString("o"));
                         gCap.Invoke(gTracker, new object[] { inst });
                         if ((gossip.Settings?.EnableDebug == true) || enableLocalDebug)
