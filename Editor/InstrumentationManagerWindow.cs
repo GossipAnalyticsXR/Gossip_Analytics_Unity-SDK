@@ -1493,6 +1493,60 @@ namespace GossipSDK.Editor
                 }
             }
             catch { }
+
+            // 3. Spatial trackers with default (too-large) world bounds
+
+            try
+            {
+                string[] boundedTrackers = {
+                    "PlayerMovementHeatmapComponent", "EyeTrackingComponent", "AudioReactionTrackerComponent"
+                };
+
+                foreach (var typeName in boundedTrackers)
+                {
+                    var tp = GetTrackerType(typeName);
+                    if (tp == null) continue;
+
+                    var comp = Object.FindObjectOfType(tp) as Component;
+                    if (comp == null) continue;
+
+                    var so = new SerializedObject(comp);
+                    var minP = so.FindProperty("worldMinXZ");
+                    var maxP = so.FindProperty("worldMaxXZ");
+                    if (minP == null || maxP == null) continue;
+
+                    Vector2 mn = minP.vector2Value, mx = maxP.vector2Value;
+                    float width = mx.x - mn.x, depth = mx.y - mn.y;
+                    if (width > 20f || depth > 20f)
+                    {
+                        EditorGUILayout.HelpBox(
+                            "⚠ " + typeName + ": world bounds are " + width.ToString("F0") + " x " + depth.ToString("F0") +
+                            " m (default). Tighten worldMinXZ / worldMaxXZ to your real play area for usable heatmap resolution.",
+                            MessageType.Warning);
+                    }
+                }
+            }
+            catch { }
+
+            // 4. Audio Reaction present but Microphone permission disabled
+
+            try
+            {
+                var arType = GetTrackerType("AudioReactionTrackerComponent");
+                var arComp = arType != null ? Object.FindObjectOfType(arType) as Component : null;
+                if (arComp != null)
+                {
+                    var permHandler = _cachedPermHandler ?? Object.FindObjectOfType<VRPermissionsHandler>();
+                    if (permHandler != null && !permHandler.enableMicrophone)
+                    {
+                        EditorGUILayout.HelpBox(
+                            "⚠ Audio Reaction tracker is present but Microphone permission is disabled in the Permissions tab. " +
+                            "No audio reactions will be captured. Enable Microphone (and add RECORD_AUDIO to AndroidManifest.xml).",
+                            MessageType.Warning);
+                    }
+                }
+            }
+            catch { }
         }
 
         // --- Tab: Permissions ---
