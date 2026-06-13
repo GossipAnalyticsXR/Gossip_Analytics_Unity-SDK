@@ -546,8 +546,25 @@ namespace GossipSDK.Editor
                 doneStyle))
             {
                 AssetDatabase.SaveAssets();
-                bool didSave = EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
-                if (didSave) Close();
+                EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
+                bool anyDirty = false;
+                for (int i = 0; i < SceneManager.sceneCount; i++)
+                {
+                    var sc = SceneManager.GetSceneAt(i);
+                    if (sc.isLoaded && sc.isDirty) { anyDirty = true; break; }
+                }
+                if (!anyDirty)
+                {
+                    Close();
+                }
+                else
+                {
+                    EditorApplication.delayCall += () =>
+                        EditorUtility.DisplayDialog(
+                            "Instrumentation not saved",
+                            "Some scene changes were not saved. Your trackers / permissions / interactables will be lost on the next Unity restart. Save the scene (Ctrl+S), or click Save & Close again and choose Save.",
+                            "OK");
+                }
             }
             GUI.backgroundColor = prevBg;
         }
