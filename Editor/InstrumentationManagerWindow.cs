@@ -243,6 +243,15 @@ namespace GossipSDK.Editor
                 postAddHint = "Checks server status on start and every pollInterval seconds. Deselect if the app has no backend game server."
             },
             new TrackerInfo {
+                componentTypeName = "DistanceTrackerComponent",
+                displayName = "Distance Tracker",
+                description = "Measures player displacement over the session. playerTransform is auto-assigned to the main camera.",
+                category = "Spatial",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = false,
+                postAddHint = "playerTransform auto-assigned to main camera. Adjust sampleInterval / minDistanceThreshold if needed."
+            },
+            new TrackerInfo {
                 componentTypeName = "PassthroughComponent",
                 displayName = "Passthrough Tracker",
                 description = "Tracks MR passthrough enable/disable events and active duration. Requires wiring to your passthrough toggle logic.",
@@ -1044,10 +1053,12 @@ namespace GossipSDK.Editor
             // Queue auto-assign for trackers that have a transform field
             if (info.componentTypeName == "UserPostureComponent" ||
                 info.componentTypeName == "EyeTrackingComponent"  ||
-                info.componentTypeName == "AudioReactionTrackerComponent")
+                info.componentTypeName == "AudioReactionTrackerComponent" ||
+                info.componentTypeName == "DistanceTrackerComponent")
             {
                 string fieldName = info.componentTypeName == "UserPostureComponent" ? "headTransform"
                         : info.componentTypeName == "EyeTrackingComponent" ? "cam"
+                        : info.componentTypeName == "DistanceTrackerComponent" ? "playerTransform"
                         : "trackedTransform";
                 string typeName  = info.componentTypeName;
                 EditorApplication.delayCall += () =>
