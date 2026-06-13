@@ -216,6 +216,33 @@ namespace GossipSDK.Editor
                 postAddHint = "Auto-reports on scene start (autoReportOnStart = true). Optionally set areaTypeOverride (2D / 3D / XR)."
             },
             new TrackerInfo {
+                componentTypeName = "DifficultyComponent",
+                displayName = "Difficulty Tracker",
+                description = "Reports difficulty level changes. Auto-reports a default level on start; call NotifyDifficulty() for real levels.",
+                category = "Device",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = false,
+                postAddHint = "Auto-reports defaultDifficultyId on start. Call GetComponent<DifficultyComponent>().NotifyDifficulty(id, value) from your difficulty UI."
+            },
+            new TrackerInfo {
+                componentTypeName = "MultiplayerTrackerComponent",
+                displayName = "Multiplayer Tracker",
+                description = "Tracks multiplayer room/match snapshots. Emits on start with empty room unless configured.",
+                category = "Device",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = false,
+                postAddHint = "Set roomId / matchType or call StartTracking() from your netcode. Deselect this tracker if the app is single-user."
+            },
+            new TrackerInfo {
+                componentTypeName = "ServerStatusComponent",
+                displayName = "Server Status",
+                description = "Polls a game-server status on an interval. Deselect if there is no dedicated game server.",
+                category = "Device",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = false,
+                postAddHint = "Checks server status on start and every pollInterval seconds. Deselect if the app has no backend game server."
+            },
+            new TrackerInfo {
                 componentTypeName = "PassthroughComponent",
                 displayName = "Passthrough Tracker",
                 description = "Tracks MR passthrough enable/disable events and active duration. Requires wiring to your passthrough toggle logic.",
