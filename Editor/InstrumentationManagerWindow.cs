@@ -207,6 +207,15 @@ namespace GossipSDK.Editor
                 requiresConfiguration = false
             },
             new TrackerInfo {
+                componentTypeName = "PlayableAreaComponent",
+                displayName = "Playable Area",
+                description = "Reports play-area / guardian bounds (width, depth, area in m2) on session start. Auto-reports; no configuration required.",
+                category = "XR",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = false,
+                postAddHint = "Auto-reports on scene start (autoReportOnStart = true). Optionally set areaTypeOverride (2D / 3D / XR)."
+            },
+            new TrackerInfo {
                 componentTypeName = "PassthroughComponent",
                 displayName = "Passthrough Tracker",
                 description = "Tracks MR passthrough enable/disable events and active duration. Requires wiring to your passthrough toggle logic.",
