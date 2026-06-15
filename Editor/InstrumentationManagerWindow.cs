@@ -216,6 +216,15 @@ namespace GossipSDK.Editor
                 postAddHint = "Auto-reports on scene start (autoReportOnStart = true). Optionally set areaTypeOverride (2D / 3D / XR)."
             },
             new TrackerInfo {
+                componentTypeName = "HeatmapSceneAutoCapture",
+                displayName = "Heatmap Scene Capture",
+                description = "Captures a top-down image of the scene on start and uploads it as the heatmap background. Auto-frames to scene bounds.",
+                category = "XR",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = false,
+                postAddHint = "Auto-captures on scene start. Adjust cameraHeight / padding / textureSize only if the top-down framing is off."
+            },
+            new TrackerInfo {
                 componentTypeName = "DifficultyComponent",
                 displayName = "Difficulty Tracker",
                 description = "Reports difficulty level changes. Auto-reports a default level on start; call NotifyDifficulty() for real levels.",
