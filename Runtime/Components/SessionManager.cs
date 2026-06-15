@@ -36,6 +36,15 @@ namespace GossipSDK.Components
             return "free_trial";
         }
 
+        public void SetSubscriptionType(string value)
+        {
+            subscriptionTypeOverride = value ?? string.Empty;
+        }
+
+        public void SetSessionType(string value)
+        {
+            sessionTypeOverride = value ?? string.Empty;
+        }
         private void Awake()
         {
             if (string.IsNullOrWhiteSpace(sessionId))
