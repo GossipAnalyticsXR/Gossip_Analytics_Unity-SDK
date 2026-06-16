@@ -1458,10 +1458,10 @@ namespace GossipSDK.Editor
 
         // --- Scene Health Check (XR config warnings) ---
                 private void RecomputeHealthWarnings()
-        
+        {
+                    _cachedHealthWarnings.Clear();
             if (!_healthCheckTypesCached)
             {
-            _cachedHealthWarnings.Clear();
                 _cachedXROriginType = AppDomain.CurrentDomain.GetAssemblies()
                     .SelectMany(a => { try { return a.GetTypes(); } catch { return Type.EmptyTypes; } })
                     .FirstOrDefault(t => t.FullName == "UnityEngine.XR.Interaction.Toolkit.XROrigin");
