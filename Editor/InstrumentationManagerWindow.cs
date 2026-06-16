@@ -23,7 +23,8 @@ namespace GossipSDK.Editor
         private Vector2 _scrollPos;
         private static bool _isScanning = false;
         private int _cachedActiveTrackers = 0;
-        private static bool _tabSwitching = false;
+
+        private readonly List<string> _cachedHealthWarnings = new List<string>();        private static bool _tabSwitching = false;
         private static int  _tabSwitchTarget = 0;
         private static bool _tabDelayQueued = false;
         private double _lastTrackerCountTime = 0;
@@ -405,6 +406,8 @@ namespace GossipSDK.Editor
                             _trackerComponentCache[t.componentTypeName] = comp;
                         }
                     }
+                
+                    RecomputeHealthWarnings();
                 }
                 _lastTrackerCountTime = EditorApplication.timeSinceStartup;
             }
@@ -1454,10 +1457,11 @@ namespace GossipSDK.Editor
         }
 
         // --- Scene Health Check (XR config warnings) ---
-        private void DrawSceneHealthCheck()
-        {
+                private void RecomputeHealthWarnings()
+        
             if (!_healthCheckTypesCached)
             {
+            _cachedHealthWarnings.Clear();
                 _cachedXROriginType = AppDomain.CurrentDomain.GetAssemblies()
                     .SelectMany(a => { try { return a.GetTypes(); } catch { return Type.EmptyTypes; } })
                     .FirstOrDefault(t => t.FullName == "UnityEngine.XR.Interaction.Toolkit.XROrigin");
@@ -1480,11 +1484,10 @@ namespace GossipSDK.Editor
                             ?? originSO.FindProperty("trackingOriginMode");
                         if (trackProp != null && trackProp.intValue == 0)
                         {
-                            EditorGUILayout.HelpBox(
-                                "⚠ XR Origin: Tracking Origin Mode is 'Not Specified'. " +
+                            _cachedHealthWarnings.Add(
+                    "⚠ XR Origin: Tracking Origin Mode is 'Not Specified'. " +
                                 "Set it to 'Floor' (standing / room-scale) or 'Device' (seated / head-level) " +
-                                "in the XR Origin Inspector before building.",
-                                MessageType.Warning);
+                                "in the XR Origin Inspector before building.");
                         }
                     }
                 }
@@ -1510,10 +1513,9 @@ namespace GossipSDK.Editor
                             string side = (leftMissing && rightMissing) ? "Left Hand and Right Hand are"
                                         : leftMissing  ? "Left Hand is"
                                         : "Right Hand is";
-                            EditorGUILayout.HelpBox(
-                                "⚠ XR Input Modality Manager: " + side + " not assigned. " +
-                                "Hand tracking will not function. Assign the hand prefabs in the Inspector.",
-                                MessageType.Warning);
+                            _cachedHealthWarnings.Add(
+                    "⚠ XR Input Modality Manager: " + side + " not assigned. " +
+                                "Hand tracking will not function. Assign the hand prefabs in the Inspector.");
                         }
                     }
                 }
@@ -1545,10 +1547,9 @@ namespace GossipSDK.Editor
                     float width = mx.x - mn.x, depth = mx.y - mn.y;
                     if (width > 20f || depth > 20f)
                     {
-                        EditorGUILayout.HelpBox(
-                            "⚠ " + typeName + ": world bounds are " + width.ToString("F0") + " x " + depth.ToString("F0") +
-                            " m (default). Tighten worldMinXZ / worldMaxXZ to your real play area for usable heatmap resolution.",
-                            MessageType.Warning);
+                        _cachedHealthWarnings.Add(
+                    "⚠ " + typeName + ": world bounds are " + width.ToString("F0") + " x " + depth.ToString("F0") +
+                            " m (default). Tighten worldMinXZ / worldMaxXZ to your real play area for usable heatmap resolution.");
                     }
                 }
             }
@@ -1565,14 +1566,19 @@ namespace GossipSDK.Editor
                     var permHandler = _cachedPermHandler ?? Object.FindObjectOfType<VRPermissionsHandler>();
                     if (permHandler != null && !permHandler.enableMicrophone)
                     {
-                        EditorGUILayout.HelpBox(
-                            "⚠ Audio Reaction tracker is present but Microphone permission is disabled in the Permissions tab. " +
-                            "No audio reactions will be captured. Enable Microphone (and add RECORD_AUDIO to AndroidManifest.xml).",
-                            MessageType.Warning);
+                        _cachedHealthWarnings.Add(
+                    "⚠ Audio Reaction tracker is present but Microphone permission is disabled in the Permissions tab. " +
+                            "No audio reactions will be captured. Enable Microphone (and add RECORD_AUDIO to AndroidManifest.xml).");
                     }
                 }
             }
             catch { }
+        
+
+        private void DrawSceneHealthCheck()
+        {
+            foreach (var w in _cachedHealthWarnings)
+                EditorGUILayout.HelpBox(w, MessageType.Warning);
         }
 
         // --- Tab: Permissions ---
