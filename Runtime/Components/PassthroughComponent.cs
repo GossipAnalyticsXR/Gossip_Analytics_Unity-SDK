@@ -30,14 +30,14 @@ public class PassthroughComponent : MonoBehaviour
 
     private void Start()
     {
-        if (onActiveStart) StartCoroutine(WaitAndEnable());
+        StartCoroutine(WaitAndInit());
     }
 
-    private IEnumerator WaitAndEnable()
+    private IEnumerator WaitAndInit()
     {
         yield return new WaitUntil(() => Gossip.Instance != null);
         TrySubscribeGuardianBoundary();
-        OnPassthroughEnabled();
+        if (onActiveStart) OnPassthroughEnabled();
     }
 
     private void Update()
