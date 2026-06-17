@@ -1240,7 +1240,6 @@ namespace GossipSDK.Editor
                 _trackerComponentCache.TryGetValue(info.componentTypeName, out Component existing);
                 bool isPresent = (UnityEngine.Object)existing != null;
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                bool showInspectorBtn = isPresent && info.requiresConfiguration;
                 EditorGUILayout.BeginHorizontal();
                 bool wasPresent = isPresent;
                 bool nowSelected = EditorGUILayout.Toggle(wasPresent, GUILayout.Width(20));
@@ -1273,14 +1272,6 @@ namespace GossipSDK.Editor
                 EditorGUILayout.LabelField(info.displayName, EditorStyles.boldLabel);
                 EditorGUILayout.LabelField(info.description, _wordWrapMiniLabel);
                 EditorGUILayout.EndVertical();
-                if (showInspectorBtn)
-                {
-                    if (GUILayout.Button("Open Inspector", GUILayout.Width(110)))
-                    {
-                        Selection.activeGameObject = existing.gameObject;
-                        EditorGUIUtility.PingObject(existing);
-                    }
-                }
                 EditorGUILayout.EndHorizontal();
                 if (!isPresent && info.requiresConfiguration)
                 {
