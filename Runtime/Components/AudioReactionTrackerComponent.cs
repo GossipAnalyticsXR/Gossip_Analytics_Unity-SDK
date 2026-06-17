@@ -23,8 +23,8 @@ namespace GossipSDK.Components
 
         [Header("Heatmap Settings")]
         public Transform trackedTransform;
-        public Vector2 worldMinXZ = new Vector2(-25, -25);
-        public Vector2 worldMaxXZ = new Vector2(25, 25);
+        public Vector2 worldMinXZ = new Vector2(-5, -5);
+        public Vector2 worldMaxXZ = new Vector2(5, 5);
         public float cellSizeMeters = 0.5f;
         public float heatmapFlushInterval = 10f;
 
