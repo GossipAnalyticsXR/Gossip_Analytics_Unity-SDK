@@ -24,8 +24,8 @@ namespace GossipSDK.Components
         [SerializeField] private float headFallbackThresholdMultiplier = 2.5f;
 
         [Header("Heatmap")]
-        [SerializeField] private Vector2 worldMinXZ = new(-25, -25);
-        [SerializeField] private Vector2 worldMaxXZ = new(25, 25);
+        [SerializeField] private Vector2 worldMinXZ = new(-5, -5);
+        [SerializeField] private Vector2 worldMaxXZ = new(5, 5);
         [SerializeField] private float cellSizeMeters = 0.5f;
         [SerializeField] private float heatmapFlushInterval = 10f;
 
