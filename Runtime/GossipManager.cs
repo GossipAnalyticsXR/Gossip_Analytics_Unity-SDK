@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using GossipSDK.Core;
 using GossipSDK.Core.Configuration;
 using GossipSDK.Components;
@@ -35,6 +36,9 @@ namespace GossipSDK
         private bool isDeployRoutineRunning = false;
 
         private static GossipManager _instance;
+
+        private bool autoTrackersInitialized;
+        private GameObject autoTrackersHost;
 
         private void Awake()
         {
@@ -178,6 +182,7 @@ namespace GossipSDK
 
             StartSubscriptions();
             WaitAndCreateHeatmap().Forget();
+            WaitAndAutoAddTrackers().Forget();
         }
 
         private async UniTaskVoid WaitAndCreateHeatmap()
@@ -197,6 +202,78 @@ namespace GossipSDK
             go.AddComponent<GossipSDK.Heatmaps.HeatmapSceneAutoCapture>();
         }
 
+        private async UniTaskVoid WaitAndAutoAddTrackers()
+        {
+            await UniTask.WaitUntil(() => Gossip != null && Gossip.IsSessionReady);
+
+            if (autoTrackersInitialized) return;
+            autoTrackersInitialized = true;
+
+            autoTrackersHost = new GameObject("GossipAutoTrackers");
+            DontDestroyOnLoad(autoTrackersHost);
+
+            SceneManager.sceneLoaded += (_, __) => EnsureTrackers();
+
+            EnsureTrackers();
+        }
+
+        private void EnsureTrackers()
+        {
+            var cam = Camera.main;
+            var camGO = cam != null ? cam.gameObject : null;
+
+            void Ensure(System.Type t, GameObject host)
+            {
+                if (host == null) return;
+                if (UnityEngine.Object.FindObjectOfType(t) == null)
+                    host.AddComponent(t);
+            }
+
+            // GROUP A: own-transform readers -- attach to Camera GO
+            Ensure(typeof(PositionTrackerComponent),            camGO);
+            Ensure(typeof(RotationAndVelocityTrackerComponent), camGO);
+            Ensure(typeof(UserBalanceTrackerComponent),         camGO);
+            Ensure(typeof(PlayerMovementHeatmapComponent),      camGO);
+
+            // GROUP B: all others -- attach to persistent autoTrackersHost
+            Ensure(typeof(UserPostureComponent),                autoTrackersHost);
+            Ensure(typeof(EyeTrackingComponent),                autoTrackersHost);
+            Ensure(typeof(AudioReactionTrackerComponent),       autoTrackersHost);
+            Ensure(typeof(DistanceTrackerComponent),            autoTrackersHost);
+            Ensure(typeof(HandControllerTrackingComponent),     autoTrackersHost);
+            Ensure(typeof(PerformanceMonitorComponent),         autoTrackersHost);
+            Ensure(typeof(BatteryMonitorComponent),             autoTrackersHost);
+            Ensure(typeof(ConnectivityMonitorComponent),        autoTrackersHost);
+            Ensure(typeof(InputUsageTrackerComponent),          autoTrackersHost);
+            Ensure(typeof(AudioVolumeTrackerComponent),         autoTrackersHost);
+            Ensure(typeof(PlatformMonitorComponent),            autoTrackersHost);
+            Ensure(typeof(RealityModeMonitor),                  autoTrackersHost);
+            Ensure(typeof(ExperienceInfoComponent),             autoTrackersHost);
+            Ensure(typeof(PlayableAreaComponent),               autoTrackersHost);
+            Ensure(typeof(PeripheralAutoTrackerComponent),      autoTrackersHost);
+            Ensure(typeof(PauseComponent),                      autoTrackersHost);
+            Ensure(typeof(DifficultyComponent),                 autoTrackersHost);
+            Ensure(typeof(MultiplayerTrackerComponent),         autoTrackersHost);
+            Ensure(typeof(ServerStatusComponent),               autoTrackersHost);
+            Ensure(typeof(AvatarTrackerComponent),              autoTrackersHost);
+            Ensure(typeof(AccessoriesComponent),                autoTrackersHost);
+            Ensure(typeof(CrashReporterComponent),              autoTrackersHost);
+            Ensure(typeof(AdComponent),                         autoTrackersHost);
+            Ensure(typeof(PassthroughComponent),                autoTrackersHost);
+
+            // Camera wiring: refresh to current Camera.main on every call
+            var posture = UnityEngine.Object.FindObjectOfType<UserPostureComponent>();
+            if (posture != null && cam != null) posture.headTransform = cam.transform;
+
+            var eye = UnityEngine.Object.FindObjectOfType<EyeTrackingComponent>();
+            if (eye != null && cam != null) eye.cam = cam.transform;
+
+            var audioRx = UnityEngine.Object.FindObjectOfType<AudioReactionTrackerComponent>();
+            if (audioRx != null && cam != null) audioRx.trackedTransform = cam.transform;
+
+            var dist = UnityEngine.Object.FindObjectOfType<DistanceTrackerComponent>();
+            if (dist != null && cam != null) dist.PlayerTransform = cam.transform;
+        }
 
         public bool UnregisterComponent(GossipBasicComponent component)
         {
