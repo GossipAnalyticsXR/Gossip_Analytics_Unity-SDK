@@ -1573,7 +1573,7 @@ namespace GossipSDK.Editor
                 }
             }
             catch { }
-        
+        }
 
         private void DrawSceneHealthCheck()
         {
