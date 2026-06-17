@@ -10,8 +10,8 @@ namespace GossipSDK.Components
     public class PlayerMovementHeatmapComponent : MonoBehaviour
     {
         [Header("Heatmap Settings")]
-        public Vector2 worldMinXZ = new Vector2(-50, -50);
-        public Vector2 worldMaxXZ = new Vector2(50, 50);
+        public Vector2 worldMinXZ = new Vector2(-5, -5);
+        public Vector2 worldMaxXZ = new Vector2(5, 5);
         public float cellSizeMeters = 1.0f;
         public float sampleInterval = 0.25f;
         public float heatmapFlushInterval = 10f;
