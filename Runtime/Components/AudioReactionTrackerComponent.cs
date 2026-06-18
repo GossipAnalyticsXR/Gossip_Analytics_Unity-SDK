@@ -5,6 +5,7 @@ using UnityEngine.Android; // Necesario para verificar permiso sin pedirlo
 using GossipSDK.Core;
 using GossipSDK.Tracking.GameplayMetrics;
 using GossipSDK.Tracking;
+using GossipSDK.Heatmaps;
 using UnityEngine.SceneManagement;
 
 namespace GossipSDK.Components
@@ -27,6 +28,9 @@ namespace GossipSDK.Components
         public Vector2 worldMaxXZ = new Vector2(5, 5);
         public float cellSizeMeters = 0.5f;
         public float heatmapFlushInterval = 10f;
+
+        [Header("Auto Bounds")]
+        [SerializeField] public bool autoBounds = true;
 
         [Header("Scoring Weights (must sum to 1.0)")]
         [SerializeField] private float scoreWeightEnergy = 0.4f;
@@ -76,6 +80,13 @@ namespace GossipSDK.Components
             analysisWindowSize = Mathf.CeilToInt(sampleRate * analysisWindowSeconds);
             ringBuffer = new float[bufferSize];
 
+            if (autoBounds && HeatmapBoundsResolver.ResolvePlayAreaXZ(
+                out Vector2 resolvedMin, out Vector2 resolvedMax))
+            {
+                worldMinXZ = resolvedMin;
+                worldMaxXZ = resolvedMax;
+            }
+
             heatmapManager = new HeatmapManager(
                 SceneManager.GetActiveScene().name,
                 worldMinXZ,
@@ -92,7 +103,7 @@ namespace GossipSDK.Components
 
         void Update()
         {
-            // Si no hay clip o no está grabando, no hacemos nada
+            // Si no hay clip o no esta grabando, no hacemos nada
             if (micClip == null || Microphone.devices.Length == 0 || !Microphone.IsRecording(Microphone.devices[0]))
                 return;
 
@@ -149,16 +160,16 @@ namespace GossipSDK.Components
             // 1. ESPERAR AL GESTOR CENTRAL
             yield return new WaitUntil(() => VRPermissionsHandler.IsReady);
 
-            // 2. VERIFICACIÓN DE SEGURIDAD
+            // 2. VERIFICACION DE SEGURIDAD
 #if UNITY_ANDROID && !UNITY_EDITOR
             if (!Permission.HasUserAuthorizedPermission(Permission.Microphone))
             {
-                Debug.LogWarning("[AudioTracker] Sin permiso de micrófono. Abortando.");
+                Debug.LogWarning("[AudioTracker] Sin permiso de microfono. Abortando.");
                 yield break; 
             }
 #endif
 
-            // 3. RE-DETECCIÓN DINÁMICA DE DISPOSITIVOS
+            // 3. RE-DETECCION DINAMICA DE DISPOSITIVOS
             float retryTime = 0;
             while (Microphone.devices.Length == 0 && retryTime < 2.0f)
             {
@@ -168,11 +179,11 @@ namespace GossipSDK.Components
 
             if (Microphone.devices.Length == 0)
             {
-                Debug.LogError("[AudioTracker] No se detectó ningún micrófono físico disponible.");
+                Debug.LogError("[AudioTracker] No se detecto ningun microfono fisico disponible.");
                 yield break;
             }
 
-            // 4. INICIO CON SELECCIÓN EXPLÍCITA
+            // 4. INICIO CON SELECCION EXPLICITA
             string deviceName = Microphone.devices[0];
             bool success = false;
 
@@ -183,7 +194,7 @@ namespace GossipSDK.Components
             }
             catch (Exception e)
             {
-                Debug.LogError($"[AudioTracker] Fallo crítico al iniciar grabación: {e.Message}");
+                Debug.LogError($"[AudioTracker] Fallo critico al iniciar grabacion: {e.Message}");
                 success = false;
             }
 
@@ -191,7 +202,7 @@ namespace GossipSDK.Components
             if (success)
             {
                 yield return new WaitUntil(() => Microphone.GetPosition(deviceName) > 0);
-                Debug.Log($"[AudioTracker] Micrófono '{deviceName}' iniciado y capturando.");
+                Debug.Log($"[AudioTracker] Microfono '{deviceName}' iniciado y capturando.");
             }
         }
 
