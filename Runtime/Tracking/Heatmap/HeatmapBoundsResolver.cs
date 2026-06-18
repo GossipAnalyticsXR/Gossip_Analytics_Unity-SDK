@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using System.Reflection;
+using GossipSDK.Core.Utilities;
 
 namespace GossipSDK.Heatmaps
 {
@@ -31,10 +32,8 @@ namespace GossipSDK.Heatmaps
             max = default;
             try
             {
-                // OVRManager.boundary (static property, type OVRBoundary)
-                Type ovrManagerType = Type.GetType("OVRManager, Assembly-CSharp");
-                if (ovrManagerType == null)
-                    ovrManagerType = Type.GetType("OVRManager, OculusIntegration");
+                // Assembly-agnostic lookup: works with Oculus.VR, Assembly-CSharp, OculusIntegration, etc.
+                Type ovrManagerType = ReflectionUtil.FindType("OVRManager");
                 if (ovrManagerType == null)
                     return false;
 
@@ -58,9 +57,7 @@ namespace GossipSDK.Heatmaps
                     return false;
 
                 // OVRBoundary.BoundaryType.PlayArea enum value
-                Type ovrBoundaryType = Type.GetType("OVRBoundary, Assembly-CSharp");
-                if (ovrBoundaryType == null)
-                    ovrBoundaryType = Type.GetType("OVRBoundary, OculusIntegration");
+                Type ovrBoundaryType = ReflectionUtil.FindType("OVRBoundary");
 
                 object playAreaValue = null;
                 if (ovrBoundaryType != null)
