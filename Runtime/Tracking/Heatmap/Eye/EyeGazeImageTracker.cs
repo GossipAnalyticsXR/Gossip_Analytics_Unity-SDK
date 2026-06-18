@@ -20,6 +20,7 @@ namespace GossipSDK.Heatmaps
 
             byte[] png = await CaptureUtils.CapturePngAsync();
             if (png == null) return;
+            if (gossip.EndpointClient == null) { if (gossip.Settings?.EnableDebug == true) Debug.LogWarning("[EyeGazeImage] EndpointClient null"); return; }
 
             await gossip.EndpointClient.UploadEyeGazeImage(
                 gazeRay, hit, fixationDuration, trackingSource, png,
