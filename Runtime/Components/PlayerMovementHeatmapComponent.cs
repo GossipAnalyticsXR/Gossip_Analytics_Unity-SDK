@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using GossipSDK.Core;
 using GossipSDK.Tracking;
+using GossipSDK.Heatmaps;
 using System;
 
 namespace GossipSDK.Components
@@ -16,12 +17,22 @@ namespace GossipSDK.Components
         public float sampleInterval = 0.25f;
         public float heatmapFlushInterval = 10f;
 
+        [Header("Auto Bounds")]
+        [SerializeField] public bool autoBounds = true;
+
         private HeatmapManager heatmapManager;
         private float sampleTimer;
         private float flushTimer;
 
         private void Start()
         {
+
+            if (autoBounds && HeatmapBoundsResolver.ResolvePlayAreaXZ(
+                out Vector2 resolvedMin, out Vector2 resolvedMax))
+            {
+                worldMinXZ = resolvedMin;
+                worldMaxXZ = resolvedMax;
+            }
 
             heatmapManager = new HeatmapManager(
                 SceneManager.GetActiveScene().name,
