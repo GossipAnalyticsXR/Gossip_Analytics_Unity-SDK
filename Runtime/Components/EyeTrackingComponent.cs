@@ -29,6 +29,9 @@ namespace GossipSDK.Components
         [SerializeField] private float cellSizeMeters = 0.5f;
         [SerializeField] private float heatmapFlushInterval = 10f;
 
+        [Header("Auto Bounds")]
+        [SerializeField] public bool autoBounds = true;
+
         public Transform cam;
         private string sceneName;
 
@@ -49,6 +52,13 @@ namespace GossipSDK.Components
         private void Awake()
         {
             sceneName = SceneManager.GetActiveScene().name;
+
+            if (autoBounds && HeatmapBoundsResolver.ResolvePlayAreaXZ(
+                out Vector2 resolvedMin, out Vector2 resolvedMax))
+            {
+                worldMinXZ = resolvedMin;
+                worldMaxXZ = resolvedMax;
+            }
 
             heatmap = new HeatmapManager(sceneName, worldMinXZ, worldMaxXZ, cellSizeMeters);
 
