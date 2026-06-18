@@ -14,7 +14,21 @@ namespace GossipSDK.Core.Configuration
 
         [Header("Environment / Versioning")]
         [SerializeField] private Environment environment = Environment.Dev;
-        public Environment SelectedEnvironment => environment;
+
+        // Effective environment is auto-derived from build type by default:
+        //   release build (!Debug.isDebugBuild) → Production
+        //   development build                   → Dev
+        // Set overrideEnvironment = true in the Inspector to use the 'environment'
+        // field value explicitly (e.g. to force Beta or lock Dev in a release build).
+        [SerializeField] private bool overrideEnvironment = false;
+        public Environment SelectedEnvironment
+        {
+            get
+            {
+                if (overrideEnvironment) return environment;
+                return Debug.isDebugBuild ? Environment.Dev : Environment.Production;
+            }
+        }
 
         [HideInInspector] [SerializeField] private bool useHttpEndpoint = true;
         public bool UseHttpEndpoint => useHttpEndpoint;
@@ -55,7 +69,7 @@ namespace GossipSDK.Core.Configuration
         {
             get
             {
-                return environment switch
+                return SelectedEnvironment switch
                 {
                     Environment.Dev        => devServerUrl,
                     Environment.Beta       => betaServerUrl,
@@ -67,7 +81,7 @@ namespace GossipSDK.Core.Configuration
 
         public string GetActiveServerUrl()
         {
-            string stored = environment switch
+            string stored = SelectedEnvironment switch
             {
                 Environment.Dev        => devServerUrl,
                 Environment.Beta       => betaServerUrl,
@@ -83,7 +97,7 @@ namespace GossipSDK.Core.Configuration
         {
             get
             {
-                return environment switch
+                return SelectedEnvironment switch
                 {
                     Environment.Dev        => devApiKey,
                     Environment.Beta       => betaApiKey,
