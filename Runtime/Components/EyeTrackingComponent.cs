@@ -202,6 +202,7 @@ namespace GossipSDK.Components
 
         private void FlushHeatmap()
         {
+            if (heatmap == null) return;
             Gossip.Instance?.HeatmapTracker?
                 .CapFromHeatmap(heatmap, "eye_gaze", true);
         }
