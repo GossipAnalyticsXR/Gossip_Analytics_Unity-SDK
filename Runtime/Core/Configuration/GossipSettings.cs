@@ -15,20 +15,7 @@ namespace GossipSDK.Core.Configuration
         [Header("Environment / Versioning")]
         [SerializeField] private Environment environment = Environment.Dev;
 
-        // Effective environment is auto-derived from build type by default:
-        //   release build (!Debug.isDebugBuild) → Production
-        //   development build                   → Dev
-        // Set overrideEnvironment = true in the Inspector to use the 'environment'
-        // field value explicitly (e.g. to force Beta or lock Dev in a release build).
-        [SerializeField] private bool overrideEnvironment = false;
-        public Environment SelectedEnvironment
-        {
-            get
-            {
-                if (overrideEnvironment) return environment;
-                return Debug.isDebugBuild ? Environment.Dev : Environment.Production;
-            }
-        }
+        public Environment SelectedEnvironment => environment;
 
         [HideInInspector] [SerializeField] private bool useHttpEndpoint = true;
         public bool UseHttpEndpoint => useHttpEndpoint;
