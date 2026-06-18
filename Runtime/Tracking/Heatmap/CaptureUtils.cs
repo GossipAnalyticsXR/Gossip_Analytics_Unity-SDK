@@ -1,12 +1,8 @@
 using UnityEngine;
-using UnityEngine.Rendering;
-using Cysharp.Threading.Tasks;
-using Unity.Collections;
-using UnityEngine.Experimental.Rendering;
 
 public static class CaptureUtils
 {
-    public static async UniTask<byte[]> CapturePngAsync()
+    public static byte[] CapturePngAsync()
     {
         var cam = Camera.main;
         if (cam == null) return null;
@@ -15,34 +11,32 @@ public static class CaptureUtils
         float aspectRatio = (float)Screen.width / Screen.height;
         int targetWidth = Mathf.RoundToInt(targetHeight * aspectRatio);
 
-        var rt = RenderTexture.GetTemporary(targetWidth, targetHeight, 24, GraphicsFormat.R8G8B8A8_SRGB);
+        var rt = RenderTexture.GetTemporary(targetWidth, targetHeight, 24);
+
+        RenderTexture previousActive = RenderTexture.active;
         RenderTexture previousRT = cam.targetTexture;
-        cam.targetTexture = rt;
-        cam.Render();
-        cam.targetTexture = previousRT;
+        Texture2D tex = null;
 
         try
         {
-            var request = await AsyncGPUReadback.Request(rt, 0, GraphicsFormat.R8G8B8A8_SRGB);
+            cam.targetTexture = rt;
+            cam.Render();
+            cam.targetTexture = previousRT;
 
-            if (request.hasError)
-            {
-                return null;
-            }
+            RenderTexture.active = rt;
 
-            var rawData = request.GetData<byte>();
-            byte[] cpuBuffer = rawData.ToArray();
+            tex = new Texture2D(targetWidth, targetHeight, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, targetWidth, targetHeight), 0, 0);
+            tex.Apply();
 
-            return ImageConversion.EncodeArrayToPNG(
-                cpuBuffer,
-                GraphicsFormat.R8G8B8A8_SRGB,
-                (uint)targetWidth,
-                (uint)targetHeight
-            );
+            return tex.EncodeToPNG();
         }
         finally
         {
+            RenderTexture.active = previousActive;
             RenderTexture.ReleaseTemporary(rt);
+
+            if (tex != null) UnityEngine.Object.Destroy(tex);
         }
     }
 }
