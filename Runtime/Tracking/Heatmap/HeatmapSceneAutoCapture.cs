@@ -15,11 +15,14 @@ namespace GossipSDK.Heatmaps
         private IEnumerator Start()
         {
             yield return new WaitForSeconds(captureDelay);
+            if (GossipSDK.Core.Gossip.Instance?.Settings?.EnableDebug == true) Debug.Log("[HeatmapScene] Start");
 
             var gossip = GossipSDK.Core.Gossip.Instance;
+            if (gossip?.Settings?.EnableDebug == true) Debug.Log("skip: gossip/Settings null");
             if (gossip == null || gossip.Settings == null)
                 yield break;
-
+            if (gossip?.Settings?.EnableDebug == true) Debug.Log("skip: EnableHeatmaps false");
+            
             if (!gossip.Settings.EnableHeatmaps)
                 yield break;
 
@@ -28,10 +31,12 @@ namespace GossipSDK.Heatmaps
             spec.SessionID = gossip.CurrentSessionId;
 
 
-            if (HeatmapSceneCache.WasUploaded(spec))
+                        if (gossip?.Settings?.EnableDebug == true) Debug.Log("skip: WasUploaded true (scene+version cached)");
+                        if (HeatmapSceneCache.WasUploaded(spec))
                 yield break;
 
-            yield return CaptureAndUpload(spec);
+                        if (gossip?.Settings?.EnableDebug == true) Debug.Log("[HeatmapScene] capturing...");
+                        yield return CaptureAndUpload(spec);
         }
 
         private IEnumerator CaptureAndUpload(HeatmapSceneSpec spec)
