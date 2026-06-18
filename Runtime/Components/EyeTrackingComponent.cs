@@ -53,6 +53,17 @@ namespace GossipSDK.Components
         {
             sceneName = SceneManager.GetActiveScene().name;
 
+            if (cam != null)
+            {
+                lastCamPos = cam.position;
+                lastCamRot = cam.rotation;
+            }
+
+            lastImageTime = -minTimeBetweenImages;
+        }
+
+        private void Start()
+        {
             if (autoBounds && HeatmapBoundsResolver.ResolvePlayAreaXZ(
                 out Vector2 resolvedMin, out Vector2 resolvedMax))
             {
@@ -61,14 +72,6 @@ namespace GossipSDK.Components
             }
 
             heatmap = new HeatmapManager(sceneName, worldMinXZ, worldMaxXZ, cellSizeMeters);
-
-            if (cam != null)
-            {
-                lastCamPos = cam.position;
-                lastCamRot = cam.rotation;
-            }
-
-            lastImageTime = -minTimeBetweenImages;
         }
 
         private void Update()
