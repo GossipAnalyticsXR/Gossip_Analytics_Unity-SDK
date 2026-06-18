@@ -10,7 +10,8 @@ namespace GossipSDK.Heatmaps
     {
         public static void Track(GameObject interactedObject, string interactionType)
         {
-            if (Gossip.Instance.Settings.SelectedEnvironment != Core.Configuration.GossipSettings.Environment.Production)
+            var g = Gossip.Instance; if (g == null || g.Settings == null) return;
+                        if (g.Settings.SelectedEnvironment != Core.Configuration.GossipSettings.Environment.Production)
                 return;
 
             TrackAsync(interactedObject, interactionType).Forget();
@@ -23,6 +24,7 @@ namespace GossipSDK.Heatmaps
 
             byte[] png = await CaptureUtils.CapturePngAsync();
             if (png == null) return;
+            if (gossip.EndpointClient == null) { if (gossip.Settings?.EnableDebug == true) Debug.LogWarning("[InteractionImage] EndpointClient null"); return; }
 
             await gossip.EndpointClient.UploadInteractionImage(
                          interactedObject,
