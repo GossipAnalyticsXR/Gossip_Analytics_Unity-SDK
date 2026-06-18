@@ -1,11 +1,12 @@
 using UnityEngine;
+using Cysharp.Threading.Tasks;
 
 public static class CaptureUtils
 {
-    public static byte[] CapturePngAsync()
+    public static UniTask<byte[]> CapturePngAsync()
     {
         var cam = Camera.main;
-        if (cam == null) return null;
+        if (cam == null) return UniTask.FromResult<byte[]>(null);
 
         int targetHeight = 540;
         float aspectRatio = (float)Screen.width / Screen.height;
@@ -29,7 +30,7 @@ public static class CaptureUtils
             tex.ReadPixels(new Rect(0, 0, targetWidth, targetHeight), 0, 0);
             tex.Apply();
 
-            return tex.EncodeToPNG();
+            return UniTask.FromResult(tex.EncodeToPNG());
         }
         finally
         {
