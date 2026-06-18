@@ -3,6 +3,7 @@ using System.Collections;
 using System.Reflection;
 using GossipSDK.Core;
 using GossipSDK.Tracking.GameplayMetrics;
+using GossipSDK.Core.Utilities;
 using UnityEngine.SceneManagement;
 
 [DisallowMultipleComponent]
@@ -125,8 +126,8 @@ public class PassthroughComponent : MonoBehaviour
     {
         try
         {
-            var ovrManagerType = System.Type.GetType(
-                "OVRManager, OVRPlugin", throwOnError: false);
+            // Assembly-agnostic lookup: works with Oculus.VR, Assembly-CSharp, OculusIntegration, etc.
+            var ovrManagerType = ReflectionUtil.FindType("OVRManager");
             if (ovrManagerType == null) return;          // Meta XR SDK absent
 
             _guardianEvtInfo = ovrManagerType.GetEvent(
