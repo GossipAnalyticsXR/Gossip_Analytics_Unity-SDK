@@ -312,6 +312,22 @@ namespace GossipSDK.Editor
                 postAddHint          = "Call RecordImpression(), RecordInteraction() or RecordReward() from your ad network SDK callbacks. OnAdOpened() and OnAdClosed() handle session timing automatically."
             },
         };
+
+        // ---------------------------------------------------------------------------
+        // Chip metadata: tracker componentTypeName -> (chipLabel, whyText).
+        // chipLabel: "AUTO" (green) | "REVIEW" (amber) | "CODE" (blue)
+        // ---------------------------------------------------------------------------
+        private static readonly Dictionary<string, (string chipLabel, string whyText)> s_chipInfo =
+            new Dictionary<string, (string, string)>
+            {
+                { "ServerStatusComponent",       ("REVIEW", "Only applies if you have a dedicated game server. Turn off for non-multiplayer apps.") },
+                { "MultiplayerTrackerComponent", ("REVIEW", "Emits an empty room snapshot each session. Turn off for single-user apps.") },
+                { "DifficultyComponent",         ("REVIEW", "Emits a default difficulty level each session. Turn off if your app has no difficulty system.") },
+                { "AvatarTrackerComponent",      ("CODE",   "Call NotifyAvatar() from your purchase flow.") },
+                { "AccessoriesComponent",        ("CODE",   "Call ReportPurchased() from your purchase flow.") },
+                { "AdComponent",                 ("CODE",   "Call RecordImpression()/RecordReward() from your ad SDK callbacks.") },
+                { "PassthroughComponent",        ("CODE",   "Wire OnPassthroughEnabled()/OnPassthroughDisabled() to your passthrough toggle.") },
+            };
         private static Dictionary<string, Type> _trackerTypeCache = null;
         private static Type _cachedXROriginType;
         private static Type _cachedXRInputModalityManagerType;
@@ -320,6 +336,9 @@ namespace GossipSDK.Editor
         private static GUIStyle _footerSummaryStyle;
         private static GUIStyle _footerHintStyle;
         private static GUIContent _doneButtonContent;
+        private static GUIStyle _chipAutoStyle;
+        private static GUIStyle _chipReviewStyle;
+        private static GUIStyle _chipCodeStyle;
         private static Dictionary<string, Component> _trackerComponentCache = new Dictionary<string, Component>();
 
         // --- Menu entry ---
@@ -1215,8 +1234,13 @@ namespace GossipSDK.Editor
 
             string currentCategory = null;
             bool _currentCategoryExpanded = true;
-            if (_wordWrapMiniLabel == null)
-                _wordWrapMiniLabel = new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
+                if (_wordWrapMiniLabel == null)
+                {
+                    _wordWrapMiniLabel = new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
+                    _chipAutoStyle   = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(0.2f, 0.8f, 0.2f) }, fontStyle = FontStyle.Bold };
+                    _chipReviewStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(1.0f, 0.75f, 0.0f) }, fontStyle = FontStyle.Bold };
+                    _chipCodeStyle   = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(0.35f, 0.65f, 1.0f) }, fontStyle = FontStyle.Bold };
+                }
             foreach (var info in _recommendedTrackers.OrderBy(t => t.category == "Spatial" ? 0 : t.category == "Device" ? 1 : 2))
             {
                 if (info.category != currentCategory)
@@ -1239,6 +1263,10 @@ namespace GossipSDK.Editor
                 var trackerType = GetTrackerType(info.componentTypeName);
                 _trackerComponentCache.TryGetValue(info.componentTypeName, out Component existing);
                 bool isPresent = (UnityEngine.Object)existing != null;
+                // Pre-capture chip data before any Begin* call (IMGUI rule)
+                s_chipInfo.TryGetValue(info.componentTypeName, out var _chipEntry);
+                string _chipLabel = _chipEntry.chipLabel ?? "AUTO";
+                string _chipWhy   = _chipEntry.whyText;
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
                 EditorGUILayout.BeginHorizontal();
                 bool wasPresent = isPresent;
@@ -1268,11 +1296,19 @@ namespace GossipSDK.Editor
                         }
                     }
                 }
+                // Draw chip: AUTO (green) / REVIEW (amber) / CODE (blue)
+                {
+                    var _cStyle = _chipLabel == "REVIEW" ? _chipReviewStyle : (_chipLabel == "CODE" ? _chipCodeStyle : _chipAutoStyle);
+                    string _chipDisp = _chipLabel == "AUTO" ? "● AUTO" : (_chipLabel == "REVIEW" ? "● REVISAR" : "● CÓDIGO");
+                    GUILayout.Label(_chipDisp, _cStyle, GUILayout.ExpandWidth(false));
+                }
                 EditorGUILayout.BeginVertical();
                 EditorGUILayout.LabelField(info.displayName, EditorStyles.boldLabel);
                 EditorGUILayout.LabelField(info.description, _wordWrapMiniLabel);
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.EndHorizontal();
+                if (_chipLabel != "AUTO" && !string.IsNullOrEmpty(_chipWhy))
+                    EditorGUILayout.LabelField(_chipWhy, _wordWrapMiniLabel);
                 if (!isPresent && info.requiresConfiguration)
                 {
                     string hintA = !string.IsNullOrEmpty(info.preAddHint)
