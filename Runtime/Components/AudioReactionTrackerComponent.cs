@@ -235,7 +235,10 @@ namespace GossipSDK.Components
             if (M >= signalThresholdMovement)
                 signals++;
 
-            if (Time.time < lastTriggerTime + cooldownSeconds)
+                        if (Gossip.Instance?.Settings?.EnableDebug == true && (E > 0.1f || V_eff > 0.1f || M > 0.1f))
+                Debug.Log($"[AudioReaction] E={E:F2} V={V_eff:F2} M={M:F2} score={score:F2} signals={signals} gates(E>={signalThresholdEnergy} V>={signalThresholdVoice} M>={signalThresholdMovement} minScore={minEmotionalScore} fastE>={fastTriggerEnergyThreshold})");
+
+if (Time.time < lastTriggerTime + cooldownSeconds)
                 return;
 
             if ((signals >= 2 && score >= minEmotionalScore) ||
