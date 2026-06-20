@@ -3,6 +3,8 @@ using UnityEngine;
 using UnityEngine.XR;
 using GossipSDK.Core;
 using GossipSDK.Tracking.PlatformSpecification;
+using System.Reflection;
+using GossipSDK.Core.Utilities;
 
 namespace GossipSDK.Components
 {
@@ -37,35 +39,44 @@ namespace GossipSDK.Components
 
         private string DetectCurrentMode()
         {
-            bool xrActive = XRSettings.isDeviceActive;
+            if (!XRSettings.isDeviceActive)
+                return "2D";
 
-            if (xrActive)
+            bool passthroughActive = false;
+            object raw = null;
+            try
             {
-                string deviceName = XRSettings.loadedDeviceName;
-                if (!string.IsNullOrEmpty(deviceName))
+                System.Type ovrType = ReflectionUtil.FindType("OVRManager");
+                if (ovrType != null)
                 {
-                    if (deviceName.ToLower().Contains("oculus")
-                        || deviceName.ToLower().Contains("meta")
-                        || deviceName.ToLower().Contains("openxr"))
+                    PropertyInfo instProp = ovrType.GetProperty("instance",
+                        BindingFlags.Public | BindingFlags.Static);
+                    if (instProp != null)
                     {
-                        return "VR";
+                        object inst = instProp.GetValue(null);
+                        if (inst != null)
+                        {
+                            PropertyInfo ptProp = ovrType.GetProperty(
+                                "isInsightPassthroughEnabled",
+                                BindingFlags.Public | BindingFlags.Instance);
+                            if (ptProp != null)
+                            {
+                                raw = ptProp.GetValue(inst);
+                                passthroughActive = raw is bool b && b;
+                            }
+                        }
                     }
-
-                    if (deviceName.ToLower().Contains("ar")
-                        || deviceName.ToLower().Contains("mixed"))
-                    {
-                        return "MR";
-                    }
-
-                    return "XRUnknown";
                 }
-
-                return "XR";
             }
+            catch { }
 
-            return "2D";
+            string mode = passthroughActive ? "MR" : "VR";
+
+            if (Gossip.Instance?.Settings?.EnableDebug == true)
+                Debug.Log($"[RealityModeMonitor] mode={mode} ptRaw={raw} device={UnityEngine.XR.XRSettings.loadedDeviceName}");
+
+            return mode;
         }
-
         private void SendTransition(string from, string to, double duration)
         {
             try
