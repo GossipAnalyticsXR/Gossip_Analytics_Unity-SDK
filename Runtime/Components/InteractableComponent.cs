@@ -140,48 +140,6 @@ namespace GossipSDK.Components
             }
         }
 
-        // ── Event-based interactable hook (no compile-time dependency) ──────────────────
-        private bool TrySubscribeEvent(Component comp, string member, System.Action cb)
-        {
-            if ((UnityEngine.Object)comp == null) return false;
-            try
-            {
-                var t = comp.GetType();
-                object evt = t.GetProperty(member, BindingFlags.Public | BindingFlags.Instance)?.GetValue(comp)
-                          ?? t.GetField(member,    BindingFlags.Public | BindingFlags.Instance)?.GetValue(comp);
-                if (evt == null) return false;
-                var add = evt.GetType().GetMethod("AddListener");
-                if (add == null) return false;
-                var pType = add.GetParameters()[0].ParameterType;
-                System.Delegate del;
-                if (pType == typeof(UnityEngine.Events.UnityAction))
-                {
-                    del = (UnityEngine.Events.UnityAction)(() => cb());
-                }
-                else if (pType.IsGenericType &&
-                         pType.GetGenericTypeDefinition() == typeof(UnityEngine.Events.UnityAction<>))
-                {
-                    var argT = pType.GetGenericArguments()[0];
-                    del = (System.Delegate)GetType()
-                        .GetMethod("MakeIgnoringAction", BindingFlags.NonPublic | BindingFlags.Instance)
-                        .MakeGenericMethod(argT)
-                        .Invoke(this, new object[] { cb });
-                }
-                else return false;
-                add.Invoke(evt, new object[] { del });
-                return true;
-            }
-            catch { return false; }
-        }
-
-        private UnityEngine.Events.UnityAction<T> MakeIgnoringAction<T>(System.Action cb) => _ => cb();
-
-        private void FireInstant(string label)
-        {
-            OnInteractStart(label);
-            OnInteractEnd(label);
-        }
-
         private void Awake()
         {
             if (!registerHeatmapHit) return;
@@ -213,15 +171,6 @@ namespace GossipSDK.Components
         {
             yield return new WaitUntil(() => Gossip.Instance != null);
             TryWireXrFramework();
-
-            // ── Subscribe to event-driven interactables (UI Button, XR Activate, XR Poke) ──
-            foreach (var c in GetComponents<Component>())
-            {
-                TrySubscribeEvent(c, "onClick",     () => FireInstant("UIButton"));
-                TrySubscribeEvent(c, "activated",   () => FireInstant("XRActivate"));
-                TrySubscribeEvent(c, "pokeEntered", () => OnInteractStart("XRPoke"));
-                TrySubscribeEvent(c, "pokeExited",  () => OnInteractEnd("XRPoke"));
-            }
 
             if (autoTriggerOnStart)  OnInteractInstant("Demo Shoot");
             if (autoStartOnEnable)   OnInteractStart("Demo Start Interaction");

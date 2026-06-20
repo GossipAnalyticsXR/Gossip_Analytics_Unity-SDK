@@ -15,28 +15,35 @@ namespace GossipSDK.Heatmaps
         private IEnumerator Start()
         {
             yield return new WaitForSeconds(captureDelay);
-            if (GossipSDK.Core.Gossip.Instance?.Settings?.EnableDebug == true) Debug.Log("[HeatmapScene] Start");
 
             var gossip = GossipSDK.Core.Gossip.Instance;
-            if (gossip?.Settings?.EnableDebug == true) Debug.Log("skip: gossip/Settings null");
+
             if (gossip == null || gossip.Settings == null)
+            {
+                Debug.LogWarning("[HeatmapScene] skip: gossip/Settings null");
                 yield break;
-            if (gossip?.Settings?.EnableDebug == true) Debug.Log("skip: EnableHeatmaps false");
-            
+            }
+
+            if (gossip.Settings.EnableDebug) Debug.Log("[HeatmapScene] Start");
+
             if (!gossip.Settings.EnableHeatmaps)
+            {
+                if (gossip.Settings.EnableDebug) Debug.Log("[HeatmapScene] skip: EnableHeatmaps false");
                 yield break;
+            }
 
             var spec = HeatmapSceneSpec.CreateCurrentSceneSpec();
-            spec.PlayerID = gossip.CurrentPlayerId;
+            spec.PlayerID  = gossip.CurrentPlayerId;
             spec.SessionID = gossip.CurrentSessionId;
 
-
-                        if (gossip?.Settings?.EnableDebug == true) Debug.Log("skip: WasUploaded true (scene+version cached)");
-                        if (HeatmapSceneCache.WasUploaded(spec))
+            if (HeatmapSceneCache.WasUploaded(spec))
+            {
+                if (gossip.Settings.EnableDebug) Debug.Log($"[HeatmapScene] skip: WasUploaded true ({spec.SceneName}_{spec.Version})");
                 yield break;
+            }
 
-                        if (gossip?.Settings?.EnableDebug == true) Debug.Log("[HeatmapScene] capturing...");
-                        yield return CaptureAndUpload(spec);
+            if (gossip.Settings.EnableDebug) Debug.Log("[HeatmapScene] capturing...");
+            yield return CaptureAndUpload(spec);
         }
 
         private IEnumerator CaptureAndUpload(HeatmapSceneSpec spec)

@@ -637,7 +637,7 @@ namespace GossipSDK.Editor
                 EditorGUILayout.BeginHorizontal();
                 int selectedCount = objs.Count(o => o.isChecked);
                 int totalCount = objs.Count;
-                string sceneLabel = $"{sceneName}  ({selectedCount} de {totalCount})";
+                string sceneLabel = $"{sceneName}  ({selectedCount} of {totalCount})";
                 _sceneFoldouts[sceneName] = EditorGUILayout.Foldout(
                     _sceneFoldouts[sceneName],
                     sceneLabel,
@@ -1250,9 +1250,9 @@ namespace GossipSDK.Editor
                                   : currentCategory == "Device"  ? _deviceExpanded
                                   : _xrExpanded;
                     EditorGUILayout.Space(4);
-                    string catLabel = currentCategory == "Spatial" ? string.Format("Spatial  ({0} de {1})", spatialActive, spatialTotal)
-                                    : currentCategory == "Device"  ? string.Format("Device  ({0} de {1})", deviceActive, deviceTotal)
-                                    :                                string.Format("XR  ({0} de {1})", xrActive, xrTotal);
+                    string catLabel = currentCategory == "Spatial" ? string.Format("Spatial  ({0} of {1})", spatialActive, spatialTotal)
+                                    : currentCategory == "Device"  ? string.Format("Device  ({0} of {1})", deviceActive, deviceTotal)
+                                    :                                string.Format("XR  ({0} of {1})", xrActive, xrTotal);
                     expanded = EditorGUILayout.Foldout(expanded, catLabel, true, EditorStyles.foldoutHeader);
                     if (currentCategory == "Spatial") _spatialExpanded = expanded;
                     else if (currentCategory == "Device") _deviceExpanded = expanded;
@@ -1299,7 +1299,7 @@ namespace GossipSDK.Editor
                 // Draw chip: AUTO (green) / REVIEW (amber) / CODE (blue)
                 {
                     var _cStyle = _chipLabel == "REVIEW" ? _chipReviewStyle : (_chipLabel == "CODE" ? _chipCodeStyle : _chipAutoStyle);
-                    string _chipDisp = _chipLabel == "AUTO" ? "● AUTO" : (_chipLabel == "REVIEW" ? "● REVISAR" : "● CÓDIGO");
+                    string _chipDisp = _chipLabel == "AUTO" ? "● AUTO" : (_chipLabel == "REVIEW" ? "● REVIEW" : "● CODE");
                     GUILayout.Label(_chipDisp, _cStyle, GUILayout.ExpandWidth(false));
                 }
                 EditorGUILayout.BeginVertical();
