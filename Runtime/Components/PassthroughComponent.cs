@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 public class PassthroughComponent : MonoBehaviour
 {
     public bool onActiveStart = false;
-
+    public bool enableAutoDetect = false;
     [Header("Reporting")]
     public bool sendImmediately = true;
 
@@ -51,7 +51,9 @@ public class PassthroughComponent : MonoBehaviour
     {
         if (isActive) activeTimer += Time.deltaTime;
 
-        // -- Auto-detection: throttled poll every ~0.3 s ----------------------
+                if (enableAutoDetect)
+                        {
+                        // -- Auto-detection: throttled poll every ~0.3 s ----------------------
         _pollAccumulator += Time.deltaTime;
         if (_pollAccumulator >= 0.3f)
         {
@@ -101,7 +103,8 @@ public class PassthroughComponent : MonoBehaviour
                 OnPassthroughDisabled();
             }
         }
-    }
+            } // end if (enableAutoDetect)
+                }
 
     public void OnPassthroughEnabled()
     {
