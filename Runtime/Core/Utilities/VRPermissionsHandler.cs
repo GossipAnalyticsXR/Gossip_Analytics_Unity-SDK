@@ -35,14 +35,14 @@ public class VRPermissionsHandler : MonoBehaviour
 
     private IEnumerator RequestPermissionsSequence()
     {
-        yield return new WaitForSecondsRealtime(0.5f);
+        yield return new WaitForSecondsRealtime(0.1f);
 
         // Build list of enabled permissions
         var permissionsToRequest = new List<string>();
+        if (enableMicrophone)     permissionsToRequest.Add(Permission.Microphone);
         if (enableEyeTracking)    permissionsToRequest.Add("com.oculus.permission.EYE_TRACKING");
         if (enableSpatialScene)   permissionsToRequest.Add("com.oculus.permission.USE_SCENE");
         if (enableHeadsetCamera)  permissionsToRequest.Add("horizonos.permission.HEADSET_CAMERA");
-        if (enableMicrophone)     permissionsToRequest.Add(Permission.Microphone);
 
         foreach (var permission in permissionsToRequest)
         {
