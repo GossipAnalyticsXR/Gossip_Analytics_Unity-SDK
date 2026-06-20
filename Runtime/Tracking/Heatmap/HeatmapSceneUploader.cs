@@ -27,10 +27,17 @@ namespace GossipSDK.Heatmaps
                 Debug.Log($"PNG size: {png.Length}");
             }
 
+            // EndpointClient se crea tarde (tras la secuencia de permisos); la captura puede dispararse antes. Esperar.
+            float _waited = 0f;
+            while (gossip.EndpointClient == null && _waited < 60f)
+            {
+                await UniTask.Delay(500);
+                _waited += 0.5f;
+            }
             var endpoint = gossip.EndpointClient;
             if (endpoint == null)
             {
-                Debug.LogError("[HeatmapUploader] EndpointClient is NULL");
+                Debug.LogWarning("[HeatmapUploader] EndpointClient still null after wait; skipping upload");
                 return;
             }
 
