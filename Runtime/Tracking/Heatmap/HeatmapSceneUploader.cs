@@ -1,5 +1,7 @@
+using System;
 using UnityEngine;
 using GossipSDK.Core;
+using GossipSDK.Core.Connection;
 using Cysharp.Threading.Tasks;
 
 namespace GossipSDK.Heatmaps
@@ -27,27 +29,41 @@ namespace GossipSDK.Heatmaps
                 Debug.Log($"PNG size: {png.Length}");
             }
 
-            // EndpointClient se crea tarde (tras la secuencia de permisos); la captura puede dispararse antes. Esperar.
-            float _waited = 0f;
-            while (gossip.EndpointClient == null && _waited < 60f)
+            // Wait briefly for API key (not for EndpointClient, which may never be set)
+            float waited = 0f;
+            while (string.IsNullOrWhiteSpace(gossip.Settings?.ApiKeyValue) && gossip.EndpointClient == null && waited < 15f)
             {
                 await UniTask.Delay(500);
-                _waited += 0.5f;
+                waited += 0.5f;
             }
+
             var endpoint = gossip.EndpointClient;
+            EndpointConnection tempEndpoint = null;
+            if (endpoint == null && gossip.Settings != null && !string.IsNullOrWhiteSpace(gossip.Settings.ApiKeyValue))
+            {
+                tempEndpoint = new EndpointConnection(gossip.Settings.ApiKeyHeader, gossip.Settings.ApiKeyValue);
+                endpoint = tempEndpoint;
+            }
+
             if (endpoint == null)
             {
-                Debug.LogWarning("[HeatmapUploader] EndpointClient still null after wait; skipping upload");
+                Debug.LogWarning("[HeatmapUploader] No endpoint and no API key; skipping image upload");
                 return;
             }
 
             bool success = false;
-
-            await endpoint.UploadHeatmapScene(
-                spec,
-                png,
-                result => success = result
-            );
+            try
+            {
+                await endpoint.UploadHeatmapScene(
+                    spec,
+                    png,
+                    result => success = result
+                );
+            }
+            finally
+            {
+                tempEndpoint?.Dispose();
+            }
 
             if (success)
             {
