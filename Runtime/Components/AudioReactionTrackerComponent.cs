@@ -61,6 +61,7 @@ namespace GossipSDK.Components
         private int analysisWindowSize;
 
         private float baselineRms = 0.01f;
+        private float _diagTimer = 0f;
         private float lastTriggerTime;
         private float heatmapTimer;
         private float _currentMovementIntensity = 0f;
@@ -234,6 +235,13 @@ namespace GossipSDK.Components
                 signals++;
             if (M >= signalThresholdMovement)
                 signals++;
+            _diagTimer += Time.deltaTime;
+            if (Gossip.Instance?.Settings?.EnableDebug == true && _diagTimer >= 1f)
+            {
+                _diagTimer = 0f;
+                int micPos = Microphone.GetPosition(Microphone.devices.Length > 0 ? Microphone.devices[0] : null);
+                Debug.Log("[AudioReaction:diag] rawAmp=" + rms + " E=" + E + " V=" + V_eff + " M=" + M + " score=" + score + " signals=" + signals + " micPos=" + micPos);
+            }
 
                         if (Gossip.Instance?.Settings?.EnableDebug == true && (E > 0.1f || V_eff > 0.1f || M > 0.1f))
                 Debug.Log($"[AudioReaction] E={E:F2} V={V_eff:F2} M={M:F2} score={score:F2} signals={signals} gates(E>={signalThresholdEnergy} V>={signalThresholdVoice} M>={signalThresholdMovement} minScore={minEmotionalScore} fastE>={fastTriggerEnergyThreshold})");
