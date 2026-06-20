@@ -12,6 +12,9 @@ namespace GossipSDK.Editor
 
         public void OnPreprocessBuild(BuildReport report)
         {
+            bool isDevelopmentBuild = (report.summary.options & BuildOptions.Development) != 0;
+            if (isDevelopmentBuild) return;
+
             var guids = AssetDatabase.FindAssets("t:GossipSettings");
             if (guids.Length == 0) return;
 
