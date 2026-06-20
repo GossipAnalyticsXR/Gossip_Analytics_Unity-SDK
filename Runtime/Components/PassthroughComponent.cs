@@ -178,7 +178,7 @@ public class PassthroughComponent : MonoBehaviour
     {
         try
         {
-            Type ovrManagerType = ReflectionUtil.FindType("OVRManager");
+            System.Type ovrManagerType = ReflectionUtil.FindType("OVRManager");
             if (ovrManagerType != null)
             {
                 _instanceProp  = ovrManagerType.GetProperty(
@@ -197,7 +197,7 @@ public class PassthroughComponent : MonoBehaviour
 
         try
         {
-            Type ovrPluginType = ReflectionUtil.FindType("OVRPlugin");
+            System.Type ovrPluginType = ReflectionUtil.FindType("OVRPlugin");
             if (ovrPluginType != null)
             {
                 _getBoundaryVisibilityMi = ovrPluginType.GetMethod(
