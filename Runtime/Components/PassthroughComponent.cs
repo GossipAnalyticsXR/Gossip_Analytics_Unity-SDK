@@ -112,7 +112,5 @@ public class PassthroughComponent : MonoBehaviour
             Debug.Log("[PassthroughComponent] Reported passthrough. enabled=" + enabled + " mode=" + passthroughMode);
     }
 
-    // -- Auto-detection type cache -----------------------------------------------
-    // Caches OVRManager and OVRPlugin reflection handles once at Start().
-    // If Meta XR SDK is absent, all handles remain null and detection is skipped.
+
 }
