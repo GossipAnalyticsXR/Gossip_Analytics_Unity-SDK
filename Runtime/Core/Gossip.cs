@@ -290,6 +290,7 @@ namespace GossipSDK.Core
                     AccessoriesTracker,
                     MultiplayerTracker,
                     PassthroughTracker,
+                    PlayableAreaTracker,
                     ExperienceInfoTracker,
                     AdTracker,
                     ConnectivityTracker,
