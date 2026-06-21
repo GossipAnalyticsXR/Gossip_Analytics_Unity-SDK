@@ -1,6 +1,5 @@
 using UnityEngine;
 using System.Collections;
-using System.Reflection;
 using GossipSDK.Core;
 using GossipSDK.Tracking.GameplayMetrics;
 using GossipSDK.Core.Utilities;
@@ -10,8 +9,6 @@ using UnityEngine.SceneManagement;
 public class PassthroughComponent : MonoBehaviour
 {
     public bool onActiveStart = false;
-    public bool enableAutoDetect = false;
-    public bool enablePassthroughDiag = false;
     [Header("Reporting")]
     public bool sendImmediately = true;
 
@@ -28,18 +25,11 @@ public class PassthroughComponent : MonoBehaviour
     private bool isActive = false;
     private float activeTimer = 0f;
 
-    // -- Auto-detection reflection cache ----------------------------------------
-    private PropertyInfo _instanceProp;
-    private PropertyInfo _ptEnabledProp;
-    private MethodInfo _getBoundaryVisibilityMi;
-    private float _pollAccumulator = 0f;
-    private float _diagTimer        = 0f;
 
     private PassthroughTracker Tracker => Gossip.Instance?.PassthroughTracker;
 
     private void Start()
     {
-        CacheAutoDetectTypes();
         StartCoroutine(WaitAndInit());
     }
 
@@ -52,108 +42,6 @@ public class PassthroughComponent : MonoBehaviour
     private void Update()
     {
         if (isActive) activeTimer += Time.deltaTime;
-
-        if (enableAutoDetect)
-        {
-            // -- Auto-detection: throttled poll every ~0.3 s ----------------------
-            _pollAccumulator += Time.deltaTime;
-            if (_pollAccumulator >= 0.3f)
-            {
-                _pollAccumulator = 0f;
-
-                bool ptEnabled = false;
-                bool boundaryVisible = false;
-
-                // CASO 2: OVRManager.instance.isInsightPassthroughEnabled
-                try
-                {
-                    if (_instanceProp != null && _ptEnabledProp != null)
-                    {
-                        object ovrInstance = _instanceProp.GetValue(null);
-                        if (ovrInstance != null)
-                            ptEnabled = (bool)_ptEnabledProp.GetValue(ovrInstance);
-                    }
-                }
-                catch { /* reflection failure -- leave ptEnabled false */ }
-
-                // CASO 3: OVRPlugin.GetBoundaryVisibility(out BoundaryVisibility) static
-                try
-                {
-                    if (_getBoundaryVisibilityMi != null)
-                    {
-                        object[] args = new object[] { null };
-                        _getBoundaryVisibilityMi.Invoke(null, args);
-                        object bv = args[0];
-                        boundaryVisible = (bv != null && System.Convert.ToInt32(bv) == 1);
-                    }
-                }
-                catch { /* reflection failure -- leave boundaryVisible false */ }
-
-                bool passthroughActive = ptEnabled || boundaryVisible;
-
-                if (passthroughActive && !isActive)
-                {
-                    passthroughMode = ptEnabled ? "App" : "Boundary";
-                    if (Gossip.Instance?.Settings?.EnableDebug == true)
-                        Debug.Log("[PassthroughComponent] auto-detect: passthrough ON mode=" + passthroughMode);
-                    OnPassthroughEnabled();
-                }
-                else if (!passthroughActive && isActive)
-                {
-                    if (Gossip.Instance?.Settings?.EnableDebug == true)
-                        Debug.Log("[PassthroughComponent] auto-detect: passthrough OFF");
-                    OnPassthroughDisabled();
-                }
-            }
-        } // end if (enableAutoDetect)
-
-        if (enablePassthroughDiag)
-        {
-            _diagTimer += Time.deltaTime;
-            if (_diagTimer >= 1f)
-            {
-                _diagTimer = 0f;
-                int ovrMgr   = (_instanceProp != null) ? 1 : 0;
-                int ovrPlugin = (_getBoundaryVisibilityMi != null) ? 1 : 0;
-                string insightPT = "n/a";
-                if (_instanceProp != null && _ptEnabledProp != null)
-                {
-                    try
-                    {
-                        object inst = _instanceProp.GetValue(null);
-                        if (inst != null)
-                            insightPT = ((bool)_ptEnabledProp.GetValue(inst)) ? "1" : "0";
-                    }
-                    catch { }
-                }
-                string boundaryVis = "n/a";
-                if (_getBoundaryVisibilityMi != null)
-                {
-                    try
-                    {
-                        object[] args = new object[] { null };
-                        _getBoundaryVisibilityMi.Invoke(null, args);
-                        object bv = args[0];
-                        boundaryVis = (bv != null) ? System.Convert.ToInt32(bv).ToString() : "n/a";
-                    }
-                    catch { }
-                }
-                string camClear = "n/a";
-                string camAlpha = "n/a";
-                if (Camera.main != null)
-                {
-                    camClear = Camera.main.clearFlags.ToString();
-                    camAlpha = Camera.main.backgroundColor.a.ToString("F2");
-                }
-                UnityEngine.Debug.LogWarning(
-                    "[PT:diag] ovrMgr=" + ovrMgr +
-                    " ovrPlugin=" + ovrPlugin +
-                    " insightPT=" + insightPT +
-                    " boundaryVis=" + boundaryVis +
-                    " camClear=" + camClear +
-                    " camAlpha=" + camAlpha);
-            }
-        }
     }
 
     public void OnPassthroughEnabled()
@@ -161,6 +49,7 @@ public class PassthroughComponent : MonoBehaviour
         if (isActive) return;
         isActive = true;
         activeTimer = 0f;
+        ReportPassthrough(true);
         if (Gossip.Instance?.Settings?.EnableDebug == true)
             Debug.Log("[PassthroughComponent] Passthrough enabled.");
     }
@@ -226,43 +115,4 @@ public class PassthroughComponent : MonoBehaviour
     // -- Auto-detection type cache -----------------------------------------------
     // Caches OVRManager and OVRPlugin reflection handles once at Start().
     // If Meta XR SDK is absent, all handles remain null and detection is skipped.
-
-    private void CacheAutoDetectTypes()
-    {
-        try
-        {
-            System.Type ovrManagerType = ReflectionUtil.FindType("OVRManager");
-            if (ovrManagerType != null)
-            {
-                _instanceProp = ovrManagerType.GetProperty(
-                    "instance",
-                    BindingFlags.Public | BindingFlags.Static);
-                _ptEnabledProp = ovrManagerType.GetProperty(
-                    "isInsightPassthroughEnabled",
-                    BindingFlags.Public | BindingFlags.Instance);
-            }
-        }
-        catch (System.Exception ex)
-        {
-            UnityEngine.Debug.LogWarning(
-                "[PassthroughComponent] CacheAutoDetect OVRManager failed: " + ex.Message);
-        }
-
-        try
-        {
-            System.Type ovrPluginType = ReflectionUtil.FindType("OVRPlugin");
-            if (ovrPluginType != null)
-            {
-                _getBoundaryVisibilityMi = ovrPluginType.GetMethod(
-                    "GetBoundaryVisibility",
-                    BindingFlags.Public | BindingFlags.Static);
-            }
-        }
-        catch (System.Exception ex)
-        {
-            UnityEngine.Debug.LogWarning(
-                "[PassthroughComponent] CacheAutoDetect OVRPlugin failed: " + ex.Message);
-        }
-    }
-
 }
