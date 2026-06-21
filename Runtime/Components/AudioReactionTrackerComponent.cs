@@ -19,7 +19,7 @@ namespace GossipSDK.Components
         public float analysisWindowSeconds = 0.3f;
 
         [Header("Decision thresholds")]
-        [Range(0, 1)] public float minEmotionalScore = 0.45f;
+        [Range(0, 1)] public float minEmotionalScore = 0.4f;
         public float cooldownSeconds = 6f;
 
         [Header("Heatmap Settings")]
@@ -38,13 +38,13 @@ namespace GossipSDK.Components
         [SerializeField] private float scoreWeightMovement = 0.3f;
 
         [Header("Signal Gate Thresholds")]
-        [SerializeField] private float signalThresholdEnergy = 0.40f;
-        [SerializeField] private float signalThresholdVoice = 0.35f;
-        [SerializeField] private float signalThresholdMovement = 0.30f;
+        [SerializeField] private float signalThresholdEnergy = 0.3f;
+        [SerializeField] private float signalThresholdVoice = 0.25f;
+        [SerializeField] private float signalThresholdMovement = 0.25f;
 
         [Header("Fast Trigger Thresholds")]
-        [SerializeField] private float fastTriggerEnergyThreshold = 0.6f;
-        [SerializeField] private float fastTriggerConditionThreshold = 0.30f;
+        [SerializeField] private float fastTriggerEnergyThreshold = 0.5f;
+        [SerializeField] private float fastTriggerConditionThreshold = 0.25f;
 
         [Header("Normalisation Ceilings")]
         [SerializeField] private float rmsNormCeiling = 0.1f;
@@ -300,19 +300,29 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
                 TimestampUtc = DateTime.UtcNow.ToString("o")
             };
 
-            var endpointClient = Gossip.Instance?.EndpointClient;
-            if (endpointClient == null) return;
+            var endpoint = Gossip.Instance?.EndpointClient;
 
-            await endpointClient.UploadAudioReaction(
-                data,
-                audio,
-                success =>
-                {
-                    if (Gossip.Instance?.Settings?.EnableDebug == true)
-                        Debug.Log(success
-                            ? "[AudioReaction] Uploaded via endpoint"
-                            : "[AudioReaction] Upload failed");
-                });
+        GossipSDK.Core.Connection.EndpointConnection tempEndpoint = null;
+
+        if (endpoint == null)
+        {
+            var s = Gossip.Instance?.Settings;
+
+            if (s != null && !string.IsNullOrWhiteSpace(s.ApiKeyValue))
+            {
+                tempEndpoint = new GossipSDK.Core.Connection.EndpointConnection(s.ApiKeyHeader, s.ApiKeyValue);
+
+                endpoint = tempEndpoint;
+
+            }
+
+        }
+
+        if (endpoint == null) { Debug.LogWarning("[AudioReaction] No endpoint and no API key; skipping upload"); return; }
+
+        try { await endpoint.UploadAudioReaction(data, audio, success => { if (Gossip.Instance?.Settings?.EnableDebug == true) Debug.Log(success ? "[AudioReaction] Uploaded via endpoint" : "[AudioReaction] Upload failed"); }); }
+
+        finally { tempEndpoint?.Dispose(); }
 
 
             Debug.LogWarning("[AudioTracker] AUDIO SNIPPET TRIGGERED");
