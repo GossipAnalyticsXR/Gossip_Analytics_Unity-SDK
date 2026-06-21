@@ -15,9 +15,53 @@ namespace GossipSDK.Components
         [Tooltip("Optional: override area type (2D, 3D, XR)")]
         public string areaTypeOverride = "";
 
+        // -- proxy tracking fields --
+        private Transform _tracked;
+        private Vector2 _minXZ;
+        private Vector2 _maxXZ;
+        private bool _hasSamples = false;
+        private float _reportTimer = 0f;
+
         private void Start()
         {
-            if (autoReportOnStart)
+            _tracked = Camera.main != null ? Camera.main.transform : transform;
+            // No immediate report: wait for Update to accumulate samples
+        }
+
+        private void Update()
+        {
+            Vector3 pos = _tracked.position;
+            if (!_hasSamples)
+            {
+                _minXZ = new Vector2(pos.x, pos.z);
+                _maxXZ = new Vector2(pos.x, pos.z);
+                _hasSamples = true;
+            }
+            else
+            {
+                _minXZ.x = Mathf.Min(_minXZ.x, pos.x);
+                _minXZ.y = Mathf.Min(_minXZ.y, pos.z);
+                _maxXZ.x = Mathf.Max(_maxXZ.x, pos.x);
+                _maxXZ.y = Mathf.Max(_maxXZ.y, pos.z);
+            }
+
+            _reportTimer += Time.deltaTime;
+            if (_reportTimer >= 30f)
+            {
+                _reportTimer = 0f;
+                ReportPlayableArea();
+            }
+        }
+
+        private void OnApplicationQuit()
+        {
+            if (_hasSamples)
+                ReportPlayableArea();
+        }
+
+        private void OnDisable()
+        {
+            if (_hasSamples)
                 ReportPlayableArea();
         }
 
@@ -28,15 +72,84 @@ namespace GossipSDK.Components
                 var tracker = Gossip.Instance?.PlayableAreaTracker;
                 if (tracker == null) return;
 
-                Bounds bounds = GetBounds();
-                float width = bounds.size.x;
-                float height = bounds.size.y;
-                float depth = bounds.size.z;
+                float area = 0f;
+                float width = 0f;
+                float height = 0f;
+                float depth = 0f;
+                string resolvedAreaType = "";
 
-                float area   = GetPlayableAreaSquareMeters();
+#if UNITY_ANDROID && !UNITY_EDITOR
+                // Path (a): Meta OVR guardian boundary
+                try
+                {
+                    var boundary = OVRManager.boundary;
+                    if (boundary != null && boundary.GetConfigured())
+                    {
+                        Vector3[] points = boundary.GetGeometry(OVRBoundary.BoundaryType.PlayArea);
+                        if (points != null && points.Length >= 3)
+                        {
+                            area = CalculatePolygonArea(points);
+                            resolvedAreaType = "guardian";
+                        }
+                    }
+                }
+                catch { /* OVRManager not available */ }
+#endif
+
+                // Path (b): Unity XR subsystem generic (all subsystems)
+                if (string.IsNullOrEmpty(resolvedAreaType))
+                {
+                    try
+                    {
+                        var inputSubsystems = new List<XRInputSubsystem>();
+                        SubsystemManager.GetInstances(inputSubsystems);
+                        for (int i = 0; i < inputSubsystems.Count; i++)
+                        {
+                            var pts = new List<Vector3>();
+                            if (inputSubsystems[i].TryGetBoundaryPoints(pts) && pts.Count >= 3)
+                            {
+                                area = CalculatePolygonArea(pts.ToArray());
+                                resolvedAreaType = "guardian";
+                                break;
+                            }
+                        }
+                    }
+                    catch { /* subsystem not available */ }
+                }
+
+                // Path (c): proxy from accumulated movement bounding box
+                if (string.IsNullOrEmpty(resolvedAreaType))
+                {
+                    if (_hasSamples)
+                    {
+                        width = _maxXZ.x - _minXZ.x;
+                        depth = _maxXZ.y - _minXZ.y;
+                        area = width * depth;
+                        height = 0f;
+                        resolvedAreaType = "proxy_used_area";
+                    }
+                }
+
+                // Path (d): no data at all -- skip report, do not send zeros
+                if (string.IsNullOrEmpty(resolvedAreaType))
+                    return;
+
+                // For guardian paths extract width/depth from bounds for metadata
+                if (resolvedAreaType == "guardian")
+                {
+                    Bounds b = GetBounds();
+                    width = b.size.x;
+                    height = b.size.y;
+                    depth = b.size.z;
+                }
+
+                string finalAreaType = !string.IsNullOrEmpty(areaTypeOverride)
+                    ? areaTypeOverride
+                    : resolvedAreaType;
+
                 var data = new PlayableAreaTracker.EntityData
                 {
-                    AreaType = ResolveAreaType(),
+                    AreaType = finalAreaType,
                     Width = width,
                     Height = height,
                     Depth = depth,
@@ -47,11 +160,12 @@ namespace GossipSDK.Components
 
                 tracker.CapSession(data);
 
-                if (Gossip.Instance.Settings?.EnableDebug == true)
+                if (Gossip.Instance?.Settings?.EnableDebug == true)
                 {
-                    Debug.Log(
-                        $"[PlayableArea] {data.AreaType} area={area:F2}m² size=({width:F1},{height:F1},{depth:F1})"
-                    );
+                    Debug.Log("[PlayableArea] via=" + resolvedAreaType
+                        + " area=" + area.ToString("F2")
+                        + " w=" + width.ToString("F1")
+                        + " d=" + depth.ToString("F1"));
                 }
             }
             catch (Exception ex)
@@ -73,43 +187,6 @@ namespace GossipSDK.Components
             return new Bounds(transform.position, Vector3.zero);
         }
 
-
-        private float GetPlayableAreaSquareMeters()
-        {
-        #if UNITY_ANDROID && !UNITY_EDITOR
-            // Intento 1: Meta OpenXR boundary (Quest 2/3/Pro)
-            try
-            {
-                var boundary = OVRManager.boundary;
-                if (boundary != null && boundary.GetConfigured())
-                {
-                    Vector3[] points = boundary.GetGeometry(OVRBoundary.BoundaryType.PlayArea);
-                    if (points != null && points.Length >= 3)
-                        return CalculatePolygonArea(points);
-                }
-            }
-            catch { /* OVRManager no disponible en este dispositivo */ }
-
-            // Intento 2: Unity XR subsystem generico
-            try
-            {
-                var inputSubsystems = new List<XRInputSubsystem>();
-                SubsystemManager.GetInstances(inputSubsystems);
-                if (inputSubsystems.Count > 0)
-                {
-                    var pts = new List<Vector3>();
-                    if (inputSubsystems[0].TryGetBoundaryPoints(pts) && pts.Count >= 3)
-                        return CalculatePolygonArea(pts.ToArray());
-                }
-            }
-            catch { /* subsistema no disponible */ }
-        #endif
-
-            // Fallback: misma logica que antes (Collider > Renderer > 0)
-            Bounds b = GetBounds();
-            return b.size.x * b.size.z;
-        }
-
         private float CalculatePolygonArea(Vector3[] pts)
         {
             float area = 0f;
@@ -122,6 +199,7 @@ namespace GossipSDK.Components
             }
             return Mathf.Abs(area) * 0.5f;
         }
+
         private string ResolveAreaType()
         {
             if (!string.IsNullOrEmpty(areaTypeOverride))
