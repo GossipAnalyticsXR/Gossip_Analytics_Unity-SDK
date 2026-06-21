@@ -25,7 +25,26 @@ namespace GossipSDK.Core
 
         public static void Initialize(GossipSettings injectedSettings)
         {
-            if (Instance != null) Instance.settings = injectedSettings;
+            if (Instance != null) { Instance.settings = injectedSettings; Instance.EnsureTransport(); }
+        }
+
+        private void EnsureTransport()
+        {
+            if (EndpointClient != null) return;
+            if (settings == null || !settings.UseHttpEndpoint) return;
+            string key = settings.ApiKeyValue;
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                if (settings.EnableDebug) Debug.LogWarning("[Gossip] API key empty. Transport disabled.");
+                return;
+            }
+            EndpointClient = new EndpointConnection(settings.ApiKeyHeader, key);
+            if (Transport == null)
+            {
+                var transport = new EndpointTransport(settings.ApiKeyHeader, key, maxRetries: 2, timeoutSeconds: 10);
+                RegisterTransport(transport);
+            }
+            if (settings.EnableDebug) Debug.Log("[Gossip] Endpoint client prepared.");
         }
 
         public ITransport Transport { get; private set; }
@@ -82,31 +101,7 @@ namespace GossipSDK.Core
         private void Awake()
         {
 
-            try
-            {
-                string effectiveServer = settings?.GetActiveServerUrl();
-                string effectiveApiKey = settings?.ApiKeyValue;
-
-                if (settings != null && settings.UseHttpEndpoint)
-                {
-                    if (string.IsNullOrWhiteSpace(effectiveApiKey))
-                    {
-                        Debug.LogWarning("[Gossip] API key is empty or null. Transport disabled — no data will be sent.");
-                        Transport = null;
-                        EndpointClient = null;
-                        return;
-                    }
-
-                    EndpointClient = new EndpointConnection(settings.ApiKeyHeader, effectiveApiKey);
-                    if (settings.EnableDebug)
-                        Debug.Log($"[Gossip] Endpoint client prepared. Server: {effectiveServer}");
-                }
-
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogException(new System.Exception("Gossip: Could not initialize EndpointClient", ex));
-            }
+            EnsureTransport();
 
             if (PositionTracker == null) PositionTracker = new PositionTracker();
             if (SessionTracker == null) SessionTracker = new SessionTracker();
@@ -152,23 +147,7 @@ namespace GossipSDK.Core
             if (PeripheralTracker == null) PeripheralTracker = new PeripheralTracker();
             if (HandControllerTracker == null) HandControllerTracker = new HandControllerTracker();
 
-            if (Settings != null && Settings.UseHttpEndpoint)
-            {
-                if (string.IsNullOrWhiteSpace(Settings.ApiKeyValue))
-                {
-                    Debug.LogWarning("[Gossip] Cannot register HTTP transport: ApiKeyValue is empty.");
-                    return;
-                }
-
-                var transport = new EndpointTransport(Settings.ApiKeyHeader, Settings.ApiKeyValue, maxRetries: 2, timeoutSeconds: 10);
-                RegisterTransport(transport);
-
-                if (EndpointClient == null)
-                    EndpointClient = new EndpointConnection(Settings.ApiKeyHeader, Settings.ApiKeyValue);
-
-                if (Settings.EnableDebug)
-                    Debug.Log("[Gossip] EndpointTransport registered (HTTP).");
-            }
+            EnsureTransport();
         }
 
         private System.Collections.IEnumerator SendUserInfoAfterCapture()
