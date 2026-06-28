@@ -78,6 +78,7 @@ namespace GossipSDK.Core
         public EyeTrackingTracker EyeTrackingTracker { get; private set; }
         public AudioReactionTracker AudioReactionTracker { get; private set; }
         public HandControllerTracker HandControllerTracker { get; private set; }
+        public BoundaryPressureSummaryTracker BoundaryPressureSummaryTracker { get; private set; }
         public A11yTracker A11yTracker { get; private set; }
 
         public UserInfoTracker UserInfoTracker { get; private set; }
@@ -146,6 +147,7 @@ namespace GossipSDK.Core
             if (UserBalanceTracker == null) UserBalanceTracker = new UserBalanceTracker();
             if (PeripheralTracker == null) PeripheralTracker = new PeripheralTracker();
             if (HandControllerTracker == null) HandControllerTracker = new HandControllerTracker();
+            if (BoundaryPressureSummaryTracker == null) BoundaryPressureSummaryTracker = new BoundaryPressureSummaryTracker();
 
             EnsureTransport();
         }
@@ -298,7 +300,8 @@ namespace GossipSDK.Core
                     HandControllerTracker,
                     A11yTracker,
                     EyeTrackingTracker,
-                    InputUsageTracker
+                    InputUsageTracker,
+                BoundaryPressureSummaryTracker
                 };
 
                         foreach (var t in trackers)
