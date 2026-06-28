@@ -150,7 +150,8 @@ namespace GossipSDK
                 Gossip.PeripheralTracker, Gossip.RealityModeTracker, Gossip.PlayableAreaTracker,
                 Gossip.UserPostureTracker, Gossip.UserEventTracker, Gossip.UserBalanceTracker,
                 Gossip.HandControllerTracker,
-                Gossip.BoundaryPressureSummaryTracker
+                Gossip.BoundaryPressureSummaryTracker,
+                Gossip.MicPermissionTracker
             };
         }
 
@@ -262,6 +263,7 @@ namespace GossipSDK
             Ensure(typeof(AdComponent),                         autoTrackersHost);
             Ensure(typeof(PassthroughComponent),                autoTrackersHost);
             Ensure(typeof(BoundaryPressureComponent), autoTrackersHost);
+            Ensure(typeof(MicPermissionComponent), autoTrackersHost);
 
             // Camera wiring: refresh to current Camera.main on every call
             var posture = UnityEngine.Object.FindObjectOfType<UserPostureComponent>();
