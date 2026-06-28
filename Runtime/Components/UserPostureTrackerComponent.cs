@@ -24,6 +24,22 @@ namespace GossipSDK.Components
         //private bool registerHeatmapHit = false;
         private bool enableLocalDebug = false;
 
+        [Header("Relative thresholds (calibrated to user height)")]
+        [Tooltip("Fraction of standing head height below which posture is Sitting (default 0.65)")]
+        public float sitRatio = 0.65f;
+
+        [Tooltip("Fraction of standing head height below which posture is Crouching (default 0.80)")]
+        public float crouchRatio = 0.80f;
+
+        // Running max of head height seen this session.
+        // Updated in SampleAndSend() on every sample.
+        private float _standingHeadY = 0f;
+
+        // Minimum plausible standing head height.
+        // Used as a cold-start guard: relative thresholds are applied only
+        // once _standingHeadY reaches this floor (a standing adult always exceeds 1.0 m).
+        private const float _minStandingHeadY = 1.0f;
+
         float timer = 0f;
         string lastPosture = "Unknown";
 
@@ -54,6 +70,7 @@ namespace GossipSDK.Components
         void SampleAndSend()
         {
             Vector3 headPos = GetHeadPosition();
+            _standingHeadY = Mathf.Max(_standingHeadY, headPos.y);
             string posture = InferPostureFromHeadY(headPos.y);
             lastPosture = posture;
 
@@ -68,8 +85,20 @@ namespace GossipSDK.Components
 
         string InferPostureFromHeadY(float headWorldY)
         {
-            if (headWorldY <= sitThreshold) return "Sitting";
-            if (headWorldY <= crouchThreshold) return "Crouching";
+            // Cold-start guard: use absolute thresholds until _standingHeadY
+            // is calibrated to at least _minStandingHeadY (1.0 m).
+            // A standing adult always exceeds 1.0 m; below that the running max
+            // has not yet seen a full-standing sample, so fall back to absolute thresholds.
+            if (_standingHeadY < _minStandingHeadY)
+            {
+                if (headWorldY <= sitThreshold) return "Sitting";
+                if (headWorldY <= crouchThreshold) return "Crouching";
+                return "Standing";
+            }
+
+            // Relative classification against the session running-max head height.
+            if (headWorldY <= _standingHeadY * sitRatio) return "Sitting";
+            if (headWorldY <= _standingHeadY * crouchRatio) return "Crouching";
             return "Standing";
         }
 
