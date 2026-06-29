@@ -20,5 +20,8 @@ namespace GossipSDK.Core.Messaging
 
         [field: SerializeField]
         public List<T> Messages { get; set; } = new List<T>();
+
+        [field: SerializeField]
+        public string Engine { get; set; }
     }
 }
