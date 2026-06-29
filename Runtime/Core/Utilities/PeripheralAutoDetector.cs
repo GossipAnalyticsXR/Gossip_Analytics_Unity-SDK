@@ -44,7 +44,7 @@ namespace GossipSDK.Utilities
                     Name = "Touchscreen",
                     Type = "mobile",
                     Brand = InferBrand(),
-                    IsHaptic = Application.isMobilePlatform
+                    IsHaptic = false
                 });
             }
 
