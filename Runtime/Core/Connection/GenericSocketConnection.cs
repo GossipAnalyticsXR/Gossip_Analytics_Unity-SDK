@@ -221,6 +221,7 @@ namespace GossipSDK.Core.Connection
                     Data.SessionID = gossip.CurrentSessionId;
 
                     Data.EventType = EventName;
+                    Data.Engine = Constants.Engine;
                     Data.SceneUser = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
                     Data.TimeMovement = DateTime.UtcNow.ToString("o");
                 }
