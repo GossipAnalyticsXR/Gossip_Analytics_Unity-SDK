@@ -29,9 +29,14 @@ namespace GossipSDK.Components
             yield return new WaitUntil(() => VRPermissionsHandler.IsReady);
 
             bool micDenied = false;
+            bool androidPathCompiled = false;
+            bool rawHasAuth = false;
 #if UNITY_ANDROID && !UNITY_EDITOR
-            micDenied = !Permission.HasUserAuthorizedPermission(Permission.Microphone);
+            androidPathCompiled = true;
+            rawHasAuth = Permission.HasUserAuthorizedPermission(Permission.Microphone);
+            micDenied = !rawHasAuth;
 #endif
+            Debug.Log($"[MicPermission] compiled={androidPathCompiled} rawHasAuth={rawHasAuth} micDenied={micDenied} isReady={VRPermissionsHandler.IsReady}");
 
             yield return new WaitUntil(() => (UnityEngine.Object)Gossip.Instance != null);
 
