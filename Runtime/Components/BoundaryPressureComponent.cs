@@ -24,11 +24,6 @@ namespace GossipSDK.Components
 
         private Vector2[] _poly;
 
-#if UNITY_ANDROID && !UNITY_EDITOR
-        private static readonly OVRBoundary.Node[] BoundaryTestNodes =
-            { OVRBoundary.Node.Head, OVRBoundary.Node.HandLeft, OVRBoundary.Node.HandRight };
-#endif
-
         private void OnEnable()
         {
             _hadPressure = false;
@@ -84,12 +79,18 @@ namespace GossipSDK.Components
 #if UNITY_ANDROID && !UNITY_EDITOR
             if (OVRManager.boundary != null && OVRManager.boundary.GetConfigured())
             {
-                foreach (var node in BoundaryTestNodes)
+                EvaluateBoundaryNode(OVRBoundary.Node.Head);
+
+                var controllers = XRBootstrap.HandControllers;
+                if (controllers != null && controllers.IsSupported)
                 {
-                    var r = OVRManager.boundary.TestNode(node, OVRBoundary.BoundaryType.PlayArea);
-                    if (r.IsTriggering || r.ClosestDistance <= NearEdgeThreshold)
+                    if (controllers.TryGetLeftPose(out _, out _))
                     {
-                        _hadPressure = true;
+                        EvaluateBoundaryNode(OVRBoundary.Node.HandLeft);
+                    }
+                    if (controllers.TryGetRightPose(out _, out _))
+                    {
+                        EvaluateBoundaryNode(OVRBoundary.Node.HandRight);
                     }
                 }
             }
@@ -106,6 +107,17 @@ namespace GossipSDK.Components
                 Debug.Log($"[BoundaryPressure] state changed -> hadPressure={_hadPressure}");
             }
         }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        private void EvaluateBoundaryNode(OVRBoundary.Node node)
+        {
+            var r = OVRManager.boundary.TestNode(node, OVRBoundary.BoundaryType.PlayArea);
+            if (r.IsTriggering || r.ClosestDistance <= NearEdgeThreshold)
+            {
+                _hadPressure = true;
+            }
+        }
+#endif
 
         private void SampleOncePolygonFallback()
         {
