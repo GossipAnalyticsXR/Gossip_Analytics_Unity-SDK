@@ -9,7 +9,14 @@ namespace GossipSDK.XR
         private InputDevice left;
         private InputDevice right;
 
-        public bool IsSupported => left.isValid || right.isValid;
+        public bool IsSupported
+        {
+            get
+            {
+                EnsureDevices();
+                return left.isValid || right.isValid;
+            }
+        }
 
         public OpenXRHandControllerPoseProvider()
         {
@@ -19,12 +26,22 @@ namespace GossipSDK.XR
 
         public bool TryGetLeftPose(out Vector3 pos, out Quaternion rot)
         {
+            EnsureDevices();
             return TryGetPose(left, out pos, out rot);
         }
 
         public bool TryGetRightPose(out Vector3 pos, out Quaternion rot)
         {
+            EnsureDevices();
             return TryGetPose(right, out pos, out rot);
+        }
+
+        private void EnsureDevices()
+        {
+            if (!left.isValid)
+                left = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
+            if (!right.isValid)
+                right = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
         }
 
         private bool TryGetPose(InputDevice device, out Vector3 pos, out Quaternion rot)
