@@ -24,6 +24,11 @@ namespace GossipSDK.Components
 
         private Vector2[] _poly;
 
+#if UNITY_ANDROID && !UNITY_EDITOR
+        private static readonly OVRBoundary.Node[] BoundaryTestNodes =
+            { OVRBoundary.Node.Head, OVRBoundary.Node.HandLeft, OVRBoundary.Node.HandRight };
+#endif
+
         private void OnEnable()
         {
             _hadPressure = false;
@@ -73,6 +78,36 @@ namespace GossipSDK.Components
         }
 
         private void SampleOnce()
+        {
+            bool previousHadPressure = _hadPressure;
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+            if (OVRManager.boundary != null && OVRManager.boundary.GetConfigured())
+            {
+                foreach (var node in BoundaryTestNodes)
+                {
+                    var r = OVRManager.boundary.TestNode(node, OVRBoundary.BoundaryType.PlayArea);
+                    if (r.IsTriggering || r.ClosestDistance <= NearEdgeThreshold)
+                    {
+                        _hadPressure = true;
+                    }
+                }
+            }
+            else
+            {
+                SampleOncePolygonFallback();
+            }
+#else
+            SampleOncePolygonFallback();
+#endif
+
+            if (_hadPressure != previousHadPressure)
+            {
+                Debug.Log($"[BoundaryPressure] state changed -> hadPressure={_hadPressure}");
+            }
+        }
+
+        private void SampleOncePolygonFallback()
         {
             if (_poly == null)
             {
@@ -136,6 +171,13 @@ namespace GossipSDK.Components
                 SceneId = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
                 TimestampUtc = DateTime.UtcNow.ToString("o")
             };
+#if UNITY_ANDROID && !UNITY_EDITOR
+            bool ovrPresent = OVRManager.boundary != null;
+            bool ovrConfigured = ovrPresent && OVRManager.boundary.GetConfigured();
+            Debug.Log($"[BoundaryPressure] ovr={ovrPresent} configured={ovrConfigured} hadPressure={_hadPressure} polyNull={_poly == null}");
+#else
+            Debug.Log($"[BoundaryPressure] ovr=false configured=false hadPressure={_hadPressure} polyNull={_poly == null}");
+#endif
             tracker.CapSession(data);
         }
 
