@@ -24,6 +24,8 @@ namespace GossipSDK.Heatmaps
         public string Version;
         public string TimestampUtc;
 
+        public HeatmapOccluder[] Occluders;
+
         public static HeatmapSceneSpec CreateCurrentSceneSpec(int width = 2048, int height = 2048)
         {
             var bounds = HeatmapSceneBoundsUtility.CalculateSceneBounds();
@@ -40,7 +42,8 @@ namespace GossipSDK.Heatmaps
                 MaxZ = bounds.max.z,
 
                 Version = Application.version,
-                TimestampUtc = DateTime.UtcNow.ToString("o")
+                TimestampUtc = DateTime.UtcNow.ToString("o"),
+                Occluders = HeatmapOccluderUtility.Collect(),
             };
         }
     }
