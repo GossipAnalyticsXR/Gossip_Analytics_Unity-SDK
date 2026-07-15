@@ -119,18 +119,12 @@ namespace GossipSDK.Core.Connection
             }
         }
 
-        public async UniTask UploadEyeGazeImage(Ray gazeRay, RaycastHit hit, float fixationDuration, string trackingSource, byte[] png, Action<bool> callback)
+        public async UniTask UploadEyeGazeImage(Ray gazeRay, RaycastHit hit, float fixationDuration, string trackingSource, byte[] png, Vector3 camPos, Vector3 camEuler, float camFov, float camAspect, Action<bool> callback)
         {
             try
             {
                 var gossip = Gossip.Instance;
                 if (png == null || png.Length == 0 || !ValidateSession(gossip)) { callback?.Invoke(false); return; }
-
-                var cam = Camera.main;
-                var camPos = cam.transform.position;
-                var camRot = cam.transform.rotation.eulerAngles;
-                var camFov = cam.fieldOfView;
-                var camAspect = cam.aspect;
 
                 var sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
 
@@ -164,7 +158,7 @@ namespace GossipSDK.Core.Connection
                         Camera = new
                         {
                             Position = new { x = camPos.x, y = camPos.y, z = camPos.z },
-                            Rotation = new { x = camRot.x, y = camRot.y, z = camRot.z },
+                            Rotation = new { x = camEuler.x, y = camEuler.y, z = camEuler.z },
                             Fov = camFov,
                             Aspect = camAspect
                         },

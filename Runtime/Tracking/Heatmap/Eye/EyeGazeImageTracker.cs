@@ -19,8 +19,8 @@ namespace GossipSDK.Heatmaps
             var gossip = Gossip.Instance;
             if (gossip == null) return;
 
-            byte[] png = await CaptureUtils.CapturePngAsync();
-            if (png == null) return;
+            var frame = await CaptureUtils.CaptureFrameAsync();
+            if (frame.Png == null) return;
 
             // Wait briefly for API key (not for EndpointClient, which may never be set)
             float waited = 0f;
@@ -47,7 +47,7 @@ namespace GossipSDK.Heatmaps
             try
             {
                 await endpoint.UploadEyeGazeImage(
-                    gazeRay, hit, fixationDuration, trackingSource, png,
+                    gazeRay, hit, fixationDuration, trackingSource, frame.Png, frame.Position, frame.EulerAngles, frame.Fov, frame.Aspect,
                     success => {
                         if (gossip.Settings.EnableDebug)
                             Debug.Log(success ? "[EyeGazeImage] Uploaded" : "[EyeGazeImage] Upload failed");
