@@ -38,7 +38,14 @@ namespace GossipAnalytics.Editor
                 "Gossip Analytics components and assets have been removed from your project. Your scenes and scripts are untouched.\n\nWhen you click Close, Unity will remove the SDK package (com.gossip.core) and recompile. That final step may take a few seconds.\n\nWe hope to see you again soon.",
                 "Close");
 
-            RunStep3_RemovePackage();
+            try
+            {
+                RunStep3_RemovePackage();
+            }
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+            }
         }
 
         [MenuItem("Window/Gossip Analytics/Uninstall SDK", true, 100)]
