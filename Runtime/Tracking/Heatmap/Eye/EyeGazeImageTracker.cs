@@ -48,6 +48,7 @@ namespace GossipSDK.Heatmaps
             {
                 await endpoint.UploadEyeGazeImage(
                     gazeRay, hit, fixationDuration, trackingSource, frame.Png, frame.Position, frame.EulerAngles, frame.Fov, frame.Aspect,
+                    frame.DepthPng, frame.DepthWidth, frame.DepthHeight, frame.DepthMaxMeters,
                     success => {
                         if (gossip.Settings.EnableDebug)
                             Debug.Log(success ? "[EyeGazeImage] Uploaded" : "[EyeGazeImage] Upload failed");

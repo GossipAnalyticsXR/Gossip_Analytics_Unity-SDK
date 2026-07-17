@@ -119,7 +119,7 @@ namespace GossipSDK.Core.Connection
             }
         }
 
-        public async UniTask UploadEyeGazeImage(Ray gazeRay, RaycastHit hit, float fixationDuration, string trackingSource, byte[] png, Vector3 camPos, Vector3 camEuler, float camFov, float camAspect, Action<bool> callback)
+public async UniTask UploadEyeGazeImage(Ray gazeRay, RaycastHit hit, float fixationDuration, string trackingSource, byte[] png, Vector3 camPos, Vector3 camEuler, float camFov, float camAspect, byte[] depthPng, int depthWidth, int depthHeight, float depthMaxMeters, Action<bool> callback)       
         {
             try
             {
@@ -135,6 +135,7 @@ namespace GossipSDK.Core.Connection
                 string json = await UniTask.RunOnThreadPool(() =>
                 {
                     string base64 = Convert.ToBase64String(png);
+                    string depthBase64 = depthPng != null ? Convert.ToBase64String(depthPng) : null;
                     var envelope = new
                     {
                         EventType = "EyeGazeImageTracker",
@@ -162,7 +163,8 @@ namespace GossipSDK.Core.Connection
                             Fov = camFov,
                             Aspect = camAspect
                         },
-                        Image = new { Format = "png", DataBase64 = base64 }
+                        Image = new { Format = "png", DataBase64 = base64 },
+                        Depth = (depthPng != null) ? new { Format = "png", DataBase64 = depthBase64, Width = depthWidth, Height = depthHeight, MaxMeters = depthMaxMeters } : (object)null
                     };
                     return JsonConvert.SerializeObject(envelope);
                 });
