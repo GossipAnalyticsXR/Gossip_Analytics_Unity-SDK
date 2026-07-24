@@ -21,8 +21,6 @@ namespace GossipSDK.Tracking.GameplayMetrics
             public float? Exposure { get; set; }
             public float? QualityMetric { get; set; }
             [field: SerializeField] public float? Duration   { get; set; }
-            [field: SerializeField] public string ObjectName { get; set; }
-            [field: SerializeField] public string SceneName  { get; set; }
             public string TimestampUtc { get; set; }
             [JsonConstructor] public EntityData() { }
         }
@@ -30,7 +28,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
         [Serializable]
         public class TrackerMessage : Message<EntityData> { }
 
-        public void CapPassthrough(bool enabled, string mode = null, float? exposure = null, float? quality = null, float? duration = null, string objectName = null, string sceneName = null)
+        public void CapPassthrough(bool enabled, string mode = null, float? exposure = null, float? quality = null, float? duration = null)
         {
             try
             {
@@ -41,8 +39,6 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     Exposure = exposure,
                     QualityMetric = quality,
                     Duration = duration,
-                    ObjectName = objectName ?? string.Empty,
-                    SceneName = sceneName ?? string.Empty,
                     TimestampUtc = DateTime.UtcNow.ToString("o")
                 };
 
