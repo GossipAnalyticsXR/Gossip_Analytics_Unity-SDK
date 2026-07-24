@@ -81,7 +81,7 @@ namespace GossipSDK.Components
             analysisWindowSize = Mathf.CeilToInt(sampleRate * analysisWindowSeconds);
             ringBuffer = new float[bufferSize];
 
-            if (autoBounds && HeatmapBoundsResolver.ResolvePlayAreaXZ(
+            if (autoBounds && HeatmapBoundsResolver.ResolveSceneBoundsXZ(
                 out Vector2 resolvedMin, out Vector2 resolvedMax))
             {
                 worldMinXZ = resolvedMin;

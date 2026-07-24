@@ -42,9 +42,10 @@ namespace GossipSDK.Tracking
             int cx = Mathf.FloorToInt((worldPos.x - origin.x) / cellSize);
             int cy = Mathf.FloorToInt((worldPos.z - origin.y) / cellSize);
 
-            if (cx < 0 || cy < 0 || cx >= cols || cy >= rows)
-HitsDiscarded++;
-            return false;
+            if (cx < 0 || cy < 0 || cx >= cols || cy >= rows){
+                HitsDiscarded++;
+                return false;
+            }
 
             lock (lockObj)
             {
