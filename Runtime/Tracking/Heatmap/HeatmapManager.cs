@@ -11,6 +11,8 @@ namespace GossipSDK.Tracking
         private readonly int rows;
         private readonly Vector2 origin;
         private readonly int[,] counts;
+        public int HitsRegistered { get; private set; }
+        public int HitsDiscarded { get; private set; }
         private readonly object lockObj = new object();
 
         public string SceneName { get; }
@@ -41,11 +43,13 @@ namespace GossipSDK.Tracking
             int cy = Mathf.FloorToInt((worldPos.z - origin.y) / cellSize);
 
             if (cx < 0 || cy < 0 || cx >= cols || cy >= rows)
-                return false;
+HitsDiscarded++;
+            return false;
 
             lock (lockObj)
             {
                 counts[cx, cy]++;
+                HitsRegistered++;
             }
 
             return true;
