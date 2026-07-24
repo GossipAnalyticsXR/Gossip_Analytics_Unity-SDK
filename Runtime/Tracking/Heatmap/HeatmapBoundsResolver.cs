@@ -25,6 +25,22 @@ namespace GossipSDK.Heatmaps
             return false;
         }
 
+        // Bounds de escena ÚNICAMENTE (sin guardián), padding 0 para coincidir EXACTO
+        // con HeatmapSceneSpec y con el marco que el backend usa para normalizar.
+        public static bool ResolveSceneBoundsXZ(out Vector2 min, out Vector2 max)
+        {
+            min = default; max = default;
+            try
+            {
+                Bounds b = HeatmapSceneBoundsUtility.CalculateSceneBounds();
+                if (b.size.x <= 0f || b.size.z <= 0f) return false;
+                min = new Vector2(b.min.x, b.min.z);
+                max = new Vector2(b.max.x, b.max.z);
+                return true;
+            }
+            catch { return false; }
+        }
+
         // -- Attempt 1: OVR boundary via reflection --
         private static bool TryResolveFromOVR(out Vector2 min, out Vector2 max, float padding)
         {
