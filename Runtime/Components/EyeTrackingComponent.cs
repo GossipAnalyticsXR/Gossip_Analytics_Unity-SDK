@@ -64,7 +64,7 @@ namespace GossipSDK.Components
 
         private void Start()
         {
-            if (autoBounds && HeatmapBoundsResolver.ResolveSceneBoundsXZ(
+            if (autoBounds && HeatmapBoundsResolver.ResolvePlayAreaXZ(
                 out Vector2 resolvedMin, out Vector2 resolvedMax))
             {
                 worldMinXZ = resolvedMin;
