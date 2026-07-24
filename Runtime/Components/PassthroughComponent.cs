@@ -46,7 +46,12 @@ public class PassthroughComponent : MonoBehaviour
 
     public void OnPassthroughEnabled()
     {
-        if (isActive) return;
+        if (isActive)
+        {
+        if (Gossip.Instance?.Settings?.EnableDebug == true)
+        Debug.Log("[PassthroughComponent] OnPassthroughEnabled ignorado: ya estaba activo.");
+        return;
+        }
         isActive = true;
         activeTimer = 0f;
         ReportPassthrough(true);
@@ -56,7 +61,12 @@ public class PassthroughComponent : MonoBehaviour
 
     public void OnPassthroughDisabled()
     {
-        if (!isActive) return;
+        if (!isActive)
+        {
+        if (Gossip.Instance?.Settings?.EnableDebug == true)
+        Debug.Log("[PassthroughComponent] OnPassthroughDisabled ignorado: no estaba activo.");
+        return;
+        }
         isActive = false;
         float duration = activeTimer;
         activeTimer = 0f;
@@ -99,11 +109,9 @@ public class PassthroughComponent : MonoBehaviour
         Tracker.CapPassthrough(
             enabled,
             passthroughMode,
-            exposure > 0f ? (float?)exposure : null,
-            qualityMetric > 0f ? (float?)qualityMetric : null,
-            duration > 0f ? (float?)duration : null,
-            gameObject.name,
-            UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+(float?)exposure,
+(float?)qualityMetric,
+duration > 0f ? (float?)duration : null);
 
         if (sendImmediately)
             Tracker.SendDataToSocket();
