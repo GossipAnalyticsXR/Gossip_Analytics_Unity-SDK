@@ -27,7 +27,7 @@ namespace GossipSDK.Components
         private void Start()
         {
 
-            if (autoBounds && HeatmapBoundsResolver.ResolveSceneBoundsXZ(
+            if (autoBounds && HeatmapBoundsResolver.ResolvePlayAreaXZ(
                 out Vector2 resolvedMin, out Vector2 resolvedMax))
             {
                 worldMinXZ = resolvedMin;
@@ -40,16 +40,6 @@ namespace GossipSDK.Components
                 worldMaxXZ,
                 cellSizeMeters
             );
-
-            // Diagnóstico Build 1: modo de tracking real que resolvió el runtime + puntos de guardián.
-            var _diagSubs = new System.Collections.Generic.List<UnityEngine.XR.XRInputSubsystem>();
-            UnityEngine.SubsystemManager.GetInstances(_diagSubs);
-            if (_diagSubs.Count > 0)
-            {
-            var _pts = new System.Collections.Generic.List<Vector3>();
-            bool _ok = _diagSubs[0].TryGetBoundaryPoints(_pts);
-            Debug.Log($"[GossipDiag] trackingOrigin={_diagSubs[0].GetTrackingOriginMode()} boundaryOk={_ok} boundaryPoints={_pts.Count} sceneMin={worldMinXZ} sceneMax={worldMaxXZ}");
-            }
         }
 
         private void Update()
@@ -89,8 +79,6 @@ namespace GossipSDK.Components
                 heatmapSource: "player_movement",
                 sparse: true
             );
-
-            Debug.Log($"[GossipDiag] movement hits registered={heatmapManager.HitsRegistered} discarded={heatmapManager.HitsDiscarded}");
 
             if (Gossip.Instance?.Settings?.EnableDebug == true)
                 Debug.Log("[Heatmap] Player movement heatmap flushed");
