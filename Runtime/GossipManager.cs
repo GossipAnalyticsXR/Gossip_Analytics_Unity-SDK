@@ -160,9 +160,8 @@ namespace GossipSDK
             if (Gossip == null) return;
             switch (component)
             {
-                case PositionTrackerComponent c:
-                    var pos = c.transform.position;
-                    Gossip.PositionTracker?.CapSession(new PositionTracker.EntityData { X = pos.x, Y = pos.y, Z = pos.z });
+                case PositionTrackerComponent:
+                    // La captura de posicion ahora la hace PositionTrackerComponent.Update() (gate de distancia). No capturar aqui.
                     break;
                 case RotationAndVelocityTrackerComponent rotComp:
                     if (Gossip?.Settings?.EnableDebug == true) Debug.Log($"Tracking {rotComp.name}");
