@@ -23,6 +23,9 @@ namespace GossipSDK.Tracking.GameplayMetrics
         
             [field: SerializeField]
             public float Z { get; set; }
+
+            [field: SerializeField]
+            public string TimestampUtc { get; set; }
             
             [JsonConstructor]
             public EntityData() {}
