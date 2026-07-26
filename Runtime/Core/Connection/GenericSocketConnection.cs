@@ -206,11 +206,14 @@ namespace GossipSDK.Core.Connection
             try
             {
                 List<T1> snapshot;
+                List<BsonValue> sentIds = new List<BsonValue>();
                 lock (dbLock)
                 {
                     using var db = CreateLiteDatabaseWithRetry();
                     ILiteCollection<T1> col = db.GetCollection<T1>(DataBaseName);
                     snapshot = new List<T1>(col.FindAll());
+                    var rawCol = db.GetCollection(DataBaseName);
+                    foreach (var rawDoc in rawCol.FindAll()) sentIds.Add(rawDoc["_id"]);
                 }
 
                 Data.Messages = snapshot;
@@ -281,11 +284,18 @@ namespace GossipSDK.Core.Connection
 
                     if (postSuccess)
                     {
+                        try
+                        {
                         lock (dbLock)
                         {
                             using var db = CreateLiteDatabaseWithRetry();
-                            ILiteCollection<T1> col = db.GetCollection<T1>(DataBaseName);
-                            col.DeleteMany(_ => true);
+                            var col = db.GetCollection(DataBaseName);
+                            foreach (var id in sentIds) col.Delete(id);
+                            }
+                        }
+                        catch (Exception cleanupEx)
+                        {
+                            Debug.LogWarning($"[GenericSocketConnection] POST OK but local cleanup failed for {EventName} (will retry next cycle): {cleanupEx.Message}");
                         }
 
                         Debug.Log($"[GenericSocketConnection] POST {EventName} -> {endpoint} (items={Data.Messages?.Count})");
@@ -305,12 +315,19 @@ namespace GossipSDK.Core.Connection
                     string json = JsonConvert.SerializeObject(Data, Formatting.Indented);
                     await EmitStringAsJSONAsync(EventName, json);
 
-                    lock (dbLock)
-                    {
-                        using var db = CreateLiteDatabaseWithRetry();
-                        ILiteCollection<T1> col = db.GetCollection<T1>(DataBaseName);
-                        col.DeleteMany(_ => true);
-                    }
+                        try
+                        {
+                        lock (dbLock)
+                        {
+                            using var db = CreateLiteDatabaseWithRetry();
+                            var col = db.GetCollection(DataBaseName);
+                            foreach (var id in sentIds) col.Delete(id);
+                            }
+                        }
+                        catch (Exception cleanupEx)
+                        {
+                            Debug.LogWarning($"[GenericSocketConnection] Socket emit OK but local cleanup failed for {EventName} (will retry next cycle): {cleanupEx.Message}");
+                        }
 
                     Debug.Log($"[GenericSocketConnection] Emitted {EventName} via socket (items={Data.Messages?.Count})");
                     return true;
