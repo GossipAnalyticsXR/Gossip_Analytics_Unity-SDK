@@ -85,6 +85,7 @@ namespace GossipSDK.Core.Connection
                 var sceneName = SceneManager.GetActiveScene().name;
                 var objId = interactedObject.GetInstanceID().ToString();
                 var objName = interactedObject.name;
+                var appVersion = Application.version;
 
                 string json = await UniTask.RunOnThreadPool(() =>
                 {
@@ -96,6 +97,7 @@ namespace GossipSDK.Core.Connection
                         SessionID = gossip.CurrentSessionId,
                         TimestampUtc = DateTime.UtcNow.ToString("o"),
                         SceneName = sceneName,
+                        SceneVersion = appVersion,
                         Interaction = new { ObjectId = objId, ObjectName = objName, InteractionType = interactionType },
                         Camera = new
                         {
@@ -131,6 +133,7 @@ public async UniTask UploadEyeGazeImage(Ray gazeRay, RaycastHit hit, float fixat
                 string hitName = hit.collider != null ? hit.collider.gameObject.name : null;
                 string hitTag = hit.collider != null ? hit.collider.gameObject.tag : null;
                 Vector3 hitPoint = hit.point;
+                var appVersion = Application.version;
 
                 string json = await UniTask.RunOnThreadPool(() =>
                 {
@@ -143,6 +146,7 @@ public async UniTask UploadEyeGazeImage(Ray gazeRay, RaycastHit hit, float fixat
                         SessionID = gossip.CurrentSessionId,
                         TimestampUtc = DateTime.UtcNow.ToString("o"),
                         SceneName = sceneName,
+                        SceneVersion = appVersion,
                         Gaze = new
                         {
                             Origin = new { x = gazeRay.origin.x, y = gazeRay.origin.y, z = gazeRay.origin.z },
