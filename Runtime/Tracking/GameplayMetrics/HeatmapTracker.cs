@@ -31,6 +31,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
         {
             [JsonProperty("SceneName")] public string SceneName { get; set; }
             [JsonProperty("HeatmapSource")] public string HeatmapSource { get; set; }
+            [JsonProperty("SceneVersion", NullValueHandling = NullValueHandling.Ignore)] public string SceneVersion { get; set; }
 
             [JsonProperty("Cols")] public int Cols { get; set; }
             [JsonProperty("Rows")] public int Rows { get; set; }
@@ -121,6 +122,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
             {
                 SceneName = hm.SceneName,
                 HeatmapSource = source,
+                SceneVersion = Application.version,
                 Cols = cols,
                 Rows = rows,
                 CellSize = cellSize,
@@ -160,6 +162,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
             {
                 SceneName = hm.SceneName,
                 HeatmapSource = source,
+                SceneVersion = Application.version,
                 Cols = cols,
                 Rows = rows,
                 CellSize = cellSize,
