@@ -40,13 +40,6 @@ namespace GossipSDK.XR
                 return true;
             }
 
-            if (fallbackCamera != null)
-            {
-                gaze = new Ray(fallbackCamera.position, fallbackCamera.forward);
-                _lastSource = "head";
-                return true;
-            }
-
             gaze = default;
             return false;
         }
