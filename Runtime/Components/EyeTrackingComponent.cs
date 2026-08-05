@@ -41,6 +41,9 @@ namespace GossipSDK.Components
 
         private GameObject currentObject;
         private GameObject lastImageObject;
+        private RaycastHit pendingHit;
+        private Ray pendingGazeRay;
+        private string pendingSource;
 
         private Vector3 lastCamPos;
         private Quaternion lastCamRot;
@@ -93,7 +96,7 @@ namespace GossipSDK.Components
                 source = eyeProvider.TrackingSource;
             }
             else if (XRBootstrap.HeadPose != null &&
-                     XRBootstrap.HeadPose.TryGetPose(out Vector3 pos, out Quaternion rot))
+                XRBootstrap.HeadPose.TryGetPose(out Vector3 pos, out Quaternion rot))
             {
                 gazeRay = new Ray(pos, rot * Vector3.forward);
                 source = SOURCE_HEAD;
@@ -105,6 +108,7 @@ namespace GossipSDK.Components
 
             if (!Physics.Raycast(gazeRay, out RaycastHit hit, maxDistance, raycastLayers))
             {
+                TryEmitFixation();
                 currentObject = null;
                 fixationTimer = 0f;
                 return;
@@ -114,24 +118,27 @@ namespace GossipSDK.Components
 
             if (hit.collider.gameObject != currentObject)
             {
+                TryEmitFixation();
                 currentObject = hit.collider.gameObject;
                 fixationTimer = 0f;
-                return;
             }
 
             fixationTimer += Time.deltaTime;
-
-            if (fixationTimer < fixationThreshold)
-                return;
-
-            ProcessFixation(hit, gazeRay, source);
-            fixationTimer = 0f;
+            pendingHit = hit;
+            pendingGazeRay = gazeRay;
+            pendingSource = source;
 
             if (heatmapTimer >= heatmapFlushInterval)
             {
                 FlushHeatmap();
                 heatmapTimer = 0f;
             }
+        }
+
+        private void TryEmitFixation()
+        {
+            if (currentObject != null && fixationTimer >= fixationThreshold)
+                ProcessFixation(pendingHit, pendingGazeRay, pendingSource);
         }
 
         private void ProcessFixation(RaycastHit hit, Ray gazeRay, string source)
@@ -207,6 +214,10 @@ namespace GossipSDK.Components
                 .CapFromHeatmap(heatmap, "eye_gaze", true);
         }
 
-        private void OnDisable() => FlushHeatmap();
+        private void OnDisable()
+        {
+            TryEmitFixation();
+            FlushHeatmap();
+        }
     }
 }
