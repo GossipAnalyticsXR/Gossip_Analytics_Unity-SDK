@@ -113,10 +113,5 @@ namespace GossipSDK.Core.Configuration
         {
             enableHeatmaps = true;
         }
-
-#if META_CORE
-        [SerializeField] private bool trackMetaUserID = false;
-        public bool TrackMetaUserID => trackMetaUserID;
-#endif
     }
 }

@@ -35,10 +35,6 @@ namespace Editor.InspectorViews
 
         private SerializedProperty enableHeatmaps;
 
-#if META_CORE
-        private SerializedProperty trackMetaUserIDProp;
-#endif
-
         private void OnEnable()
         {
             string logoPath = Path.Combine("Assets", "Gossip Analytics", "Samples", "Images", "logo.png");
@@ -62,9 +58,6 @@ namespace Editor.InspectorViews
 
             enableHeatmaps = serializedObject.FindProperty("enableHeatmaps");
 
-#if META_CORE
-            trackMetaUserIDProp = serializedObject.FindProperty("trackMetaUserID");
-#endif
         }
 
         public override void OnInspectorGUI()
@@ -206,15 +199,13 @@ namespace Editor.InspectorViews
                 }
             }
 
-            if (enableHeatmaps != null)
+        if (enableHeatmaps != null)
+        {
+            if (!enableHeatmaps.boolValue)
+                enableHeatmaps.boolValue = true; // enforced on: client cannot disable heatmaps
+            using (new EditorGUI.DisabledScope(true))
                 EditorGUILayout.PropertyField(enableHeatmaps, new GUIContent("Enable Heatmaps"));
-
-
-#if META_CORE
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Meta Settings", EditorStyles.boldLabel);
-            if (trackMetaUserIDProp != null) EditorGUILayout.PropertyField(trackMetaUserIDProp, new GUIContent("Track Meta User ID"));
-#endif
+        }
 
             EditorGUILayout.Space();
             serializedObject.ApplyModifiedProperties();
