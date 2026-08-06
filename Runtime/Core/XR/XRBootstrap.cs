@@ -31,18 +31,26 @@ namespace GossipSDK.XR
                 return;
             }
 
-            // Eye gaze: prefer Meta (Quest Pro) when the Meta XR SDK is present, else generic
-            // OpenXR; head fallback is handled by the tracking component when no eye is available.
-            #if META_CORE
-            EyeGaze = new CompositeEyeGazeProvider(
-                new MetaEyeGazeProvider(cam.transform),
-                new OpenXREyeGazeProvider(cam.transform));
-            #else
-            EyeGaze = new OpenXREyeGazeProvider(cam.transform);
-            #endif
             HeadPose = new OpenXRHeadPoseProvider(cam.transform);
             HandControllers = new OpenXRHandControllerPoseProvider();
             XRProviders.Session = new OpenXRSessionProvider();
+
+            // Eye gaze last, guarded so a provider init failure can never break head/hand tracking.
+            try
+            {
+#if META_CORE
+                EyeGaze = new CompositeEyeGazeProvider(
+                    new MetaEyeGazeProvider(cam.transform),
+                    new OpenXREyeGazeProvider(cam.transform));
+#else
+                EyeGaze = new OpenXREyeGazeProvider(cam.transform);
+#endif
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[XRBootstrap] Eye provider init failed, using OpenXR only: {e.Message}");
+                EyeGaze = new OpenXREyeGazeProvider(cam.transform);
+            }
 
             Debug.Log($"[XRBootstrap] Providers initialized");
             Debug.Log($"[XRBootstrap] EyeGaze: {XRProviders.EyeGaze?.GetType().Name}");

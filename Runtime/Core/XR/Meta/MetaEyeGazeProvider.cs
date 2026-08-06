@@ -9,18 +9,26 @@ namespace GossipSDK.XR
     // on Meta devices; other runtimes fall back to OpenXREyeGazeProvider.
     public sealed class MetaEyeGazeProvider : IEyeGazeProvider
     {
-        private readonly OVREyeGaze eyeGaze;
+        private OVREyeGaze eyeGaze;
 
         public bool IsAvailable => eyeGaze != null && eyeGaze.EyeTrackingEnabled;
         public string TrackingSource => "eye";
 
         public MetaEyeGazeProvider(Transform cameraTransform)
         {
-            var go = new GameObject("GossipMetaEyeGaze");
-            if (cameraTransform != null)
-                go.transform.SetParent(cameraTransform.parent, false);
-            eyeGaze = go.AddComponent<OVREyeGaze>();
-            eyeGaze.Eye = OVREyeGaze.EyeId.Left; // tune on device (or combine L/R)
+            try
+            {
+                var go = new GameObject("GossipMetaEyeGaze");
+                if (cameraTransform != null)
+                    go.transform.SetParent(cameraTransform.parent, false);
+                eyeGaze = go.AddComponent<OVREyeGaze>();
+                eyeGaze.Eye = OVREyeGaze.EyeId.Left; // tune on device (or combine L/R)
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[GossipMetaEyeGaze] init failed, falling back: {e.Message}");
+                eyeGaze = null;
+            }
         }
 
         public bool TryGetEyeGaze(out Ray gaze)
