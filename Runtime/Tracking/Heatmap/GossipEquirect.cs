@@ -84,7 +84,7 @@ if (forwardComp <= 0.0001f) forwardComp = 0.0001f;
 float rightComp = Vector3.Dot(dir, basis.right) / forwardComp;
 float upComp = Vector3.Dot(dir, basis.up) / forwardComp;
 
-float s = Mathf.Clamp01((rightComp + 1f) * 0.5f);
+float s = Mathf.Clamp01((1f - rightComp) * 0.5f);
 float t = Mathf.Clamp01((upComp + 1f) * 0.5f);
 
 int px = Mathf.Clamp((int)(s * faceSize), 0, faceSize - 1);
