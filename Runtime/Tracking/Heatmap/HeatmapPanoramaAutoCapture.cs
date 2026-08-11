@@ -81,11 +81,23 @@ cam.aspect = 1f;
 cam.nearClipPlane = 0.03f;
 cam.farClipPlane = 1000f;
 cam.transform.position = capturePos;
-cam.stereoTargetEye = StereoTargetEyeMask.None;
 
 RenderTexture faceRT = new RenderTexture(faceSize, faceSize, 24, RenderTextureFormat.ARGB32);
 Texture2D faceTex = new Texture2D(faceSize, faceSize, TextureFormat.RGB24, false);
-
+// Auto-hide VR hands/controllers/body: disable renderers whose bounds center is very
+// close to the capture point (they always sit right by the head). Restored after capture.
+const float HandHideRadius = 0.8f;
+var hidden = new System.Collections.Generic.List<Renderer>();
+var sceneRenderers = Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+foreach (var rend in sceneRenderers)
+{
+    if (rend == null || !rend.enabled) continue;
+    if ((rend.bounds.center - capturePos).sqrMagnitude <= HandHideRadius * HandHideRadius)
+    {
+        rend.enabled = false;
+        hidden.Add(rend);
+    }
+}
 for (int f = 0; f < 6; f++)
 {
 cam.transform.rotation = Quaternion.LookRotation(bases[f].forward, bases[f].up);
@@ -100,7 +112,11 @@ RenderTexture.active = null;
 
 yield return null;
 }
-
+foreach (var rend in hidden)
+{
+    if ((UnityEngine.Object)rend != null) rend.enabled = true;
+    }
+    
 cam.targetTexture = null;
 Object.Destroy(faceTex);
 Object.Destroy(faceRT);
