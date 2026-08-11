@@ -8,9 +8,9 @@ namespace GossipSDK.Heatmaps
 public class HeatmapPanoramaAutoCapture : MonoBehaviour
 {
 [SerializeField] private float captureDelay = 0.5f;
-[SerializeField] private int faceSize = 1024;
-[SerializeField] private int equirectW = 2048;
-[SerializeField] private int equirectH = 1024;
+[SerializeField] private int faceSize = 2048;
+[SerializeField] private int equirectW = 4096;
+[SerializeField] private int equirectH = 2048;
 [SerializeField] private int jpgQuality = 85;
 
 private static bool s_captured;
@@ -81,6 +81,7 @@ cam.aspect = 1f;
 cam.nearClipPlane = 0.03f;
 cam.farClipPlane = 1000f;
 cam.transform.position = capturePos;
+cam.stereoTargetEye = StereoTargetEyeMask.None;
 
 RenderTexture faceRT = new RenderTexture(faceSize, faceSize, 24, RenderTextureFormat.ARGB32);
 Texture2D faceTex = new Texture2D(faceSize, faceSize, TextureFormat.RGB24, false);

@@ -87,10 +87,27 @@ float upComp = Vector3.Dot(dir, basis.up) / forwardComp;
 float s = Mathf.Clamp01((1f - rightComp) * 0.5f);
 float t = Mathf.Clamp01((upComp + 1f) * 0.5f);
 
-int px = Mathf.Clamp((int)(s * faceSize), 0, faceSize - 1);
-int py = Mathf.Clamp((int)(t * faceSize), 0, faceSize - 1);
+var face = faceColors[bestFace];
 
-return faceColors[bestFace][py * faceSize + px];
+float fx = s * faceSize - 0.5f;
+float fy = t * faceSize - 0.5f;
+int x0 = Mathf.Clamp((int)Mathf.Floor(fx), 0, faceSize - 1);
+int y0 = Mathf.Clamp((int)Mathf.Floor(fy), 0, faceSize - 1);
+int x1 = Mathf.Clamp(x0 + 1, 0, faceSize - 1);
+int y1 = Mathf.Clamp(y0 + 1, 0, faceSize - 1);
+float wx = Mathf.Clamp01(fx - x0);
+float wy = Mathf.Clamp01(fy - y0);
+
+Color32 c00 = face[y0 * faceSize + x0];
+Color32 c10 = face[y0 * faceSize + x1];
+Color32 c01 = face[y1 * faceSize + x0];
+Color32 c11 = face[y1 * faceSize + x1];
+
+float r = (c00.r * (1f - wx) + c10.r * wx) * (1f - wy) + (c01.r * (1f - wx) + c11.r * wx) * wy;
+float g = (c00.g * (1f - wx) + c10.g * wx) * (1f - wy) + (c01.g * (1f - wx) + c11.g * wx) * wy;
+float b = (c00.b * (1f - wx) + c10.b * wx) * (1f - wy) + (c01.b * (1f - wx) + c11.b * wx) * wy;
+
+return new Color32((byte)(r + 0.5f), (byte)(g + 0.5f), (byte)(b + 0.5f), 255);
 }
 }
 }
