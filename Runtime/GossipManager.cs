@@ -31,6 +31,7 @@ namespace GossipSDK
 
         private Gossip Gossip => Gossip.Instance;
         private bool heatmapCreated;
+private bool panoramaCreated;
 
         private bool isTrackRoutineRunning = false;
         private bool isDeployRoutineRunning = false;
@@ -183,6 +184,7 @@ namespace GossipSDK
 
             StartSubscriptions();
             WaitAndCreateHeatmap().Forget();
+WaitAndCreatePanorama().Forget();
             WaitAndAutoAddTrackers().Forget();
         }
 
@@ -202,6 +204,19 @@ namespace GossipSDK
             DontDestroyOnLoad(go);
             go.AddComponent<GossipSDK.Heatmaps.HeatmapSceneAutoCapture>();
         }
+
+private async UniTaskVoid WaitAndCreatePanorama()
+{
+if (Gossip == null || Gossip.Instance.Settings == null) return;
+// NOTE: intentionally NOT gated to Production -- the panorama pipeline is validated in dev.
+await UniTask.WaitUntil(() => Gossip != null && Gossip.IsSessionReady);
+if (panoramaCreated) return;
+panoramaCreated = true;
+var go = new GameObject("GossipHeatmapPanoramaCapture");
+DontDestroyOnLoad(go);
+go.AddComponent<GossipSDK.Heatmaps.HeatmapPanoramaAutoCapture>();
+}
+
 
         private async UniTaskVoid WaitAndAutoAddTrackers()
         {

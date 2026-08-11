@@ -69,6 +69,42 @@ namespace GossipSDK.Core.Connection
                 callback?.Invoke(false);
             }
         }
+public async UniTask UploadHeatmapPanorama(HeatmapPanoramaSpec spec, byte[] jpg, Action<bool> callback)
+{
+try
+{
+if (spec == null || jpg == null || jpg.Length == 0) { callback?.Invoke(false); return; }
+var gossip = Gossip.Instance;
+if (!ValidateSession(gossip)) { callback?.Invoke(false); return; }
+
+string json = await UniTask.RunOnThreadPool(() =>
+{
+string imageBase64 = Convert.ToBase64String(jpg);
+var envelope = new
+{
+EventType = "HeatmapPanoramaTracker",
+PlayerID = gossip.CurrentPlayerId,
+SessionID = gossip.CurrentSessionId,
+TimestampUtc = DateTime.UtcNow.ToString("o"),
+SceneName = spec.SceneName,
+SceneVersion = spec.Version,
+Camera = new { Position = new { x = spec.PositionX, y = spec.PositionY, z = spec.PositionZ } },
+YawOffsetDeg = spec.YawOffsetDeg,
+Image = new { Format = "jpg", DataBase64 = imageBase64, Width = spec.ImageWidth, Height = spec.ImageHeight }
+};
+return JsonConvert.SerializeObject(envelope);
+});
+
+bool ok = await PostJsonAsync(GetUploadUrl(), json);
+callback?.Invoke(ok);
+}
+catch (Exception ex)
+{
+Debug.LogException(ex);
+callback?.Invoke(false);
+}
+}
+
 
         public async UniTask UploadInteractionImage(GameObject interactedObject, string interactionType, byte[] png, Action<bool> callback)
         {
