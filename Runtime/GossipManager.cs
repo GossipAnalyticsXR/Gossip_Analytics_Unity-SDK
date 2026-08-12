@@ -32,6 +32,7 @@ namespace GossipSDK
         private Gossip Gossip => Gossip.Instance;
         private bool heatmapCreated;
 private bool panoramaCreated;
+            private bool dwellPanoramaCreated;
 
         private bool isTrackRoutineRunning = false;
         private bool isDeployRoutineRunning = false;
@@ -185,6 +186,7 @@ private bool panoramaCreated;
             StartSubscriptions();
             WaitAndCreateHeatmap().Forget();
 WaitAndCreatePanorama().Forget();
+            WaitAndCreateDwellPanorama().Forget();
             WaitAndAutoAddTrackers().Forget();
         }
 
@@ -216,6 +218,19 @@ var go = new GameObject("GossipHeatmapPanoramaCapture");
 DontDestroyOnLoad(go);
 go.AddComponent<GossipSDK.Heatmaps.HeatmapPanoramaAutoCapture>();
 }
+
+        private async UniTaskVoid WaitAndCreateDwellPanorama()
+        {
+            if (Gossip == null || Gossip.Instance.Settings == null) return;
+            // NOTE: intentionally NOT gated to Production, same as WaitAndCreatePanorama --
+            // this is the auto-detection/trickle layer on top of the same dev-validated pipeline.
+            await UniTask.WaitUntil(() => Gossip != null && Gossip.IsSessionReady);
+            if (dwellPanoramaCreated) return;
+            dwellPanoramaCreated = true;
+            var go = new GameObject("GossipHeatmapDwellPanoramaCapture");
+            DontDestroyOnLoad(go);
+            go.AddComponent<GossipSDK.Heatmaps.HeatmapDwellPanoramaCapture>();
+        }
 
 
         private async UniTaskVoid WaitAndAutoAddTrackers()
