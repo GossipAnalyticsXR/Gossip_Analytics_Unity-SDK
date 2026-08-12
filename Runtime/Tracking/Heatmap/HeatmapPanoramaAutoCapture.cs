@@ -84,8 +84,9 @@ cam.transform.position = capturePos;
 
 RenderTexture faceRT = new RenderTexture(faceSize, faceSize, 24, RenderTextureFormat.ARGB32);
 Texture2D faceTex = new Texture2D(faceSize, faceSize, TextureFormat.RGB24, false);
-// Auto-hide VR hands/controllers/body: disable renderers whose bounds center is very
-// close to the capture point (they always sit right by the head). Restored after capture.
+// Collect VR hands/controllers/body renderers near the capture point; hidden
+// per-face around each cam.Render() below so the user's own view never loses
+// them for a whole frame -- only the capture camera's view does.
 const float HandHideRadius = 0.8f;
 var hidden = new System.Collections.Generic.List<Renderer>();
 var sceneRenderers = Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
@@ -94,12 +95,20 @@ foreach (var rend in sceneRenderers)
     if (rend == null || !rend.enabled) continue;
     if ((rend.bounds.center - capturePos).sqrMagnitude <= HandHideRadius * HandHideRadius)
     {
-        rend.enabled = false;
         hidden.Add(rend);
     }
 }
+bool[] prevEnabled = new bool[hidden.Count];
 for (int f = 0; f < 6; f++)
 {
+for (int i = 0; i < hidden.Count; i++)
+{
+var rend = hidden[i];
+if ((UnityEngine.Object)rend == null) continue;
+prevEnabled[i] = rend.enabled;
+rend.enabled = false;
+}
+
 cam.transform.rotation = Quaternion.LookRotation(bases[f].forward, bases[f].up);
 cam.targetTexture = faceRT;
 cam.Render();
@@ -110,13 +119,15 @@ faceTex.Apply();
 faceColors[f] = faceTex.GetPixels32();
 RenderTexture.active = null;
 
+for (int i = 0; i < hidden.Count; i++)
+{
+var rend = hidden[i];
+if ((UnityEngine.Object)rend == null) continue;
+rend.enabled = prevEnabled[i];
+}
+
 yield return null;
 }
-foreach (var rend in hidden)
-{
-    if ((UnityEngine.Object)rend != null) rend.enabled = true;
-    }
-    
 cam.targetTexture = null;
 Object.Destroy(faceTex);
 Object.Destroy(faceRT);

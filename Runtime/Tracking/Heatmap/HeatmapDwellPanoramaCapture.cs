@@ -135,7 +135,9 @@ namespace GossipSDK.Heatmaps
             faceRT = new RenderTexture(faceSize, faceSize, 24, RenderTextureFormat.ARGB32);
             faceTex = new Texture2D(faceSize, faceSize, TextureFormat.RGB24, false);
 
-            // Auto-hide VR hands/controllers/body for the duration of the trickle.
+            // Collect VR hands/controllers/body renderers near the capture point; hidden
+            // per-face around each cam.Render() (see RenderFace) so the user's own view never
+            // loses them for a whole frame -- only the capture camera's view does.
             hiddenRenderers = new List<Renderer>();
             var sceneRenderers = Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
             foreach (var rend in sceneRenderers)
@@ -143,7 +145,6 @@ namespace GossipSDK.Heatmaps
                 if (rend == null || !rend.enabled) continue;
                 if ((rend.bounds.center - captureAnchor).sqrMagnitude <= HandHideRadius * HandHideRadius)
                 {
-                    rend.enabled = false;
                     hiddenRenderers.Add(rend);
                 }
             }
@@ -167,18 +168,38 @@ namespace GossipSDK.Heatmaps
             if (nextFace >= 6) FinishCapture();
         }
 
-        private void RenderFace(int f)
-        {
-            cam.transform.rotation = Quaternion.LookRotation(faceBases[f].forward, faceBases[f].up);
-            cam.targetTexture = faceRT;
-            cam.Render();
+private void RenderFace(int f)
+{
+// Hide near renderers ONLY for this face, saving each one's enabled-state right now
+// and restoring exactly that -- so if an owner (e.g. XR tracking) disabled one between
+// faces, we don't force it back on.
+int n = hiddenRenderers != null ? hiddenRenderers.Count : 0;
+bool[] prevEnabled = n > 0 ? new bool[n] : null;
+for (int i = 0; i < n; i++)
+{
+var r = hiddenRenderers[i];
+if ((UnityEngine.Object)r == null) continue;
+prevEnabled[i] = r.enabled;
+r.enabled = false;
+}
 
-            RenderTexture.active = faceRT;
-            faceTex.ReadPixels(new Rect(0, 0, faceSize, faceSize), 0, 0);
-            faceTex.Apply();
-            faceColors[f] = faceTex.GetPixels32();
-            RenderTexture.active = null;
-        }
+cam.transform.rotation = Quaternion.LookRotation(faceBases[f].forward, faceBases[f].up);
+cam.targetTexture = faceRT;
+cam.Render();
+
+RenderTexture.active = faceRT;
+faceTex.ReadPixels(new Rect(0, 0, faceSize, faceSize), 0, 0);
+faceTex.Apply();
+faceColors[f] = faceTex.GetPixels32();
+RenderTexture.active = null;
+
+for (int i = 0; i < n; i++)
+{
+var r = hiddenRenderers[i];
+if ((UnityEngine.Object)r == null) continue;
+r.enabled = prevEnabled[i];
+}
+}
 
         private void RestoreHiddenRenderers()
         {
