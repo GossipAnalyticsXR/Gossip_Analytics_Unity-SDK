@@ -24,6 +24,33 @@ namespace GossipSDK.Utilities
                 });
             }
 
+            // XR devices (controllers, hand tracking, eye tracking, body trackers, base stations).
+            // VR controllers do NOT show up in Gamepad.all, so they are enumerated here.
+            var xrDevices = new List<UnityEngine.XR.InputDevice>();
+            InputDevices.GetDevices(xrDevices);
+
+            foreach (var device in xrDevices)
+            {
+                if (!device.isValid)
+                    continue;
+
+                var type = ClassifyXrDevice(device.characteristics);
+                if (type == null)
+                    continue; // the headset is already reported above
+
+                bool isHaptic = false;
+                HapticCapabilities capabilities;
+                if (device.TryGetHapticCapabilities(out capabilities))
+                    isHaptic = capabilities.supportsImpulse || capabilities.supportsBuffer;
+
+                peripherals.Add(new DetectedPeripheral
+                {
+                    Name = string.IsNullOrEmpty(device.name) ? type : device.name,
+                    Type = type,
+                    Brand = string.IsNullOrEmpty(device.manufacturer) ? InferBrand() : device.manufacturer,
+                    IsHaptic = isHaptic
+                });
+            }
             // Gamepads
             foreach (var gamepad in Gamepad.all)
             {
@@ -63,6 +90,32 @@ namespace GossipSDK.Utilities
             return peripherals;
         }
 
+        /// <summary>
+        /// Maps XR device characteristics to the peripheral type reported to analytics.
+        /// Returns null for the headset, which is already reported separately.
+        /// </summary>
+        private static string ClassifyXrDevice(InputDeviceCharacteristics characteristics)
+        {
+            if ((characteristics & InputDeviceCharacteristics.HeadMounted) != 0)
+                return null;
+
+            if ((characteristics & InputDeviceCharacteristics.Controller) != 0)
+                return "xr-controller";
+
+            if ((characteristics & InputDeviceCharacteristics.HandTracking) != 0)
+                return "hand-tracking";
+
+            if ((characteristics & InputDeviceCharacteristics.EyeTracking) != 0)
+                return "eye-tracking";
+
+            if ((characteristics & InputDeviceCharacteristics.TrackingReference) != 0)
+                return "tracking-reference";
+
+            if ((characteristics & InputDeviceCharacteristics.TrackedDevice) != 0)
+                return "tracker";
+
+            return "other";
+        }
         private static string InferBrand()
         {
             var xr = XRSettings.loadedDeviceName?.ToLower() ?? "";
