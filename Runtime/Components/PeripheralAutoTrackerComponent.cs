@@ -12,7 +12,7 @@ namespace GossipSDK.Components
     {
         /// <summary>Seconds between usage heartbeats. Each send reports the elapsed time
         /// since the previous one, so the backend can sum them into total usage.</summary>
-        [SerializeField] private float heartbeatSeconds = 60f;
+        [SerializeField] private float heartbeatSeconds = 300f;
 
         /// <summary>Shortest interval worth reporting, to avoid noise when several
         /// lifecycle callbacks fire back to back.</summary>
@@ -87,6 +87,8 @@ namespace GossipSDK.Components
                     Brand = p.Brand,
                     PeripheralType = p.Type,
                     IsHaptic = p.IsHaptic,
+                    // UsageDurationSeconds es el DELTA de uso desde el ultimo envio, no el acumulado de la sesion.
+                    // El backend suma los deltas por sesion para obtener el total de uso del accesorio.
                     UsageDurationSeconds = duration,
                     SceneName = SceneManager.GetActiveScene().name,
                     TimestampUtc = DateTime.UtcNow.ToString("o")
