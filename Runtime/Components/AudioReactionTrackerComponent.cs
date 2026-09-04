@@ -59,6 +59,7 @@ namespace GossipSDK.Components
         private int ringIndex;
         private int bufferSize;
         private int analysisWindowSize;
+        private int lastMicPos = -1;
 
         private float baselineRms = 0.01f;
         private float _diagTimer = 0f;
@@ -111,20 +112,46 @@ namespace GossipSDK.Components
             heatmapTimer += Time.deltaTime;
 
             int micPos = Microphone.GetPosition(null);
-            if (micPos <= 0)
+            if (micPos < 0)
                 return;
 
-            int readSize = Mathf.Min(256, micPos);
-            float[] temp = new float[readSize];
+            int clipSamples = micClip.samples;
 
-            int offset = Mathf.Max(0, micPos - readSize);
-            micClip.GetData(temp, offset);
-
-            foreach (var s in temp)
+            // Primera vuelta: solo fijamos el cursor.
+            if (lastMicPos < 0)
             {
-                ringBuffer[ringIndex] = s;
-                ringIndex = (ringIndex + 1) % bufferSize;
+                lastMicPos = micPos;
+                return;
             }
+
+            // Muestras nuevas desde la ultima lectura, contando la vuelta del clip.
+            // Antes se cogian SIEMPRE las ultimas 256 sin cursor: a 16 kHz son 16 ms
+            // exactos, asi que con frames mas largos se perdia audio y con frames mas
+            // cortos se duplicaba. El buffer no era continuo.
+            int available = micPos - lastMicPos;
+            if (available < 0)
+                available += clipSamples;
+            if (available <= 0)
+                return;
+
+            // Si un frame largo dejo mas muestras de las que caben, nos quedamos con
+            // las mas recientes: perder lo viejo es mejor que desordenar el buffer.
+            // bufferSize podria superar la longitud del clip si alguien sube
+            // bufferSeconds por encima de los 10 s con que se abre el microfono.
+            int maxCatchUp = Mathf.Min(bufferSize, clipSamples);
+            if (available > maxCatchUp)
+            {
+                lastMicPos = (micPos - maxCatchUp + clipSamples) % clipSamples;
+                available = maxCatchUp;
+            }
+
+            // El clip del microfono es circular: puede hacer falta leer en dos tramos.
+            int firstChunk = Mathf.Min(available, clipSamples - lastMicPos);
+            AppendFromMic(lastMicPos, firstChunk);
+            if (available > firstChunk)
+                AppendFromMic(0, available - firstChunk);
+
+            lastMicPos = (lastMicPos + available) % clipSamples;
 
             AnalyzeWindow();
 
@@ -191,6 +218,7 @@ namespace GossipSDK.Components
             try
             {
                 micClip = Microphone.Start(deviceName, true, 10, sampleRate);
+                lastMicPos = -1;
                 success = true;
             }
             catch (Exception e)
@@ -204,6 +232,22 @@ namespace GossipSDK.Components
             {
                 yield return new WaitUntil(() => Microphone.GetPosition(deviceName) > 0);
                 Debug.Log($"[AudioTracker] Microfono '{deviceName}' iniciado y capturando.");
+            }
+        }
+
+        // Copia count muestras del clip del microfono, desde offset, al ring buffer.
+        void AppendFromMic(int offset, int count)
+        {
+            if (count <= 0)
+                return;
+
+            float[] temp = new float[count];
+            micClip.GetData(temp, offset);
+
+            for (int i = 0; i < count; i++)
+            {
+                ringBuffer[ringIndex] = temp[i];
+                ringIndex = (ringIndex + 1) % bufferSize;
             }
         }
 
