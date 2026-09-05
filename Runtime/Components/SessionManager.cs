@@ -15,7 +15,12 @@ namespace GossipSDK.Components
         [SerializeField] private string subscriptionTypeOverride = "";
 
 
-        private string persistentPlayerId;
+        [Tooltip("Id de jugador del integrador. Vacio = el SDK resuelve uno estable por su cuenta.")]
+        [SerializeField] private string persistentPlayerId;
+
+        private const string LocalPlayerIdKey = "gossip_player_id";
+        private const string PendingSessionIdKey = "gossip_pending_session_id";
+        private const string PendingSessionStartKey = "gossip_pending_session_start";
 
         private string playerId;
         private double sessionStartTimeRealtime;
@@ -53,26 +58,28 @@ namespace GossipSDK.Components
             if (!string.IsNullOrWhiteSpace(persistentPlayerId))
                 playerId = persistentPlayerId;
             else
-                playerId = TryGetPlatformUserId() ?? Guid.NewGuid().ToString();
+                playerId = TryGetPlatformUserId() ?? GetOrCreateLocalPlayerId();
 
-            try
-            {
-                Gossip.Instance?.SetCurrentIds(playerId, sessionId);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[SessionManager] Could not set Gossip current ids: {ex.Message}");
-            }
+            SetCurrentIdsSafe(playerId, sessionId);
 
             // Check for orphaned session from previous run (e.g., editor Stop)
-            if (PlayerPrefs.HasKey("gossip_pending_session_id"))
+            // Sesion huerfana de la ejecucion anterior (Stop del editor, cierre a lo bruto).
+            // El session_end tiene que cerrar ESA sesion, no la que acaba de empezar: el
+            // tracker usa siempre los ids actuales. Antes se mandaba con el sessionId nuevo.
+            if (PlayerPrefs.HasKey(PendingSessionIdKey))
             {
-                long orphanStartUnix = long.Parse(PlayerPrefs.GetString("gossip_pending_session_start", "0"));
+                string orphanSessionId = PlayerPrefs.GetString(PendingSessionIdKey, string.Empty);
+                long orphanStartUnix = long.Parse(PlayerPrefs.GetString(PendingSessionStartKey, "0"));
                 double orphanDuration = System.Math.Max(0.0, (double)(System.DateTimeOffset.UtcNow.ToUnixTimeSeconds() - orphanStartUnix));
-                SendSessionEvent("session_end", orphanDuration);
-                PlayerPrefs.DeleteKey("gossip_pending_session_id");
-                PlayerPrefs.DeleteKey("gossip_pending_session_start");
-                PlayerPrefs.Save();
+
+                if (!string.IsNullOrWhiteSpace(orphanSessionId) && orphanSessionId != sessionId)
+                {
+                    SetCurrentIdsSafe(playerId, orphanSessionId);
+                    SendSessionEvent("session_end", orphanDuration, orphanSessionId);
+                    SetCurrentIdsSafe(playerId, sessionId);
+                }
+
+                ClearPendingSession();
             }
             
             double duration = 0;
@@ -80,8 +87,8 @@ namespace GossipSDK.Components
 
             sessionStartTimeRealtime = Time.realtimeSinceStartupAsDouble;
             sessionStarted = true;
-            PlayerPrefs.SetString("gossip_pending_session_id", sessionId);
-            PlayerPrefs.SetString("gossip_pending_session_start", System.DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString());
+            PlayerPrefs.SetString(PendingSessionIdKey, sessionId);
+            PlayerPrefs.SetString(PendingSessionStartKey, System.DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString());
             PlayerPrefs.Save();
         }
 
@@ -112,6 +119,59 @@ namespace GossipSDK.Components
             return null;
         }
 
+        /// <summary>
+        /// Id de jugador estable para esta instalacion.
+        ///
+        /// Antes, cuando la plataforma no daba id, se generaba un Guid nuevo en CADA
+        /// arranque. Medido el 5-sep-2026 en dev: 87 "usuarios" que eran 4 dispositivos.
+        /// Total Users contaba arranques, Top Users era 0 siempre y Active Users no se
+        /// podia distinguir de New Users.
+        /// </summary>
+        private string GetOrCreateLocalPlayerId()
+        {
+            try
+            {
+                string stored = PlayerPrefs.GetString(LocalPlayerIdKey, string.Empty);
+                if (!string.IsNullOrWhiteSpace(stored))
+                    return stored;
+
+                string generated = Guid.NewGuid().ToString();
+                PlayerPrefs.SetString(LocalPlayerIdKey, generated);
+                PlayerPrefs.Save();
+                return generated;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[SessionManager] Could not persist local player id: {ex.Message}");
+                return Guid.NewGuid().ToString();
+            }
+        }
+
+        /// <summary>Id de jugador del integrador. Vacio devuelve al SDK su propia resolucion.</summary>
+        public void SetPersistentPlayerId(string value)
+        {
+            persistentPlayerId = value ?? string.Empty;
+        }
+
+        private void SetCurrentIdsSafe(string player, string session)
+        {
+            try
+            {
+                Gossip.Instance?.SetCurrentIds(player, session);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[SessionManager] Could not set Gossip current ids: {ex.Message}");
+            }
+        }
+
+        private void ClearPendingSession()
+        {
+            PlayerPrefs.DeleteKey(PendingSessionIdKey);
+            PlayerPrefs.DeleteKey(PendingSessionStartKey);
+            PlayerPrefs.Save();
+        }
+
         private void OnApplicationQuit()
         {
             if (!sessionStarted)
@@ -126,8 +186,7 @@ namespace GossipSDK.Components
                 SendSessionEvent("session_end", totalDuration);
             else
                 Debug.LogWarning("[SessionManager] Gossip.Instance null on quit -- session_end not sent");
-            PlayerPrefs.DeleteKey("gossip_pending_session");
-            PlayerPrefs.Save();
+            ClearPendingSession();
         }
 
         private void OnDestroy()
@@ -144,9 +203,10 @@ namespace GossipSDK.Components
                 SendSessionEvent("session_end", totalDuration);
             else
                 Debug.LogWarning("[SessionManager] Gossip.Instance null on destroy -- session_end not sent");
+            ClearPendingSession();
         }
 
-        private void SendSessionEvent(string eventType, double durationSeconds)
+        private void SendSessionEvent(string eventType, double durationSeconds, string sessionIdOverride = null)
         {
             try
             {
@@ -172,7 +232,7 @@ namespace GossipSDK.Components
                     DurationSeconds = durationSeconds,
                     SceneName = SceneManager.GetActiveScene().name,
                     PlayerId = playerId,
-                    SessionId = sessionId,
+                    SessionId = sessionIdOverride ?? sessionId,
                     SessionType = ResolveSessionType(),
                     SubscriptionType = ResolveSubscriptionType()
                 };

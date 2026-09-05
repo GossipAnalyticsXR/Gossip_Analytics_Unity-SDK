@@ -16,6 +16,21 @@ namespace GossipSDK.Components
         [Header("Recording")]
         public int sampleRate = 16000;
         public float bufferSeconds = 3f;
+
+        /// <summary>
+        /// Segundos que se esperan TRAS el disparo antes de copiar el snippet.
+        ///
+        /// El buffer guarda siempre los ultimos bufferSeconds. Si se copia en el
+        /// instante del disparo, el fichero TERMINA ahi: se graba el momento previo
+        /// a la reaccion y la vocalizacion queda fuera. Medido sobre 140 clips, el
+        /// pico caia en el ultimo 20% del clip en el 74% de los casos, contra un 20%
+        /// por puro azar.
+        ///
+        /// Esperando 1,5 s la ventana pasa a ser [disparo-1,5 s, disparo+1,5 s] sin
+        /// cambiar el tamano del buffer, ni la duracion del fichero, ni el coste.
+        /// A 0 se comporta exactamente como antes.
+        /// </summary>
+        public float postTriggerSeconds = 1.5f;
         public float analysisWindowSeconds = 0.3f;
 
         [Header("Decision thresholds")]
@@ -53,6 +68,25 @@ namespace GossipSDK.Components
         [Header("Baseline Adaptation")]
         [SerializeField] private float baselineLerpRate = 0.02f;
 
+        /// <summary>
+        /// Rango en dB sobre la linea base con el que se normaliza el cambio de voz.
+        ///
+        /// La formula anterior era un cociente lineal recortado a 1:
+        ///     clamp01((rms - baselineRms) / baselineRms)
+        /// que llega a 1 en cuanto rms dobla la linea base. Medido: V valia 1 en el
+        /// 68% de los 140 clips viejos y en el 98% de los 112 nuevos, y el umbral
+        /// V >= 0,25 se cumplia en el 100% de los clips de las TRES bandas
+        /// acusticas, incluidas las inaudibles. Una senal que nunca se apaga no
+        /// discrimina: es una constante disfrazada de medida.
+        ///
+        /// En dB no satura. Con span 12: 3 dB sobre la base dan V ~ 0,25 (el
+        /// umbral), 6 dB dan 0,50 y hacen falta 12 dB para llegar a 1.
+        ///
+        /// A 0 se vuelve exactamente a la formula anterior, para poder revertir
+        /// sin deshacer el commit.
+        /// </summary>
+        [SerializeField] private float voiceChangeSpanDb = 12f;
+
         private HeatmapManager heatmapManager;
         private AudioClip micClip;
         private float[] ringBuffer;
@@ -60,6 +94,15 @@ namespace GossipSDK.Components
         private int bufferSize;
         private int analysisWindowSize;
         private int lastMicPos = -1;
+
+        // Disparo aplazado. El snippet se copia desde Update(), no con un await:
+        // asi no hay nada que cancelar si el componente se desactiva y no se leen
+        // objetos ya destruidos.
+        private bool snippetPending;
+        private float snippetDueTime;
+        private string snippetSceneName;
+        private float snippetE, snippetV, snippetQuality, snippetM, snippetScore;
+        private int snippetSignals;
 
         private float baselineRms = 0.01f;
         private float _diagTimer = 0f;
@@ -152,6 +195,15 @@ namespace GossipSDK.Components
                 AppendFromMic(0, available - firstChunk);
 
             lastMicPos = (lastMicPos + available) % clipSamples;
+
+            // Si hay un snippet esperando y ya le toca, se copia AQUI: el buffer
+            // acaba de rellenarse este frame, asi que trae el audio mas reciente.
+            if (snippetPending && Time.time >= snippetDueTime)
+            {
+                snippetPending = false;
+                TriggerSnippet(snippetE, snippetV, snippetQuality, snippetM,
+                               snippetScore, snippetSignals, snippetSceneName);
+            }
 
             AnalyzeWindow();
 
@@ -264,7 +316,15 @@ namespace GossipSDK.Components
             float rms = ComputeRMS(window);
             float quality = ComputeQuality(window);
 
-            float voiceChange = Mathf.Clamp01((rms - baselineRms) / Mathf.Max(baselineRms, 0.001f));
+            // Cuanto sube el nivel sobre la linea base, en dB. Es la magnitud que
+            // se queria medir; el cociente lineal la aplastaba contra el techo.
+            float baseRef = Mathf.Max(baselineRms, 1e-5f);
+            float voiceChangeDb = 20f * Mathf.Log10(Mathf.Max(rms, 1e-7f) / baseRef);
+
+            float voiceChange = voiceChangeSpanDb > 0f
+                ? Mathf.Clamp01(voiceChangeDb / voiceChangeSpanDb)
+                : Mathf.Clamp01((rms - baselineRms) / Mathf.Max(baselineRms, 0.001f));
+
             float V_eff = voiceChange * quality;
 
             float E = Mathf.Clamp01(rms / rmsNormCeiling);
@@ -284,7 +344,7 @@ namespace GossipSDK.Components
             {
                 _diagTimer = 0f;
                 int micPos = Microphone.GetPosition(Microphone.devices.Length > 0 ? Microphone.devices[0] : null);
-                Debug.Log("[AudioReaction:diag] rawAmp=" + rms + " E=" + E + " V=" + V_eff + " M=" + M + " score=" + score + " signals=" + signals + " micPos=" + micPos);
+                Debug.Log("[AudioReaction:diag] rawAmp=" + rms + " base=" + baselineRms + " vDb=" + voiceChangeDb + " E=" + E + " V=" + V_eff + " M=" + M + " score=" + score + " signals=" + signals + " micPos=" + micPos);
             }
 
                         if (Gossip.Instance?.Settings?.EnableDebug == true && (E > 0.1f || V_eff > 0.1f || M > 0.1f))
@@ -296,7 +356,7 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
             if ((signals >= 2 && score >= minEmotionalScore) ||
                 (E >= fastTriggerEnergyThreshold && (V_eff >= fastTriggerConditionThreshold || M >= fastTriggerConditionThreshold)))
             {
-                TriggerSnippet(E, voiceChange, quality, M, score, signals);
+                ArmSnippet(E, voiceChange, quality, M, score, signals);
             }
             else
             {
@@ -304,16 +364,56 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
             }
         }
 
-        async void TriggerSnippet(float E, float V, float Qv, float M, float score, int signals)
+        /// <summary>
+        /// Marca el disparo y deja el snippet armado para copiarse mas tarde.
+        ///
+        /// Aqui va todo lo que depende del INSTANTE del disparo: el cooldown, el
+        /// punto del heatmap y el nombre de la escena. Leerlos despues de la espera
+        /// los falsearia si la escena cambia en ese segundo y medio.
+        /// </summary>
+        void ArmSnippet(float E, float V, float Qv, float M, float score, int signals)
         {
+            if (trackedTransform == null) return;
+            if (Gossip.Instance == null) return;
+
+            lastTriggerTime = Time.time;
+            heatmapManager.RegisterHit(trackedTransform.position);
+
+            string sceneName = SceneManager.GetActiveScene().name;
+
+            // Sin espera se copia ya: identico al comportamiento anterior.
+            if (postTriggerSeconds <= 0f)
+            {
+                TriggerSnippet(E, V, Qv, M, score, signals, sceneName);
+                return;
+            }
+
+            // Solo cabe un snippet a la vez. Con el cooldown por defecto (6 s) no
+            // puede ocurrir, pero si alguien lo baja por debajo de postTriggerSeconds
+            // esto evita que un disparo nuevo pise al que estaba esperando.
+            if (snippetPending) return;
+
+            snippetPending = true;
+            snippetDueTime = Time.time + Mathf.Min(postTriggerSeconds, bufferSeconds);
+            snippetSceneName = sceneName;
+            snippetE = E;
+            snippetV = V;
+            snippetQuality = Qv;
+            snippetM = M;
+            snippetScore = score;
+            snippetSignals = signals;
+        }
+
+        async void TriggerSnippet(float E, float V, float Qv, float M, float score,
+                                  int signals, string sceneName)
+        {
+            // Se revalida: entre el disparo y esta copia ha pasado postTriggerSeconds
+            // y el objeto o el SDK pueden haber desaparecido.
             if (trackedTransform == null) return;
             if (Gossip.Instance == null)
             {
                 return;
             }
-            lastTriggerTime = Time.time;
-
-            heatmapManager.RegisterHit(trackedTransform.position);
 
             float[] snippet = new float[bufferSize];
 
@@ -325,8 +425,6 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
             }
 
             byte[] audio = FloatToWav(snippet, sampleRate);
-
-            string sceneName = SceneManager.GetActiveScene().name;
 
             var tracker = Gossip.Instance?.AudioReactionTracker;
             if (tracker == null)
