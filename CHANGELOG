@@ -21,6 +21,22 @@ This project follows **Semantic Versioning** (MAJOR.MINOR.PATCH):
 
 ---
 
+## [2.0.1] — 2026-09-05
+
+### Fixed
+
+- **Player identity is now stable per installation.** `SessionManager` generated a new
+  `Guid` on every app launch when the platform did not provide a user id, so every launch
+  created a brand-new user in the dashboard. The SDK now persists an id in `PlayerPrefs`
+  (`gossip_player_id`), and `persistentPlayerId` is a `[SerializeField]` with a public
+  `SetPersistentPlayerId()` for integrators who already have their own login.
+- **Orphan session recovery.** `OnApplicationQuit` deleted a `PlayerPrefs` key that never
+  existed, so every launch replayed a bogus orphan-session recovery — and sent that
+  `session_end` with the new session id instead of the orphan one. Both fixed.
+- **Continuous audio capture.** Audio reactions are no longer stitched from 256-sample
+  blocks with gaps.
+
+---
 ## [2.0.0] — 2026-05
 
 ### Added
