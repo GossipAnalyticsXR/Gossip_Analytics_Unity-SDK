@@ -87,6 +87,21 @@ namespace GossipSDK.Components
         /// </summary>
         [SerializeField] private float voiceChangeSpanDb = 12f;
 
+        /// <summary>
+        /// Suelo de audibilidad absoluto, en dBFS. Por debajo de este nivel el
+        /// "cambio de voz" no mide voz: mide el baseline derrumbandose en
+        /// silencio, y cualquier crujido queda decenas de dB por encima de el.
+        ///
+        /// Medido el 05/09/2026 con gafas (99 muestras de diag, 11 clips): las
+        /// reacciones reales dispararon entre -34 y -18 dBFS; el unico falso
+        /// positivo de la sesion estaba a -79.7 dBFS. Con -60 quedan 20 dB de
+        /// margen por debajo y 26 dB por encima.
+        ///
+        /// A -200 la puerta queda desactivada, para poder revertir el
+        /// comportamiento desde el Inspector sin deshacer el commit.
+        /// </summary>
+        [SerializeField] private float voiceFloorDbfs = -60f;
+
         private HeatmapManager heatmapManager;
         private AudioClip micClip;
         private float[] ringBuffer;
@@ -324,6 +339,13 @@ namespace GossipSDK.Components
             float voiceChange = voiceChangeSpanDb > 0f
                 ? Mathf.Clamp01(voiceChangeDb / voiceChangeSpanDb)
                 : Mathf.Clamp01((rms - baselineRms) / Mathf.Max(baselineRms, 0.001f));
+
+            // Puerta acustica: sin nivel absoluto no hay voz que medir. Sin
+            // esto, en silencio baselineRms cae hasta el suelo de 1e-5 y un
+            // ruido de 1e-4 vale +20 dB, que con span 12 satura voiceChange a 1
+            // y dispara un clip vacio.
+            if (20f * Mathf.Log10(Mathf.Max(rms, 1e-7f)) < voiceFloorDbfs)
+                voiceChange = 0f;
 
             float V_eff = voiceChange * quality;
 
