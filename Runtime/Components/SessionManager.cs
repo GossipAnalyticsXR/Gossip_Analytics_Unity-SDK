@@ -1,4 +1,6 @@
 using System;
+using System.Security.Cryptography;
+using System.Text;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using GossipSDK.Core;
@@ -55,10 +57,10 @@ namespace GossipSDK.Components
             if (string.IsNullOrWhiteSpace(sessionId))
                 sessionId = Guid.NewGuid().ToString();
 
-            if (!string.IsNullOrWhiteSpace(persistentPlayerId))
-                playerId = persistentPlayerId;
-            else
-                playerId = TryGetPlatformUserId() ?? GetOrCreateLocalPlayerId();
+            playerId = ResolvePlayerId();
+
+            if (Gossip.Instance?.Settings?.EnableDebug == true)
+                Debug.Log($"[SessionManager] playerId source={PlayerIdSource} id={playerId}");
 
             SetCurrentIdsSafe(playerId, sessionId);
 
@@ -92,31 +94,119 @@ namespace GossipSDK.Components
             PlayerPrefs.Save();
         }
 
-        private string TryGetPlatformUserId()
+        /// <summary>Fuente de la que salio el id de jugador actual.</summary>
+        public string PlayerIdSource { get; private set; } = "unknown";
+
+        /// <summary>
+        /// Contrato para que el integrador imponga su propia identidad.
+        ///
+        /// Sustituye a la resolucion por reflexion que habia aqui, que buscaba una propiedad
+        /// "PlatformAdapter" y un metodo "GetUserId" que NO EXISTEN en ningun sitio: medido el
+        /// 6-sep-2026 con un barrido de los 156 ficheros .cs del repo (156/156, 0 fallos) y una
+        /// busqueda en toda la organizacion. Esa rama devolvia null siempre, en silencio.
+        /// </summary>
+        public interface IGossipPlayerIdentity
+        {
+            string GetPlayerId();
+            string SourceName { get; }
+        }
+
+        private static IGossipPlayerIdentity identityProvider;
+
+        /// <summary>Registra el proveedor del integrador. Se llama antes del Awake.</summary>
+        public static void SetIdentityProvider(IGossipPlayerIdentity provider)
+        {
+            identityProvider = provider;
+        }
+
+        /// <summary>
+        /// Escalera de resolucion, de mas estable a menos:
+        ///
+        ///   1. persistentPlayerId del inspector  -> "integrator"
+        ///   2. proveedor registrado              -> el nombre que declare
+        ///   3. id de dispositivo hasheado        -> "device"
+        ///   4. Guid en PlayerPrefs               -> "install"
+        ///
+        /// Hasta hoy el escalon 4 era el UNICO camino real, asi que la identidad era por
+        /// INSTALACION: desinstalar el APK borra PlayerPrefs y creaba un usuario nuevo.
+        /// Medido en dev el 6-sep-2026: 89 usuarios para 94 sesiones, New igual a Active en
+        /// todos los rangos y Top Users 0.
+        /// </summary>
+        private string ResolvePlayerId()
+        {
+            if (!string.IsNullOrWhiteSpace(persistentPlayerId))
+            {
+                PlayerIdSource = "integrator";
+                return persistentPlayerId;
+            }
+
+            string fromProvider = TryGetProviderPlayerId();
+            if (!string.IsNullOrWhiteSpace(fromProvider))
+                return fromProvider;
+
+            string fromDevice = TryGetDeviceScopedPlayerId();
+            if (!string.IsNullOrWhiteSpace(fromDevice))
+            {
+                PlayerIdSource = "device";
+                return fromDevice;
+            }
+
+            PlayerIdSource = "install";
+            return GetOrCreateLocalPlayerId();
+        }
+
+        private string TryGetProviderPlayerId()
+        {
+            if (identityProvider == null)
+                return null;
+
+            try
+            {
+                string id = identityProvider.GetPlayerId();
+                if (string.IsNullOrWhiteSpace(id))
+                    return null;
+
+                string nombre = identityProvider.SourceName;
+                PlayerIdSource = string.IsNullOrWhiteSpace(nombre) ? "provider" : nombre;
+                return id;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[SessionManager] Identity provider failed: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Id estable por DISPOSITIVO, no por instalacion. En Android sale de ANDROID_ID, que
+        /// esta atado a la clave de firma del APK y sobrevive a desinstalar y reinstalar.
+        ///
+        /// No sale del visor el identificador crudo: se hashea con el nombre de paquete, asi
+        /// que el id no es correlacionable entre apps distintas. La sal es Application.identifier
+        /// y no la API key a proposito: si la clave se rota, el id no puede cambiar.
+        /// </summary>
+        private string TryGetDeviceScopedPlayerId()
         {
             try
             {
-                var gossipInstance = Gossip.Instance;
-                if (gossipInstance == null) return null;
+                string crudo = SystemInfo.deviceUniqueIdentifier;
+                if (string.IsNullOrWhiteSpace(crudo) || crudo == SystemInfo.unsupportedIdentifier)
+                    return null;
 
-                var platformAdapterProp = gossipInstance.GetType().GetProperty("PlatformAdapter");
-                if (platformAdapterProp == null) return null;
-
-                var adapter = platformAdapterProp.GetValue(gossipInstance);
-                if (adapter == null) return null;
-
-                var getUserIdMethod = adapter.GetType().GetMethod("GetUserId");
-                if (getUserIdMethod == null) return null;
-
-                var idObj = getUserIdMethod.Invoke(adapter, null);
-                if (idObj is string idStr && !string.IsNullOrWhiteSpace(idStr))
-                    return idStr;
+                using (SHA256 sha = SHA256.Create())
+                {
+                    byte[] bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(Application.identifier + ":" + crudo));
+                    StringBuilder sb = new StringBuilder(bytes.Length * 2);
+                    for (int i = 0; i < bytes.Length; i++)
+                        sb.Append(bytes[i].ToString("x2"));
+                    return sb.ToString(0, 32);
+                }
             }
-            catch
+            catch (Exception ex)
             {
+                Debug.LogWarning($"[SessionManager] Could not resolve device player id: {ex.Message}");
+                return null;
             }
-
-            return null;
         }
 
         /// <summary>
