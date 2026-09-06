@@ -1,5 +1,4 @@
 using System;
-using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -59,8 +58,10 @@ namespace GossipSDK.Components
 
             playerId = ResolvePlayerId();
 
-            if (Gossip.Instance?.Settings?.EnableDebug == true)
-                Debug.Log($"[SessionManager] playerId source={PlayerIdSource} id={playerId}");
+            // A proposito Warning y no Log: GossipBuildPreprocessor apaga EnableDebug en
+            // toda build que no sea Development, y esta linea es justo la que dice de donde
+            // salio la identidad. Una por sesion.
+            Debug.LogWarning("[GossipID] source=" + PlayerIdSource + " id=" + playerId + " paquete=" + Application.identifier);
 
             SetCurrentIdsSafe(playerId, sessionId);
 
@@ -181,31 +182,51 @@ namespace GossipSDK.Components
         /// Id estable por DISPOSITIVO, no por instalacion. En Android sale de ANDROID_ID, que
         /// esta atado a la clave de firma del APK y sobrevive a desinstalar y reinstalar.
         ///
-        /// No sale del visor el identificador crudo: se hashea con el nombre de paquete, asi
+        /// No sale del visor el identificador crudo: se mezcla con el nombre de paquete, asi
         /// que el id no es correlacionable entre apps distintas. La sal es Application.identifier
         /// y no la API key a proposito: si la clave se rota, el id no puede cambiar.
+        ///
+        /// NO se usa SHA256. El linker de IL2CPP se lleva System.Security.Cryptography si nadie
+        /// la referencia desde codigo managed, y eso revienta SOLO en el dispositivo, nunca en
+        /// el editor: la excepcion caia en el catch y la identidad se iba en silencio al id por
+        /// instalacion. Medido el 6-sep-2026 en Quest con el paquete 2.0.3: el unico usuario de
+        /// la build 1.1.3 entro con GUID. Se mezcla con FNV-1a, que no depende de la BCL.
         /// </summary>
         private string TryGetDeviceScopedPlayerId()
         {
             try
             {
                 string crudo = SystemInfo.deviceUniqueIdentifier;
-                if (string.IsNullOrWhiteSpace(crudo) || crudo == SystemInfo.unsupportedIdentifier)
-                    return null;
 
-                using (SHA256 sha = SHA256.Create())
+                if (string.IsNullOrWhiteSpace(crudo) || crudo == SystemInfo.unsupportedIdentifier)
                 {
-                    byte[] bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(Application.identifier + ":" + crudo));
-                    StringBuilder sb = new StringBuilder(bytes.Length * 2);
-                    for (int i = 0; i < bytes.Length; i++)
-                        sb.Append(bytes[i].ToString("x2"));
-                    return sb.ToString(0, 32);
+                    Debug.LogWarning("[GossipID] deviceUniqueIdentifier no soportado en esta plataforma; se cae al id por instalacion.");
+                    return null;
                 }
+
+                string semilla = Application.identifier + ":" + crudo;
+                return Mezclar(semilla, 0xcbf29ce484222325UL) + Mezclar(semilla, 0x9e3779b97f4a7c15UL);
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[SessionManager] Could not resolve device player id: {ex.Message}");
+                Debug.LogWarning("[GossipID] fallo resolviendo el id por dispositivo: " + ex.GetType().Name + " " + ex.Message);
                 return null;
+            }
+        }
+
+        /// <summary>FNV-1a de 64 bits con semilla inicial variable. Devuelve 16 caracteres hex.</summary>
+        private static string Mezclar(string texto, ulong inicial)
+        {
+            unchecked
+            {
+                ulong h = inicial;
+                byte[] bytes = Encoding.UTF8.GetBytes(texto);
+                for (int i = 0; i < bytes.Length; i++)
+                {
+                    h ^= bytes[i];
+                    h *= 0x100000001b3UL;
+                }
+                return h.ToString("x16");
             }
         }
 

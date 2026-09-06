@@ -248,6 +248,7 @@ public async UniTask UploadEyeGazeImage(Ray gazeRay, RaycastHit hit, float fixat
                             data.EventSeverity,
                             data.VoiceChange,
                             data.VoiceQuality,
+                            data.VoiceBurstiness,
                             data.MovementIntensity,
                             data.EmotionalScore,
                             data.TriggerMode

@@ -102,6 +102,27 @@ namespace GossipSDK.Components
         /// </summary>
         [SerializeField] private float voiceFloorDbfs = -60f;
 
+        /// <summary>
+        /// Que tan estallido es el sonido, en vez de que tan alto.
+        ///
+        /// crest = 20*log10(pico/rms) de la ventana de analisis. Una risa o un
+        /// susto son un golpe corto: mucho pico sobre poca media. Hablar normal
+        /// es energia sostenida: pico y media parecidos.
+        ///
+        /// Medido el 06/09/2026 sobre la ventana real del disparador ([1,20 s,
+        /// 1,50 s] del clip, que es donde cae con postTriggerSeconds 1,5):
+        ///   habla normal  9,9 a 12,0 dB   (mediana 11,3)
+        ///   risa         16,2 a 25,8 dB   (mediana 19,3)
+        ///   susto        18,1 a 27,2 dB   (mediana 22,4)
+        ///
+        /// Con floor 12 y span 8: el habla da 0 y la reaccion mas floja 0,53.
+        ///
+        /// A span 0 la puerta queda desactivada (burstiness = 1) y el disparador
+        /// se comporta como antes, sin deshacer el commit.
+        /// </summary>
+        [SerializeField] private float burstinessFloorDb = 12f;
+        [SerializeField] private float burstinessSpanDb = 8f;
+
         private HeatmapManager heatmapManager;
         private AudioClip micClip;
         private float[] ringBuffer;
@@ -116,7 +137,7 @@ namespace GossipSDK.Components
         private bool snippetPending;
         private float snippetDueTime;
         private string snippetSceneName;
-        private float snippetE, snippetV, snippetQuality, snippetM, snippetScore;
+        private float snippetE, snippetV, snippetQuality, snippetBurstiness, snippetM, snippetScore;
         private int snippetSignals;
 
         private float baselineRms = 0.01f;
@@ -216,8 +237,8 @@ namespace GossipSDK.Components
             if (snippetPending && Time.time >= snippetDueTime)
             {
                 snippetPending = false;
-                TriggerSnippet(snippetE, snippetV, snippetQuality, snippetM,
-                               snippetScore, snippetSignals, snippetSceneName);
+                TriggerSnippet(snippetE, snippetV, snippetQuality, snippetBurstiness,
+                               snippetM, snippetScore, snippetSignals, snippetSceneName);
             }
 
             AnalyzeWindow();
@@ -331,6 +352,12 @@ namespace GossipSDK.Components
             float rms = ComputeRMS(window);
             float quality = ComputeQuality(window);
 
+            // Estallido contra sonido sostenido. Ver burstinessFloorDb.
+            float crestDb = ComputeCrestDb(window, rms);
+            float burstiness = burstinessSpanDb > 0f
+                ? Mathf.Clamp01((crestDb - burstinessFloorDb) / burstinessSpanDb)
+                : 1f;
+
             // Cuanto sube el nivel sobre la linea base, en dB. Es la magnitud que
             // se queria medir; el cociente lineal la aplastaba contra el techo.
             float baseRef = Mathf.Max(baselineRms, 1e-5f);
@@ -347,7 +374,10 @@ namespace GossipSDK.Components
             if (20f * Mathf.Log10(Mathf.Max(rms, 1e-7f)) < voiceFloorDbfs)
                 voiceChange = 0f;
 
-            float V_eff = voiceChange * quality;
+            // El multiplicador ya no es quality: quality detecta recorte digital y
+            // vale 1,000 siempre (medido en 137 clips). Lo que si discrimina es si
+            // el sonido fue un golpe o una frase.
+            float V_eff = voiceChange * burstiness;
 
             float E = Mathf.Clamp01(rms / rmsNormCeiling);
             float M = _currentMovementIntensity;
@@ -366,7 +396,7 @@ namespace GossipSDK.Components
             {
                 _diagTimer = 0f;
                 int micPos = Microphone.GetPosition(Microphone.devices.Length > 0 ? Microphone.devices[0] : null);
-                Debug.Log("[AudioReaction:diag] rawAmp=" + rms + " base=" + baselineRms + " vDb=" + voiceChangeDb + " E=" + E + " V=" + V_eff + " M=" + M + " score=" + score + " signals=" + signals + " micPos=" + micPos);
+                Debug.Log("[AudioReaction:diag] rawAmp=" + rms + " base=" + baselineRms + " vDb=" + voiceChangeDb + " E=" + E + " crest=" + crestDb + " burst=" + burstiness + " V=" + V_eff + " M=" + M + " score=" + score + " signals=" + signals + " micPos=" + micPos);
             }
 
                         if (Gossip.Instance?.Settings?.EnableDebug == true && (E > 0.1f || V_eff > 0.1f || M > 0.1f))
@@ -378,7 +408,7 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
             if ((signals >= 2 && score >= minEmotionalScore) ||
                 (E >= fastTriggerEnergyThreshold && (V_eff >= fastTriggerConditionThreshold || M >= fastTriggerConditionThreshold)))
             {
-                ArmSnippet(E, voiceChange, quality, M, score, signals);
+                ArmSnippet(E, voiceChange, quality, burstiness, M, score, signals);
             }
             else
             {
@@ -393,7 +423,7 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
         /// punto del heatmap y el nombre de la escena. Leerlos despues de la espera
         /// los falsearia si la escena cambia en ese segundo y medio.
         /// </summary>
-        void ArmSnippet(float E, float V, float Qv, float M, float score, int signals)
+        void ArmSnippet(float E, float V, float Qv, float B, float M, float score, int signals)
         {
             if (trackedTransform == null) return;
             if (Gossip.Instance == null) return;
@@ -406,7 +436,7 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
             // Sin espera se copia ya: identico al comportamiento anterior.
             if (postTriggerSeconds <= 0f)
             {
-                TriggerSnippet(E, V, Qv, M, score, signals, sceneName);
+                TriggerSnippet(E, V, Qv, B, M, score, signals, sceneName);
                 return;
             }
 
@@ -421,13 +451,14 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
             snippetE = E;
             snippetV = V;
             snippetQuality = Qv;
+            snippetBurstiness = B;
             snippetM = M;
             snippetScore = score;
             snippetSignals = signals;
         }
 
-        async void TriggerSnippet(float E, float V, float Qv, float M, float score,
-                                  int signals, string sceneName)
+        async void TriggerSnippet(float E, float V, float Qv, float B, float M,
+                                  float score, int signals, string sceneName)
         {
             // Se revalida: entre el disparo y esta copia ha pasado postTriggerSeconds
             // y el objeto o el SDK pueden haber desaparecido.
@@ -457,6 +488,7 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
                 EventSeverity = E,
                 VoiceChange = V,
                 VoiceQuality = Qv,
+                VoiceBurstiness = B,
                 MovementIntensity = M,
                 EmotionalScore = score,
                 TriggerMode = signals == 3 ? "3_of_3" : "2_of_3",
@@ -508,6 +540,26 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
                     clipped++;
 
             return 1f - Mathf.Clamp01((float)clipped / samples.Length);
+        }
+
+        /// <summary>
+        /// Factor de cresta en dB: 20*log10(pico/rms) de la ventana.
+        ///
+        /// Alto = golpe corto sobre fondo bajo (risa, susto). Bajo = energia
+        /// sostenida (hablar, respirar). Es lo que separa una reaccion de una
+        /// frase, y lo que el nivel por si solo no separa.
+        /// </summary>
+        float ComputeCrestDb(float[] samples, float rms)
+        {
+            float pico = 0f;
+            foreach (var s in samples)
+            {
+                float a = Mathf.Abs(s);
+                if (a > pico)
+                    pico = a;
+            }
+
+            return 20f * Mathf.Log10(Mathf.Max(pico, 1e-7f) / Mathf.Max(rms, 1e-7f));
         }
 
         byte[] FloatToWav(float[] samples, int sampleRate)
