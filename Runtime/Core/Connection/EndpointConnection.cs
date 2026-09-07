@@ -243,11 +243,17 @@ public async UniTask UploadEyeGazeImage(Ray gazeRay, RaycastHit hit, float fixat
                         SceneName = data.SceneName,
                         TimestampUtc = data.TimestampUtc,
 
+                        // Que version del SDK produjo esta reaccion. Sin esto no se
+                        // puede cortar por epoca: medido el 06/09/2026, las 298
+                        // reacciones de la app salian sin version, y los cortes del
+                        // disparador y el criterio para retirar VoiceQuality se quedaban
+                        // en «por fecha», que es mas fragil.
+                        SdkVersion = Constants.SdkVersion,
+
                         Metrics = new
                         {
                             data.EventSeverity,
                             data.VoiceChange,
-                            data.VoiceQuality,
                             data.VoiceBurstiness,
                             data.MovementIntensity,
                             data.EmotionalScore,

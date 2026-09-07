@@ -27,10 +27,6 @@ namespace GossipSDK.Tracking.GameplayMetrics
             {
                 get; set;
             }
-            public float VoiceQuality
-            {
-                get; set;
-            }
             /// <summary>Pico/rms de la ventana, normalizado. Ver burstinessFloorDb.</summary>
             public float VoiceBurstiness
             {

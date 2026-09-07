@@ -1,14 +1,68 @@
-# Third-Party Notices
+THIRD-PARTY SOFTWARE NOTICES
 
-This SDK includes or depends on third-party software. Each component is subject to its own license.
+Gossip Analytics SDK — com.gossip.core
 
-- UniTask (Cysharp) — MIT License  
-  https://github.com/Cysharp/UniTask
+This SDK includes or depends on the following third-party packages.
+Each is subject to its own license terms.
 
-- SocketIOUnity (itisnajim) — License in repository  
-  https://github.com/itisnajim/SocketIOUnity
+------------------------------------------------------------------------
 
-- Unity Input System — Unity Companion License / Unity Terms  
-  https://docs.unity3d.com/Packages/com.unity.inputsystem
+LiteDB
 
-Other XR dependencies are installed via Unity packages as required by your project and platform.
+https://github.com/mbdavid/LiteDB
+
+License: MIT
+
+Copyright (c) Mauricio David
+
+------------------------------------------------------------------------
+
+R3
+
+https://github.com/Cysharp/R3
+
+License: MIT
+
+Copyright (c) Cysharp, Inc.
+
+------------------------------------------------------------------------
+
+UniTask
+
+https://github.com/Cysharp/UniTask
+
+License: MIT
+
+Copyright (c) Cysharp, Inc.
+
+------------------------------------------------------------------------
+
+SocketIOUnity
+
+https://github.com/itisnajim/SocketIOUnity
+
+License: MIT
+
+Copyright (c) itisnajim
+
+------------------------------------------------------------------------
+
+Unity XR Plugin Management
+
+https://docs.unity3d.com/Packages/com.unity.xr.management@latest
+
+License: Unity Companion Package License
+
+Copyright (c) Unity Technologies ApS
+
+------------------------------------------------------------------------
+
+Unity Input System
+
+https://github.com/Unity-Technologies/InputSystem
+
+License: Unity Companion Package License
+
+Copyright (c) Unity Technologies ApS
+
+------------------------------------------------------------------------

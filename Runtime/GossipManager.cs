@@ -153,7 +153,18 @@ private bool panoramaCreated;
                 Gossip.UserPostureTracker, Gossip.UserEventTracker, Gossip.UserBalanceTracker,
                 Gossip.HandControllerTracker,
                 Gossip.BoundaryPressureSummaryTracker,
-                Gossip.MicPermissionTracker
+                Gossip.MicPermissionTracker,
+
+                // Los eventos de ciclo de vida de sesion viajaban SOLO en el reenvio de
+                // 30 s (Gossip.resendIntervalSeconds), no en este ciclo de 5 s. Medido
+                // el 6-sep-2026 sobre nueve sesiones reales: el documento de sesion
+                // aparecia entre 30 y 36 s despues del primer evento, y una sesion mas
+                // corta que eso moria con todo en el disco del dispositivo. Sus eventos
+                // salian en el siguiente arranque largo; una espero 17 minutos.
+                //
+                // Son cuatro eventos por sesion: no hay problema de volumen. Position y
+                // Rotation siguen fuera a proposito, esos si lo tienen.
+                Gossip.SessionTracker
             };
         }
 

@@ -137,7 +137,7 @@ namespace GossipSDK.Components
         private bool snippetPending;
         private float snippetDueTime;
         private string snippetSceneName;
-        private float snippetE, snippetV, snippetQuality, snippetBurstiness, snippetM, snippetScore;
+        private float snippetE, snippetV, snippetBurstiness, snippetM, snippetScore;
         private int snippetSignals;
 
         private float baselineRms = 0.01f;
@@ -237,7 +237,7 @@ namespace GossipSDK.Components
             if (snippetPending && Time.time >= snippetDueTime)
             {
                 snippetPending = false;
-                TriggerSnippet(snippetE, snippetV, snippetQuality, snippetBurstiness,
+                TriggerSnippet(snippetE, snippetV, snippetBurstiness,
                                snippetM, snippetScore, snippetSignals, snippetSceneName);
             }
 
@@ -350,7 +350,6 @@ namespace GossipSDK.Components
             }
 
             float rms = ComputeRMS(window);
-            float quality = ComputeQuality(window);
 
             // Estallido contra sonido sostenido. Ver burstinessFloorDb.
             float crestDb = ComputeCrestDb(window, rms);
@@ -374,9 +373,10 @@ namespace GossipSDK.Components
             if (20f * Mathf.Log10(Mathf.Max(rms, 1e-7f)) < voiceFloorDbfs)
                 voiceChange = 0f;
 
-            // El multiplicador ya no es quality: quality detecta recorte digital y
-            // vale 1,000 siempre (medido en 137 clips). Lo que si discrimina es si
-            // el sonido fue un golpe o una frase.
+            // El multiplicador es la burstiness. El antiguo quality detectaba
+            // recorte digital y valia 1,000 en los 137 clips medidos, o sea
+            // multiplicaba por uno siempre; lo que si discrimina es si el sonido
+            // fue un golpe o una frase.
             float V_eff = voiceChange * burstiness;
 
             float E = Mathf.Clamp01(rms / rmsNormCeiling);
@@ -408,7 +408,7 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
             if ((signals >= 2 && score >= minEmotionalScore) ||
                 (E >= fastTriggerEnergyThreshold && (V_eff >= fastTriggerConditionThreshold || M >= fastTriggerConditionThreshold)))
             {
-                ArmSnippet(E, voiceChange, quality, burstiness, M, score, signals);
+                ArmSnippet(E, voiceChange, burstiness, M, score, signals);
             }
             else
             {
@@ -423,7 +423,7 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
         /// punto del heatmap y el nombre de la escena. Leerlos despues de la espera
         /// los falsearia si la escena cambia en ese segundo y medio.
         /// </summary>
-        void ArmSnippet(float E, float V, float Qv, float B, float M, float score, int signals)
+        void ArmSnippet(float E, float V, float B, float M, float score, int signals)
         {
             if (trackedTransform == null) return;
             if (Gossip.Instance == null) return;
@@ -436,7 +436,7 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
             // Sin espera se copia ya: identico al comportamiento anterior.
             if (postTriggerSeconds <= 0f)
             {
-                TriggerSnippet(E, V, Qv, B, M, score, signals, sceneName);
+                TriggerSnippet(E, V, B, M, score, signals, sceneName);
                 return;
             }
 
@@ -450,14 +450,13 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
             snippetSceneName = sceneName;
             snippetE = E;
             snippetV = V;
-            snippetQuality = Qv;
             snippetBurstiness = B;
             snippetM = M;
             snippetScore = score;
             snippetSignals = signals;
         }
 
-        async void TriggerSnippet(float E, float V, float Qv, float B, float M,
+        async void TriggerSnippet(float E, float V, float B, float M,
                                   float score, int signals, string sceneName)
         {
             // Se revalida: entre el disparo y esta copia ha pasado postTriggerSeconds
@@ -487,7 +486,6 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
             {
                 EventSeverity = E,
                 VoiceChange = V,
-                VoiceQuality = Qv,
                 VoiceBurstiness = B,
                 MovementIntensity = M,
                 EmotionalScore = score,
@@ -530,16 +528,6 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
             foreach (var s in samples)
                 sum += s * s;
             return Mathf.Sqrt((float)(sum / samples.Length));
-        }
-
-        float ComputeQuality(float[] samples)
-        {
-            int clipped = 0;
-            foreach (var s in samples)
-                if (Mathf.Abs(s) > 0.98f)
-                    clipped++;
-
-            return 1f - Mathf.Clamp01((float)clipped / samples.Length);
         }
 
         /// <summary>

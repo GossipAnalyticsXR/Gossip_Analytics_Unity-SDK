@@ -1,95 +1,91 @@
-# Changelog
-
-All notable changes to the **Gossip Analytics Unity SDK** will be documented in this file.
-
-This project follows **Semantic Versioning** (MAJOR.MINOR.PATCH):
-- MAJOR: breaking changes
-- MINOR: new functionality (backward compatible)
-- PATCH: bug fixes / documentation / internal improvements (backward compatible)
-
----
-
-## [Unreleased]
-### Added
-- N/A
+## [2.0.4] — 2026-09
 
 ### Changed
-- N/A
+
+- AudioReactionTracker: el disparador distingue un golpe de una frase. La senal de
+  voz ya no se multiplica por VoiceQuality —que detecta recorte digital y valia
+  1,000 en los 137 clips medidos, o sea multiplicaba por uno siempre— sino por
+  VoiceBurstiness, el factor de cresta de la ventana (pico/rms en dB) normalizado.
+  Medido en la ventana real del disparador: habla 9,9-12,0 dB, reacciones
+  16,2-27,2 dB. Campos nuevos burstinessFloorDb (12 dB) y burstinessSpanDb (8 dB).
+  La metrica VoiceBurstiness viaja en el payload y la linea de diag anade crest= y
+  burst=.
 
 ### Fixed
-- N/A
 
----
+- SessionManager: el id por dispositivo ya no falla en silencio dentro del
+  dispositivo. SHA256 desaparecia del build porque el linker de IL2CPP se lleva
+  System.Security.Cryptography cuando nadie la referencia desde codigo managed; la
+  excepcion caia en un catch y la identidad se iba al id por instalacion sin avisar.
+  Se sustituye por FNV-1a propio, sin dependencias de la BCL. Medido en Quest con la
+  2.0.3 instalada: 90 de 90 usuarios en formato GUID, ninguno con forma de hash.
 
-## [2.0.1] — 2026-09-05
+## [2.0.3] — 2026-09
 
 ### Fixed
 
-- **Player identity is now stable per installation.** `SessionManager` generated a new
-  `Guid` on every app launch when the platform did not provide a user id, so every launch
-  created a brand-new user in the dashboard. The SDK now persists an id in `PlayerPrefs`
-  (`gossip_player_id`), and `persistentPlayerId` is a `[SerializeField]` with a public
-  `SetPersistentPlayerId()` for integrators who already have their own login.
-- **Orphan session recovery.** `OnApplicationQuit` deleted a `PlayerPrefs` key that never
-  existed, so every launch replayed a bogus orphan-session recovery — and sent that
-  `session_end` with the new session id instead of the orphan one. Both fixed.
-- **Continuous audio capture.** Audio reactions are no longer stitched from 256-sample
-  blocks with gaps.
+- SessionManager: la identidad de jugador se resuelve por una escalera, de mas
+  estable a menos: persistentPlayerId del inspector, proveedor registrado con
+  SetIdentityProvider, id de dispositivo hasheado, y Guid en PlayerPrefs como ultimo
+  recurso. La rama anterior resolvia por reflexion una PlatformAdapter y un
+  GetUserId que no existen en ningun sitio —barrido de los 156 ficheros .cs del
+  repo, 156/156, 0 fallos—, asi que devolvia null siempre dentro de un catch vacio y
+  la identidad salia del Guid de PlayerPrefs, que en Android muere al desinstalar el
+  APK. Era por INSTALACION, no por dispositivo ni por persona. Medido en dev:
+  89 usuarios para 94 sesiones, New igual a Active en todos los rangos.
+- TextNarrationCoverageTracker: sdk_version mandaba Application.version, o sea la
+  version de la APP. Ahora sale de la constante Constants.SdkVersion. app_version no
+  cambia: esa si es Application.version y era correcta.
 
----
+## [2.0.2] — 2026-09
+
+### Fixed
+
+- AudioReactionTracker: la senal de voz ya no cuenta por debajo del suelo de
+  audibilidad. En silencio baselineRms cae hasta su suelo de 1e-5 y cualquier
+  ruido de 1e-4 quedaba +20 dB por encima, saturando voiceChange a 1 y
+  disparando clips vacios. Nuevo campo voiceFloorDbfs (-60 dBFS por defecto).
+  Medido con gafas el 05/09/2026: los disparos reales estaban entre -34 y
+  -18 dBFS; el unico falso positivo, a -79.7 dBFS.
+
+## [2.0.1] — 2026-09
+
+### Fixed
+
+- SessionManager: el id de jugador ya no se reinventa en cada arranque. Se persiste en
+  PlayerPrefs (gossip_player_id) cuando la plataforma no da uno, y persistentPlayerId pasa
+  a ser SerializeField con SetPersistentPlayerId() publico. Sin esto, cada arranque de la
+  app creaba un usuario nuevo en el dashboard.
+- SessionManager: OnApplicationQuit borraba una clave de PlayerPrefs que no existia, asi
+  que cada arranque recuperaba una sesion huerfana falsa. Y ese session_end se mandaba con
+  el sessionId nuevo en vez del huerfano.
+- AudioReactionTracker: el audio llega continuo (fin del pegado en bloques de 256).
+
 ## [2.0.0] — 2026-05
 
-### Added
+Internal development branch — see public SDK repo for full release notes:
 
-- Instrumentation Manager: 19 trackers across Spatial (5), Device (10), XR (4) categories
-- Instrumentation Manager: auto-assign Camera.main to UserPostureComponent.headTransform and EyeTrackingComponent.cam on add
-- Instrumentation Manager: auto-fill ExperienceInfoComponent.appVersion from Application.version and targetHardware from SystemInfo.deviceModel via SerializedObject delayCall
-- Instrumentation Manager: Scene Health Check (XROrigin TrackingOriginMode warning; XRInputModalityManager missing hand prefab warning)
-- Instrumentation Manager: preAddHint / postAddHint per-tracker guidance copy in Trackers tab
-- Instrumentation Manager: 3-tier device tracker fallback (GossipManager -> _playerObject -> "Gossip Device Trackers" host)
-- Instrumentation Manager: color-coded footer status bar (objects / trackers / permissions counts)
-- Instrumentation Manager: Done button cancel-safe (SaveCurrentModifiedScenesIfUserWantsTo return value checked)
-- GossipBuildPreprocessor: auto-disables EnableDebug before every build (IPreprocessBuildWithReport)
-- GossipUninstaller: clears Library/PackageCache/com.gossip.core@* after Client.Remove()
-- AudioVolumeTrackerComponent: configurable dB normalisation range via public fields dbMin (default -80f) and dbMax (default 0f)
-- AudioReactionTrackerComponent: 8 tunable [SerializeField] parameters — scoreWeightEnergy/Voice/Movement, signalThresholdEnergy/Voice/Movement, rmsNormCeiling, movementSpeedCeiling
-- EyeTrackingComponent: configurable head-fallback multipliers (headFallbackCooldownMultiplier = 1.5f, headFallbackThresholdMultiplier = 2.5f)
-- ConnectivityMonitorComponent: configurable speed test timeout via public int speedTestTimeoutSeconds (default 5)
-- HeatmapSceneAutoCapture: configurable captureDelay (default 0.5f) and cameraHeight (default 100f) as [SerializeField] fields
-- TextNarrationCoverageTracker: sdk_version now uses Application.version dynamically
+https://github.com/GossipAnalyticsXR/Gossip_Analytics_Unity-SDK/blob/main/CHANGELOG
 
-### Fixed
+### Summary of changes in this release
 
-- AudioReactionTrackerComponent: EventSeverity computed from real microphone RMS; MovementIntensity from normalised head velocity (were hardcoded 0.6 / 0.4)
-- AudioReactionTrackerComponent: trackedTransform auto-assigned in Start() via Camera.main?.transform fallback; TriggerSnippet() null guard added
-- HandControllerTrackingComponent: removed fabricated Send("left", Quaternion.identity) from Start() — first real data arrives from periodic Update() sampler
-- MistakeReporter: replaced silent GossipManager fallback with Debug.LogError + disabled = true; all data paths guarded with if (disabled) return
-- PlatformMonitorComponent: ControllersLatency and AmountDevicesInGame marked with TODO comments (not yet implemented)
-- Instrumentation Manager: Unity overloaded null check enforced for tracker component cache — prevents ArgumentException on stale destroyed-object references
-- Instrumentation Manager: AutoDetectPlayer and AutoAddTrackers now run on every Open() call, not only on cold domain-reload start
+- Instrumentation Manager expanded to 19 trackers (Spatial 5, Device 10, XR 4)
+- Editor auto-assignment for UserPosture, EyeTracking, ExperienceInfo components
+- GossipBuildPreprocessor: auto-disables EnableDebug before builds
+- GossipUninstaller: PackageCache cleanup after Client.Remove()
+- 5 phases of hardcoded data parametrisation across 9 Runtime files
+- MistakeReporter: _disabled guard replacing silent fallback
+- HandControllerTrackingComponent: removed fabricated pose event on Start()
+- TextNarrationCoverageTracker: dynamic sdk_version via Application.version
 
----
+## [1.1.1] — 2026-05
 
-## [1.1.1] - 2026-05-24
-### Fixed
-- **EyeTrackingTracker.cs** and **InputUsageTracker.cs**: Removed invalid `[SerializeField]` attributes from `EntityData` auto-properties. `[SerializeField]` only works on instance fields, not auto-properties — Unity silently ignored them, causing `EntityData` values to never serialize correctly.
-- **Gossip.cs**: `EyeTrackingTracker` and `InputUsageTracker` were missing from the `RunResendLoopAsync` resend worker list. Both trackers now share the same automatic retry resilience as all other trackers.
+(see public SDK repo for details)
 
----
+## [1.1.0] — 2026-05
 
-## [1.0.0] - 2026-02-02
-### Added
-- Initial public release of the Gossip Analytics Unity SDK.
-- Core SDK runtime via `GossipManager`.
-- Settings asset workflow (`GossipAnalyticsSettings`) for environment configuration (Dev/Beta/Production).
-- OpenXR-first support via `XR Bootstrap`.
-- Public integration documentation:
-  - `README.md`
-  - `docs/trackers.md`
-- Trackers (public reference): accessories, ads, audio reaction/volume, avatar, battery, connectivity, difficulty, distance, experience info, eye tracking, hand controller, input usage, interaction, memory/performance, mistakes, multiplayer, passthrough, pause, peripherals, platform, playable area, position, reality mode, rotation/velocity, server status, session, user balance, user posture, custom user events.
+(see public SDK repo for details)
 
-### Changed
-- N/A
+## [1.0.0] — 2026-05
 
-### Fixed
-- N/A
+Initial release.

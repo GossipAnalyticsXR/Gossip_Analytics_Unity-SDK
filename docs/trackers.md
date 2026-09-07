@@ -1,125 +1,95 @@
-# Trackers — Gossip Analytics Unity SDK (Public Reference)
+# Trackers
 
-This document describes the trackers available in the Gossip Analytics Unity SDK at an **integration** level:
-- Which trackers exist
-- Which component to use (if applicable)
-- What each tracker does (high level)
-- Common requirements (permissions / scene setup)
-- Whether it feeds heatmaps (coordinates or images)
+Every tracker is a Unity component you add to a GameObject in your scene. You do not
+add them by hand: open **Window -> Gossip Analytics -> 2 - Instrumentation Manager**,
+which lists all of them, adds the ones you keep, and auto-assigns the references it can
+resolve (head camera, XROrigin, player transform).
 
-> Note: Trackers are primarily exposed as Unity **Components**.  
-> If a tracker is a component, it must be present in the scene to run.  
-> Internal network details, payload formats, and ingestion logic are not documented in the public repository.
+This page is the reference for what each one records and what it needs from you.
 
----
+## How to read the tables
 
-## General rules
+| Setup | Meaning |
+|---|---|
+| **Auto** | Add it and it works. No Inspector fields, no code. |
+| **Inspector** | Add it and set at least one field in the Inspector before it reports useful data. |
+| **Code** | Add it and call the listed method from your own code. Without the call it reports nothing (or only a default). |
 
-- **GossipManager** is the SDK’s main controller: it initializes and coordinates trackers and overall SDK runtime behavior once the experience starts.
-- **Settings**: configuration lives in `GossipAnalyticsSettings` under `Assets/Resources/` (Create → Gossip → Settings).
-- **OpenXR-first**: you must add **XR Bootstrap** to the scene to ensure XR system compatibility.
-- **Permissions**: some trackers require permissions (microphone/camera/spatial data) depending on your app’s usage.
-- **Heatmaps**:
-  - Some trackers feed heatmaps using **coordinates** (movement, eye, interaction).
-  - Image-based heatmap capture may be enabled in **Production** environments depending on configuration.
+Deselecting a tracker in the Instrumentation Manager removes the component. Nothing is
+collected for a tracker that is not in the scene.
 
----
+## Movement and body
 
-## Trackers table
+| Tracker | Component | Setup | What it records |
+|---|---|---|---|
+| Position Tracker | `PositionTrackerComponent` | Auto | Player position (X, Y, Z) over time. Feeds the heatmaps. |
+| Rotation & Velocity | `RotationAndVelocityTrackerComponent` | Auto | Rotation, speed and angular velocity. |
+| Posture Tracker | `UserPostureComponent` | Inspector | Standing / sitting / crouching. Head camera is auto-assigned; you must set `sitThreshold` and `crouchThreshold` in metres to match your rig. |
+| Balance Tracker | `UserBalanceTrackerComponent` | Auto | Body stability and oscillation. |
+| Distance Tracker | `DistanceTrackerComponent` | Auto | Total player displacement over the session. `playerTransform` is auto-assigned to the main camera. |
+| Movement Heatmap | `PlayerMovementHeatmapComponent` | Inspector | Samples position to build a spatial heatmap. Must sit on the Player or XROrigin object; set `worldMinXZ` and `worldMaxXZ` to your scene bounds. |
+| Playable Area | `PlayableAreaComponent` | Auto | Guardian / play-area bounds (width, depth, area in m2) on session start. |
 
-> Columns:
-> - **Tracker**: functional tracker name
-> - **Component**: component/script to place in the scene (if applicable)
-> - **What it records**: high-level integration description
-> - **Setup**: where to place it (guidance only)
-> - **Permissions**: typical required permissions (if any)
-> - **Heatmap**: whether it feeds heatmaps and which type
+## Interaction and input
 
-### Gameplay / Monetization / Content
+| Tracker | Component | Setup | What it records |
+|---|---|---|---|
+| Hand & Controller Tracking | `HandControllerTrackingComponent` | Auto | Hand and controller movement. |
+| Input Usage Tracker | `InputUsageTrackerComponent` | Auto | Time spent on controllers versus hand tracking. |
+| Peripheral Tracker | `PeripheralAutoTrackerComponent` | Auto | Connected XR peripherals: type, brand and session duration. |
+| Eye Tracking | `EyeTrackingComponent` | Inspector | Gaze hits and fixation. Must be attached to the camera. |
 
-| Tracker | Component | What it records (high level) | Setup | Permissions | Heatmap |
-|---|---|---|---|---|---|
-| AccessoriesTracker | `AccessoriesComponent` | Accessory purchases/acquisitions (product, payment/method, etc.) | Scene (relevant system) | — | No |
-| AdTracker | `AdComponent` | Ad start/end, impressions/interactions, rewards | Scene (ad system) | — | No |
-| AvatarTracker | `AvatarTrackerComponent` | Avatar acquisition/sale/changes (id, color, price, etc.) | Scene (avatar system) | — | No |
-| DifficultyTracker | `DifficultyComponent` | Current level/state difficulty | Scene (game state) | — | No |
-| ExperienceInfoTracker | `ExperienceInfoComponent` | Load time and basic experience info | Scene (startup manager) | — | No |
+## Audio and reactions
 
----
+| Tracker | Component | Setup | What it records |
+|---|---|---|---|
+| Audio Volume Tracker | `AudioVolumeTrackerComponent` | Inspector | In-app audio volume. Assign an AudioMixer for per-channel data (master, music, SFX), or leave it empty to read `AudioListener.volume`. |
+| Audio Reaction Tracker | `AudioReactionTrackerComponent` | Inspector | Emotional voice reactions captured through the microphone. **Requires the Microphone permission**; add the permission handler from the Instrumentation Manager. |
 
-### Audio
+## Session, platform and health
 
-| Tracker | Component | What it records (high level) | Setup | Permissions | Heatmap |
-|---|---|---|---|---|---|
-| AudioReactionTracker | `AudioReactionTrackerComponent` | Strong user reactions and an audio snippet (e.g., .wav) | Scene (global) | Microphone | No |
-| AudioVolumeTracker | `AudioVolumeTrackerComponent` | In-app volume changes (not device volume) | Scene (audio system) | — | No |
+| Tracker | Component | Setup | What it records |
+|---|---|---|---|
+| Experience Info | `ExperienceInfoComponent` | Auto | App version, target hardware and scene load time (Awake-to-Start delta). Version is read from Player Settings. |
+| Platform Monitor | `PlatformMonitorComponent` | Auto | Platform, device model, screen resolution and audio state on session start. |
+| Performance Monitor | `PerformanceMonitorComponent` | Auto | FPS and memory usage. |
+| Battery Monitor | `BatteryMonitorComponent` | Auto | Battery level and charging status. |
+| Connectivity Monitor | `ConnectivityMonitorComponent` | Auto | Network connection type and speed. |
+| Pause Tracker | `PauseComponent` | Auto | Pause and resume events with duration. OS-level pauses (headset removal, Alt+Tab) are detected via `OnApplicationPause`. |
+| Crash Reporter | `CrashReporterComponent` | Auto | Unity exceptions and errors, via `Application.logMessageReceived`. `captureExceptions` is true by default. |
+| Reality Mode Monitor | `RealityModeMonitor` | Auto | Transitions between VR, MR, 2D and unknown XR modes, with per-mode duration. |
+| Passthrough Tracker | `PassthroughComponent` | Code | MR passthrough enable/disable events and active duration. Wire it to your own passthrough toggle. |
 
----
+## Scene capture
 
-### Device / Connectivity / Performance
+| Tracker | Component | Setup | What it records |
+|---|---|---|---|
+| Heatmap Scene Capture | `HeatmapSceneAutoCapture` | Auto | A top-down image of the scene on start, uploaded as the heatmap background. Auto-frames to scene bounds. |
 
-| Tracker | Component | What it records (high level) | Setup | Permissions | Heatmap |
-|---|---|---|---|---|---|
-| BatteryTracker | `BatteryMonitorComponent` | Battery level/status over time | Scene (global) | — | No |
-| ConnectivityTracker | `ConnectivityMonitorTracker` | Network state, connection type, connectivity metrics | Scene (global) | — | No |
-| MemoryTracker | `PerformanceMonitorComponent` | Memory/performance metrics during the session | Scene (global) | — | No |
-| PlatformTracker | `PlatformMonitorComponent` | Device info (model, resolution, version, etc.) | Scene (global) | — | No |
-| ServerStatusTracker | `ServerStatusComponent` | Server status indicators for developer diagnostics | Scene (dev/debug) | — | No |
+## Game design and economy
 
----
+These report a default on start; the real values only arrive when you call the method.
 
-### Movement / Space / Posture
+| Tracker | Component | Setup | What it records |
+|---|---|---|---|
+| Difficulty Tracker | `DifficultyComponent` | Code | Difficulty level changes. Call `NotifyDifficulty()`. |
+| Avatar Tracker | `AvatarTrackerComponent` | Code | Avatar selections and purchases. Call `NotifyAvatar()` from your purchase code. |
+| Accessories Tracker | `AccessoriesComponent` | Code | In-app item and accessory purchases. Call `ReportPurchased()` from your purchase code. |
+| Ad Tracker | `AdComponent` | Code | Ad impressions, interactions, rewards and duration. Set Ad ID, network and placement in the Inspector, then call `RecordImpression()`, `RecordInteraction()` or `RecordReward()` from your ad SDK callbacks. |
 
-| Tracker | Component | What it records (high level) | Setup | Permissions | Heatmap |
-|---|---|---|---|---|---|
-| PositionTracker | `PositionTrackerComponent` | Player position during the experience | Player | — | Yes (coordinates) |
-| RotationTracker | `RotationAndVelocityTrackerComponent` | Player rotation/velocity at intervals | Player | — | Yes (coordinates) |
-| DistanceTracker | `DistanceTrackerComponent` | Distance between player and the assigned object | Scene (per object) | — | No |
-| PlayableAreaTracker | `PlayableAreaComponent` | Play/usage area dimensions | Scene (global) | — | No |
-| UserPostureTracker | `UserPostureTrakcerComponent` | User posture state (standing/sitting/other states) | Player (head) | — | No |
-| UserBalanceTracker | `UserBalanceTrackerComponent` | User body stability (balance) | Player (head) | — | No |
-| RealityModeTracker | `RealityModeMonitor` | Reality mode state/changes (VR/MR/etc.) | Scene (global) | — | No |
-| PauseTracker | `PauseComponent` | Pauses/resumes and duration | Scene (pause manager) | — | No |
+## Multiplayer and backend
 
----
+| Tracker | Component | Setup | What it records |
+|---|---|---|---|
+| Multiplayer Tracker | `MultiplayerTrackerComponent` | Inspector | Room / match snapshots. Emits on start with an empty room unless configured. |
+| Server Status | `ServerStatusComponent` | Inspector | Polls a game-server status endpoint on an interval. Deselect it if you have no dedicated game server. |
 
-### Interaction / Input / Peripherals
+## Notes
 
-| Tracker | Component | What it records (high level) | Setup | Permissions | Heatmap |
-|---|---|---|---|---|---|
-| InteractionTracker | `InteractableComponent` | Interactions with assigned objects (event, position, etc.) | Scene (interactable objects) | — | Yes (coordinates) + (images in Production, if enabled) |
-| InputUsageTracker | `InputUsageTrackerComponent` | Controller vs hands usage and time spent | Scene (global) | — | No |
-| HandControllerTracker | `HandControllerTrackingComponent` | Hand controller usage/rotation (as supported) | Scene (global) | — | No |
-| PeripheralTracker | `PeripheralAutoTrackerComponent` | Active peripherals and usage time | Scene (global) | — | No |
-| MultiplayerTracker | `MultiplayerTrackerComponent` | Multiplayer room events (joins/leaves/state) | Scene (multiplayer manager) | — | No |
-| MistakeTracker | `MistakeReporter` | Developer-reported errors (manual) | Scene (where errors occur) | — | No |
-
----
-
-### Session / Custom Events
-
-| Tracker | Component | What it records (high level) | Setup | Permissions | Heatmap |
-|---|---|---|---|---|---|
-| SessionTracker | `SessionManager` | Session start/end and key lifecycle events | Scene (with GossipManager) | — | No |
-| UserEventsTracker | (no component) | Custom developer-defined events (called from code) | Code-only | — | No |
-
----
-
-## Eye Tracking
-
-| Tracker | Component | What it records (high level) | Setup | Permissions | Heatmap |
-|---|---|---|---|---|---|
-| EyeTrackingTracker | `EyeTrackingComponent` | Gaze signals (when supported by device/runtime) | Player (camera/view) | (platform-dependent) | Yes (coordinates) + (images in Production, if enabled) |
-
-> Note: Eye Tracking is **device-dependent** and requires XR configuration.  
-> The SDK is OpenXR-first and can operate using available runtime modes (real/simulated) depending on support.
-
----
-
-## Heatmaps
-
-### Coordinate-based heatmaps
-These trackers feed coordinate-based heatmaps:
-- `PlayerMovementHeatmapComponent` (position)
-- `EyeTrackingComponent` (gaze)
-- `InteractableComponent` (interactions)
+- Trackers that say **Auto** still need the Gossip manager in the scene and a valid API
+  key in `GossipSettings`. Run **Window -> Gossip Analytics -> 1 - Quick Setup** first.
+- A tracker that is added but never configured is not an error: it reports its default
+  and shows up in the dashboard with empty or constant values. If a card looks flat,
+  check the Setup column here before assuming the data is wrong.
+- Objects the user can interact with are instrumented separately, from the
+  **Interactables** tab of the Instrumentation Manager, not from this list.

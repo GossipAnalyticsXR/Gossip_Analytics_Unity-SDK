@@ -1,14 +1,15 @@
 # Security Policy
 
-## Reporting a vulnerability
-If you believe you have found a security issue or vulnerability in the Gossip Analytics Unity SDK, please report it to:
+## Supported Versions
 
-privacy@gossipanalytics.com
+Only the latest release of the Gossip Analytics SDK receives security updates.
 
-Please include:
-- A clear description of the issue
-- Steps to reproduce (if possible)
-- Affected versions/commit
-- Any relevant logs or screenshots (redact API keys and sensitive data)
+## Reporting a Vulnerability
 
-Please do not open public GitHub issues for security reports.
+To report a security vulnerability, use GitHub private vulnerability reporting:
+
+https://github.com/GossipAnalyticsXR/Gossip_Analytics_Unity_CoreSDK/security/advisories/new
+
+Do not open a public issue for security vulnerabilities.
+
+We will respond within 72 hours and coordinate fix and disclosure together.

@@ -14,6 +14,20 @@ namespace GossipSDK.Components
         /// since the previous one, so the backend can sum them into total usage.</summary>
         [SerializeField] private float heartbeatSeconds = 300f;
 
+        /// <summary>Primer latido, mucho mas corto que el resto.
+        ///
+        /// La deteccion del `Start` es una foto del arranque, y en ese instante
+        /// `InputDevices` normalmente todavia no ha enumerado los mandos: XR tarda
+        /// un momento en levantar. Con el latido en 300 s, una sesion corta no
+        /// volvia a mirar nunca, y en gafas el cierre suele ser abrupto, asi que el
+        /// envio de OnApplicationQuit tampoco llega. Medido el 06/09/2026 sobre 41
+        /// sesiones con visor: solo 2 registraron mando, en una app que exige mando.
+        /// </summary>
+        [SerializeField] private float firstHeartbeatSeconds = 15f;
+
+        /// <summary>Falso hasta que se manda el primer latido corto.</summary>
+        private bool firstHeartbeatDone;
+
         /// <summary>Shortest interval worth reporting, to avoid noise when several
         /// lifecycle callbacks fire back to back.</summary>
         private const double MinReportedSeconds = 0.5d;
@@ -32,7 +46,9 @@ namespace GossipSDK.Components
         private void Update()
         {
             timer += Time.deltaTime;
-            if (timer < heartbeatSeconds) return;
+            float objetivo = firstHeartbeatDone ? heartbeatSeconds : firstHeartbeatSeconds;
+            if (timer < objetivo) return;
+            firstHeartbeatDone = true;
             timer = 0f;
             SendElapsed();
         }
