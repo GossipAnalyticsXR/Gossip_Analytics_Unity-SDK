@@ -99,6 +99,23 @@ namespace GossipSDK.Core
         public bool ApiKeyValid { get; private set; } = true;
         public bool IsSessionReady { get; private set; }
 
+        /// <summary>
+        /// Cuanto tardo el SDK en estar listo, en milisegundos desde que arranco el
+        /// player de Unity: permisos, conexion y playerId/sessionId devueltos.
+        /// </summary>
+        /// <remarks>
+        /// Vale -1 mientras la sesion no este lista. No es una metrica del producto
+        /// del cliente, es nuestra: hasta que Gossip.Instance existe, lo que se manda
+        /// se descarta, asi que este numero dice cuanto dato nos comemos al principio
+        /// de cada sesion.
+        ///
+        /// Time.realtimeSinceStartupAsDouble cuenta desde el arranque del player, no
+        /// desde el Awake de nadie: por eso no hace falta guardar un instante inicial.
+        /// NO incluye lo que tarda el sistema en abrir el APK ni el splash del
+        /// compositor, que quedan fuera del alcance de Unity.
+        /// </remarks>
+        public double SdkInitMs { get; private set; } = -1.0;
+
 
         private void Awake()
         {
@@ -205,6 +222,13 @@ namespace GossipSDK.Core
             CurrentSessionId = sessionId;
 
             IsSessionReady = true;
+
+            // Se congela en la primera vez. Si la sesion se renovara mas tarde, este
+            // numero tiene que seguir describiendo el ARRANQUE, no la renovacion.
+            if (SdkInitMs < 0.0)
+            {
+                SdkInitMs = Time.realtimeSinceStartupAsDouble * 1000.0;
+            }
 
             if (settings?.EnableDebug == true)
             {

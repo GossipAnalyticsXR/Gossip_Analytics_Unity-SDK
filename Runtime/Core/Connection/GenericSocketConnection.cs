@@ -227,6 +227,10 @@ namespace GossipSDK.Core.Connection
                     Data.Engine = Constants.Engine;
                     Data.SceneUser = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
                     Data.TimeMovement = DateTime.UtcNow.ToString("o");
+
+                    // Punto unico de inyeccion del sobre: con esta linea TODOS los
+                    // eventos (sesion, pausas, perifericos, reacciones) llevan la marca.
+                    Data.IsEditor = Application.isEditor;
                 }
 
 

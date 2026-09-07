@@ -1,3 +1,15 @@
+## [2.0.5] — 2026-09
+
+### Added
+
+- Sobre de eventos: campo `IsEditor`. Dice si la sesion salio del editor de Unity
+  o de un build real. Hasta ahora el unico rastro era un `PeripheralType` `desktop`,
+  que tambien lo emite un cliente con build de PC: filtrar por ahi habria borrado
+  sesiones legitimas. Se rellena en `GenericSocketConnection`, que es el punto unico
+  por el que pasan todos los sobres, asi que viaja con sesiones, pausas, perifericos
+  y reacciones sin tocar cada tracker.
+
+
 ## [2.0.4] — 2026-09
 
 ### Changed

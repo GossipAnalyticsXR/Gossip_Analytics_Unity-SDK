@@ -24,13 +24,29 @@ namespace GossipSDK.Tracking.GameplayMetrics
             public string SceneName { get; set; }
             public string TimestampUtc { get; set; }
 
+            /// <summary>Cuanto tardo el SDK en estar listo, en ms desde el arranque del player. null si no se sabe.</summary>
+            public double? SdkInitMs { get; set; }
+
+            /// <summary>
+            /// De donde sale LoadTimeMs: "awake_to_start" (hueco Awake->Start del
+            /// ExperienceInfoComponent) o "integrator" (numero que pasa la app por
+            /// SendLoadInfo). Sin esta etiqueta, el dia que el SDK cambie de reloj el
+            /// backend tendria dos poblaciones distintas en el mismo campo.
+            /// </summary>
+            public string LoadSource { get; set; }
+
             [JsonConstructor] public EntityData() { }
         }
 
         [Serializable]
         public class TrackerMessage : Message<EntityData> { }
 
-        public void CapExperienceInfo(double loadTimeMs, string appVersion, string targetHardware)
+        public void CapExperienceInfo(
+            double loadTimeMs,
+            string appVersion,
+            string targetHardware,
+            string loadSource = "awake_to_start",
+            double? sdkInitMs = null)
         {
             try
             {
@@ -40,7 +56,9 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     AppVersion = appVersion ?? string.Empty,
                     TargetHardware = targetHardware ?? string.Empty,
                     SceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
-                    TimestampUtc = DateTime.UtcNow.ToString("o")
+                    TimestampUtc = DateTime.UtcNow.ToString("o"),
+                    LoadSource = string.IsNullOrEmpty(loadSource) ? "awake_to_start" : loadSource,
+                    SdkInitMs = sdkInitMs
                 };
 
                 CapSession(data);

@@ -68,7 +68,18 @@ namespace GossipSDK.Components
                     #endif
                 }
 
-                tracker.CapExperienceInfo(loadMs, appVersion, targetHardware);
+                // El instante lo pone Gossip cuando la sesion queda lista; -1 mientras no.
+                // Se manda null en vez de -1 para que el backend guarde "no lo se" y no un
+                // numero negativo que luego habria que filtrar en cada consulta.
+                var nucleo = GossipSDK.Core.Gossip.Instance;
+                double? initMs = (nucleo != null && nucleo.SdkInitMs >= 0.0)
+                    ? nucleo.SdkInitMs
+                    : (double?)null;
+
+                // "awake_to_start" describe literalmente lo que se acaba de medir arriba:
+                // now - awakeTime. No es la carga de la experiencia, y la etiqueta lo dice
+                // para que el dia que cambie el reloj no se mezclen las dos poblaciones.
+                tracker.CapExperienceInfo(loadMs, appVersion, targetHardware, "awake_to_start", initMs);
                 if (sendImmediately)
                     tracker.SendDataToSocket();
             }
@@ -91,7 +102,14 @@ namespace GossipSDK.Components
                 return;
             }
 
-            tracker.CapExperienceInfo(loadTimeMs, appVersionOverride ?? appVersion, targetHardwareOverride ?? targetHardware);
+            // "integrator": el numero lo pone la app, no lo mide el SDK. Va con su propia
+            // etiqueta para no confundirlo con nada que hayamos cronometrado nosotros.
+            var nucleoIntegrador = GossipSDK.Core.Gossip.Instance;
+            double? initMsIntegrador = (nucleoIntegrador != null && nucleoIntegrador.SdkInitMs >= 0.0)
+                ? nucleoIntegrador.SdkInitMs
+                : (double?)null;
+
+            tracker.CapExperienceInfo(loadTimeMs, appVersionOverride ?? appVersion, targetHardwareOverride ?? targetHardware, "integrator", initMsIntegrador);
             if (sendNow) tracker.SendDataToSocket();
         }
     }
