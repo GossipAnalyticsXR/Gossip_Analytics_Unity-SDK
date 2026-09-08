@@ -132,9 +132,15 @@ private bool panoramaCreated;
                     if (gossipTracker.GetPendingCount() > 0)
                     {
                         gossipTracker.SendDataToSocket();
-                        yield return null;
                     }
                 }
+
+                // Un frame por tracker, siempre. GetPendingCount abre LiteDB con lock
+                // y son treinta trackers: si las treinta aperturas caen en el mismo
+                // frame cada 5 s, el tiron se nota en gafas. Antes este yield estaba
+                // dentro del if y no llegaba a ejecutarse nunca, porque el is era
+                // falso para todos los trackers.
+                yield return null;
             }
         }
 

@@ -14,7 +14,14 @@ using Debug = UnityEngine.Debug;
 namespace GossipSDK.Core.Connection
 {
     [Serializable]
-    public abstract class GenericSocketConnection<T1, T2> : SocketConnection where T1 : IData where T2 : Message<T1>
+    // Implementa IGossipTracker (declarada en GossipManager.cs) para que el ciclo de
+    // deploy de 5 s pueda recorrer los trackers. Las dos firmas que pide la interfaz ya
+    // existian aqui: SendDataToSocket() y GetPendingCount(). Faltaba SOLO declararla, y
+    // por eso el filtro (tracker is IGossipTracker) de DeploySystemTrackersStepByStep era
+    // falso para TODOS los trackers y ese bucle no enviaba nada nunca. Medido el
+    // 8-sep-2026 con la 2.0.5 en gafas: cinco sesiones seguidas y el primer TrackingSession
+    // llego a los 32 s del arranque de la quinta, dentro de la rafaga del reenvio de 30 s.
+    public abstract class GenericSocketConnection<T1, T2> : SocketConnection, IGossipTracker where T1 : IData where T2 : Message<T1>
     {
         protected virtual string EventName { get; } = "";
 

@@ -1,3 +1,19 @@
+## [2.0.6] - 2026-09
+
+### Fixed
+
+- El ciclo de deploy de 5 s no enviaba NADA. Recorria la lista de trackers filtrando por
+  `tracker is IGossipTracker`, y ningun tracker implementaba esa interfaz: estaba declarada
+  en `GossipManager.cs` y no la heredaba nadie. Ahora `GenericSocketConnection` la declara, y
+  con ella los 30 trackers de la lista, incluido el de sesion. Sin cambiar ningun metodo:
+  `SendDataToSocket()` y `GetPendingCount()` ya existian con esas firmas exactas.
+  Medido el 8-sep-2026 con la 2.0.5 en gafas: cinco sesiones seguidas y los cinco documentos
+  creados en 3,3 s, hasta 376 s despues de su propio arranque, porque todo esperaba al
+  reenvio de 30 s. Position y Rotation no estan en esa lista: su volumen no cambia.
+- El `yield return null` del bucle de deploy pasa a ejecutarse una vez por tracker.
+  `GetPendingCount()` abre LiteDB con lock, y son 30 llamadas por tick: repartirlas evita
+  el tiron de frame cada 5 s. Antes ese yield no se ejecutaba nunca.
+
 ## [2.0.5] — 2026-09
 
 ### Added
