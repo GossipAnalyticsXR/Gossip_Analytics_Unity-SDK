@@ -6,6 +6,7 @@ using GossipSDK.Core;
 using GossipSDK.Tracking.GameplayMetrics;
 using GossipSDK.Tracking;
 using GossipSDK.Heatmaps;
+using GossipSDK.Tracking.PlatformSpecification;
 using UnityEngine.SceneManagement;
 
 namespace GossipSDK.Components
@@ -153,8 +154,12 @@ namespace GossipSDK.Components
             {
                 Debug.LogWarning(
                     "[AudioReactionTracker] XR not active - tracker requires " +
-                    "a headset for movement detection. Component disabled.", this);
-                enabled = false;
+                    "a headset for movement detection. No audio measured.", this);
+                // Antes aqui iba enabled = false, y eso mataba tambien la corrutina
+                // que avisa al backend: el componente se quedaba mudo por dentro y
+                // por fuera. Update() ya sale solo mientras micClip sea null, asi que
+                // dejarlo habilitado es inerte y permite que el aviso salga.
+                ReportarEstadoAudio("xr_inactive");
                 return;
             }
             bufferSize = Mathf.CeilToInt(sampleRate * bufferSeconds);
@@ -274,13 +279,31 @@ namespace GossipSDK.Components
         IEnumerator InitializeMicrophone()
         {
             // 1. ESPERAR AL GESTOR CENTRAL
-            yield return new WaitUntil(() => VRPermissionsHandler.IsReady);
+            // Con plazo, no con WaitUntil a secas: si VRPermissionsHandler no esta en
+            // la escena, IsReady se queda en false para siempre y esta corrutina se
+            // colgaba sin escribir una sola linea. El reportero no puede depender de
+            // lo que reporta.
+            float esperaPermisos = 0f;
+            while (!VRPermissionsHandler.IsReady && esperaPermisos < 15f)
+            {
+                yield return new WaitForSecondsRealtime(0.2f);
+                esperaPermisos += 0.2f;
+            }
+
+            if (!VRPermissionsHandler.IsReady)
+            {
+                Debug.LogWarning(
+                    "[AudioTracker] VRPermissionsHandler nunca estuvo listo. Abortando.");
+                ReportarEstadoAudio("permissions_timeout");
+                yield break;
+            }
 
             // 2. VERIFICACION DE SEGURIDAD
 #if UNITY_ANDROID && !UNITY_EDITOR
             if (!Permission.HasUserAuthorizedPermission(Permission.Microphone))
             {
                 Debug.LogWarning("[AudioTracker] Sin permiso de microfono. Abortando.");
+                ReportarEstadoAudio("mic_permission_denied");
                 yield break; 
             }
 #endif
@@ -296,6 +319,7 @@ namespace GossipSDK.Components
             if (Microphone.devices.Length == 0)
             {
                 Debug.LogError("[AudioTracker] No se detecto ningun microfono fisico disponible.");
+                ReportarEstadoAudio("no_microphone");
                 yield break;
             }
 
@@ -313,14 +337,80 @@ namespace GossipSDK.Components
             {
                 Debug.LogError($"[AudioTracker] Fallo critico al iniciar grabacion: {e.Message}");
                 success = false;
+                ReportarEstadoAudio("microphone_start_failed");
             }
 
             // El yield return debe estar FUERA del bloque try-catch
             if (success)
             {
-                yield return new WaitUntil(() => Microphone.GetPosition(deviceName) > 0);
+                // Con plazo: si el micro arranca pero no entrega muestras, el WaitUntil
+                // de antes se quedaba colgado aqui sin escribir nada.
+                float esperaMuestras = 0f;
+                while (Microphone.GetPosition(deviceName) <= 0 && esperaMuestras < 10f)
+                {
+                    yield return new WaitForSecondsRealtime(0.2f);
+                    esperaMuestras += 0.2f;
+                }
+
+                if (Microphone.GetPosition(deviceName) <= 0)
+                {
+                    Debug.LogWarning(
+                        "[AudioTracker] El microfono arranco pero no da muestras.");
+                    ReportarEstadoAudio("no_samples");
+                    yield break;
+                }
+
                 Debug.Log($"[AudioTracker] Microfono '{deviceName}' iniciado y capturando.");
+                ReportarEstadoAudio("ok");
             }
+        }
+
+        /// <summary>Solo el primer estado se manda: el que explica por que.</summary>
+        private bool _estadoAudioReportado;
+
+        /// <summary>
+        /// Avisa al backend de por que el tracker de audio no esta midiendo -- o de que
+        /// si lo esta. Antes solo salia del visor una de las seis salidas posibles (el
+        /// permiso denegado); las demas dejaban el mismo rastro que 'no hubo reacciones'.
+        /// </summary>
+        private void ReportarEstadoAudio(string estado)
+        {
+            if (_estadoAudioReportado) return;
+            _estadoAudioReportado = true;
+            StartCoroutine(EnviarEstadoAudio(estado));
+        }
+
+        private IEnumerator EnviarEstadoAudio(string estado)
+        {
+            float espera = 0f;
+            while ((UnityEngine.Object)Gossip.Instance == null && espera < 10f)
+            {
+                yield return new WaitForSecondsRealtime(0.2f);
+                espera += 0.2f;
+            }
+
+            var tracker = Gossip.Instance?.MicPermissionTracker;
+            if (tracker == null)
+            {
+                Debug.LogWarning(
+                    "[AudioTracker] Sin MicPermissionTracker: el estado " + estado +
+                    " no sale del visor.");
+                yield break;
+            }
+
+            bool micDenegado = false;
+#if UNITY_ANDROID && !UNITY_EDITOR
+            micDenegado = !Permission.HasUserAuthorizedPermission(Permission.Microphone);
+#endif
+
+            tracker.CapSession(new MicPermissionTracker.EntityData
+            {
+                PlayerID = Gossip.Instance?.PlayerID,
+                SessionID = Gossip.Instance?.SessionID,
+                MicDenied = micDenegado,
+                AudioTrackerStatus = estado,
+                TimestampUtc = DateTime.UtcNow.ToString("o")
+            });
         }
 
         // Copia count muestras del clip del microfono, desde offset, al ring buffer.

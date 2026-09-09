@@ -36,6 +36,16 @@ namespace GossipSDK.Core.Connection
         private readonly bool usePerProcessDbInEditor = true;
         private bool initialized;
 
+        // Candado de reentrada del envio: 0 = libre, 1 = enviando. El POST vive FUERA del
+        // lock de LiteDB y el borrado solo ocurre si el POST sale bien, asi que sin este
+        // candado el ciclo siguiente relee el mismo bufer entero (FindAll, sin tope) y lo
+        // manda otra vez. Medido el 8-sep-2026 en TrackingRealityModeTransition: tres envios
+        // de 426, 425 y 153 mensajes, subconjuntos estrictos y sin un solo mensaje nuevo;
+        // 426 transiciones reales entregadas como 1004 (578 duplicados, el 58 %).
+        private int enviando;
+        private DateTime envioIniciadoEn;
+        private const double EnvioColgadoSegundos = 120.0;
+
         public void Initialize()
         {
             if (initialized)
@@ -118,8 +128,15 @@ namespace GossipSDK.Core.Connection
                 lock (dbLock)
                 {
                     using var db = CreateLiteDatabaseWithRetry();
-                    ILiteCollection<T1> col = db.GetCollection<T1>(DataBaseName);
-                    col.Insert(entityData);
+                    var gossipCap = Gossip.Instance;
+
+                    // El sobre se estampaba al ENVIAR, con la sesion que vaciaba el bufer:
+                    // lo capturado en junio salia con el SessionID de septiembre. Cada fila
+                    // se lleva ahora la suya, y el envio agrupa por ella.
+                    var doc = BsonMapper.Global.ToDocument(entityData);
+                    doc["__playerID"] = gossipCap?.CurrentPlayerId ?? string.Empty;
+                    doc["__sessionID"] = gossipCap?.CurrentSessionId ?? string.Empty;
+                    db.GetCollection(DataBaseName).Insert(doc);
                 }
             }
             catch (Exception ex)
@@ -137,7 +154,39 @@ namespace GossipSDK.Core.Connection
                 return;
             }
 
-            SendDataToSocketAsync(serverURL).Forget();
+            SendDataToSocketGuardedAsync(serverURL).Forget();
+        }
+
+        /// <summary>
+        /// Serializa los envios de ESTE tracker: si ya hay uno en vuelo, el ciclo se omite en
+        /// vez de reenviar el mismo bufer. Si el envio en vuelo lleva mas de
+        /// EnvioColgadoSegundos, se libera el candado para no dejar al tracker mudo el resto
+        /// del proceso (UnityWebRequest no lleva timeout puesto).
+        /// </summary>
+        public async UniTask<bool> SendDataToSocketGuardedAsync(string serverURL)
+        {
+            if (Interlocked.CompareExchange(ref enviando, 1, 0) != 0)
+            {
+                if ((DateTime.UtcNow - envioIniciadoEn).TotalSeconds < EnvioColgadoSegundos)
+                {
+                    if (Gossip.Instance?.Settings?.EnableDebug == true)
+                        Debug.Log($"[GenericSocketConnection] {EventName}: envio en curso, ciclo omitido.");
+                    return false;
+                }
+
+                Debug.LogWarning($"[GenericSocketConnection] {EventName}: envio en vuelo desde hace mas de {EnvioColgadoSegundos} s. Se libera el candado.");
+            }
+
+            envioIniciadoEn = DateTime.UtcNow;
+
+            try
+            {
+                return await SendDataToSocketAsync(serverURL);
+            }
+            finally
+            {
+                Volatile.Write(ref enviando, 0);
+            }
         }
 
         public async UniTask<bool> SendDataToSocketAsync(string serverURL)
@@ -212,23 +261,54 @@ namespace GossipSDK.Core.Connection
 
             try
             {
-                List<T1> snapshot;
+                List<T1> snapshot = new List<T1>();
                 List<BsonValue> sentIds = new List<BsonValue>();
+                string lotePlayerID = null;
+                string loteSessionID = null;
                 lock (dbLock)
                 {
                     using var db = CreateLiteDatabaseWithRetry();
-                    ILiteCollection<T1> col = db.GetCollection<T1>(DataBaseName);
-                    snapshot = new List<T1>(col.FindAll());
                     var rawCol = db.GetCollection(DataBaseName);
-                    foreach (var rawDoc in rawCol.FindAll()) sentIds.Add(rawDoc["_id"]);
+
+                    // Un POST lleva UN sobre, asi que un envio solo puede llevar filas de
+                    // una sesion. Se toma la del primer documento pendiente y se dejan las
+                    // demas para el ciclo siguiente, que llega en 5 s.
+                    foreach (var rawDoc in rawCol.FindAll())
+                    {
+                        var p = rawDoc.ContainsKey("__playerID")
+                            ? rawDoc["__playerID"].AsString
+                            : null;
+                        var s = rawDoc.ContainsKey("__sessionID")
+                            ? rawDoc["__sessionID"].AsString
+                            : null;
+
+                        if (sentIds.Count == 0)
+                        {
+                            lotePlayerID = p;
+                            loteSessionID = s;
+                        }
+                        else if (p != lotePlayerID || s != loteSessionID)
+                        {
+                            continue;
+                        }
+
+                        sentIds.Add(rawDoc["_id"]);
+                        snapshot.Add(BsonMapper.Global.ToObject<T1>(rawDoc));
+                    }
                 }
 
                 Data.Messages = snapshot;
 
                 if (gossip != null)
                 {
-                    Data.PlayerID = gossip.CurrentPlayerId;
-                    Data.SessionID = gossip.CurrentSessionId;
+                    // Filas viejas, anteriores a este cambio, no llevan marca: para esas
+                    // se mantiene el comportamiento de antes.
+                    Data.PlayerID = string.IsNullOrEmpty(lotePlayerID)
+                        ? gossip.CurrentPlayerId
+                        : lotePlayerID;
+                    Data.SessionID = string.IsNullOrEmpty(loteSessionID)
+                        ? gossip.CurrentSessionId
+                        : loteSessionID;
 
                     Data.EventType = EventName;
                     Data.Engine = Constants.Engine;

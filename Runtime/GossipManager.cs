@@ -198,11 +198,19 @@ private bool panoramaCreated;
 
         private IEnumerator WaitForPermissionsBeforeStart()
         {
+            // Enviar no necesita permisos: el POST no depende de mirada ni de escena. Antes
+            // esto estaba detras del WaitUntil, y como cada permiso que no abre dialogo se
+            // come sus 10 s enteros, la telemetria no salia hasta ~31 s despues del arranque
+            // [medido el 8-sep-2026: 31,2 s y 32,1 s en dos sesiones, con el primer
+            // TrackingSession llegando en el segundo 32]. Las suscripciones arrancan ya; lo
+            // que si depende de los permisos -captura de gaze, heatmap de escena, alta de
+            // trackers- sigue detras del WaitUntil.
+            StartSubscriptions();
+
             yield return new WaitUntil(() => VRPermissionsHandler.IsReady);
 
-            StartSubscriptions();
             WaitAndCreateHeatmap().Forget();
-WaitAndCreatePanorama().Forget();
+            WaitAndCreatePanorama().Forget();
             WaitAndCreateDwellPanorama().Forget();
             WaitAndAutoAddTrackers().Forget();
         }

@@ -27,6 +27,18 @@ namespace GossipSDK.Components
         private double sessionStartTimeRealtime;
         private bool sessionStarted = false;
 
+        /// <summary>
+        /// Guardia de instancia unica. Este componente vive en el prefab
+        /// GossipAnalyticsManager, junto a GossipManager, que ya hace
+        /// DontDestroyOnLoad y destruye los duplicados. Pero el orden de Awake ENTRE
+        /// componentes del mismo GameObject no esta definido, y Destroy(gameObject) no
+        /// surte efecto hasta el final del frame: un duplicado del prefab en otra
+        /// escena puede acunar un sessionId y mandar su session_start ANTES de que
+        /// GossipManager lo destruya, y esa sesion fantasma ya quedo contada.
+        /// GossipManagerEditor ya avisa de que el prefab aparece en varias escenas.
+        /// </summary>
+        private static SessionManager _instance;
+
         private string ResolveSessionType()
         {
             if (!string.IsNullOrEmpty(sessionTypeOverride))
@@ -53,6 +65,18 @@ namespace GossipSDK.Components
         }
         private void Awake()
         {
+            if ((UnityEngine.Object)_instance != null && _instance != this)
+            {
+                // A proposito Warning: GossipBuildPreprocessor apaga EnableDebug fuera
+                // de Development, y esta linea explica una sesion que NO aparecera.
+                Debug.LogWarning(
+                    "[SessionManager] Ya hay un SessionManager vivo. Este duplicado no " +
+                    "abre sesion ni acuna sessionId.");
+                enabled = false;
+                return;
+            }
+            _instance = this;
+
             if (string.IsNullOrWhiteSpace(sessionId))
                 sessionId = Guid.NewGuid().ToString();
 
@@ -302,6 +326,10 @@ namespace GossipSDK.Components
 
         private void OnDestroy()
         {
+            // Se suelta antes del guardia de sessionStarted: si no, un duplicado que
+            // nunca arranco sesion dejaria el static apuntando a un objeto muerto.
+            if (_instance == this) _instance = null;
+
             if (!sessionStarted)
             {
                 // nothing to send

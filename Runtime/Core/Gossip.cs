@@ -328,6 +328,14 @@ namespace GossipSDK.Core
                     EyeTrackingTracker,
                     InputUsageTracker,
                 BoundaryPressureSummaryTracker,
+                // Estos cuatro estaban SOLO en el barrido de 5 s de GossipManager, que no arranca
+                // hasta que terminan los permisos (~31 s medidos el 8-sep). Sin red de 30 s, lo
+                // capturado antes se quedaba en LiteDB hasta la sesion siguiente y se entregaba con
+                // el SessionID de esa otra sesion.
+                NetworkUsageTracker,
+                AudioVolumeTracker,
+                PeripheralTracker,
+                RealityModeTracker,
                 MicPermissionTracker
                 };
 

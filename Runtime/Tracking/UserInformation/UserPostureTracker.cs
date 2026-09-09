@@ -77,7 +77,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
             var serverURL = Gossip.Instance?.Settings?.GetActiveServerUrl();
             if (!string.IsNullOrWhiteSpace(serverURL))
             {
-                await SendDataToSocketAsync(serverURL);
+                await SendDataToSocketGuardedAsync(serverURL);
             }
         }
     }

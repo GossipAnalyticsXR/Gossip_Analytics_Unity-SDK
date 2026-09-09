@@ -2,4 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <!-- Lo pide VRPermissionsHandler y lo usan los proveedores de gaze (Meta y OpenXR).
+         Sin declararlo, RequestUserPermission no abre dialogo, no se pierde el foco, y el
+         while del handler agota sus 10 s antes de dejar seguir al arranque.
+         USE_SCENE y HEADSET_CAMERA no se declaran a proposito: barrido de 156 de 156
+         ficheros .cs, 0 fallos, y no las usa ningun tracker del runtime. -->
+    <uses-permission android:name="com.oculus.permission.EYE_TRACKING" />
 </manifest>
