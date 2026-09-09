@@ -279,15 +279,28 @@ namespace GossipSDK.Components
         IEnumerator InitializeMicrophone()
         {
             // 1. ESPERAR AL GESTOR CENTRAL
-            // Con plazo, no con WaitUntil a secas: si VRPermissionsHandler no esta en
-            // la escena, IsReady se queda en false para siempre y esta corrutina se
-            // colgaba sin escribir una sola linea. El reportero no puede depender de
-            // lo que reporta.
+            // El plazo avisa, no abandona. Antes habia aqui un yield break a los
+            // 15 s: si VRPermissionsHandler tardaba mas, el tracker de reacciones se
+            // rendia para el resto de la sesion aunque el permiso llegara un segundo
+            // despues. Medido el 9-sep: cuatro sesiones seguidas con
+            // AudioTrackerStatus "permissions_timeout" y cero reacciones.
+            // Ahora a los 15 s se avisa y se sigue esperando hasta el techo, para que
+            // el diagnostico salga sin matar la medicion.
             float esperaPermisos = 0f;
-            while (!VRPermissionsHandler.IsReady && esperaPermisos < 15f)
+            bool avisadoLento = false;
+            while (!VRPermissionsHandler.IsReady && esperaPermisos < 180f)
             {
                 yield return new WaitForSecondsRealtime(0.2f);
                 esperaPermisos += 0.2f;
+
+                if (!avisadoLento && esperaPermisos >= 15f)
+                {
+                    avisadoLento = true;
+                    Debug.LogWarning(
+                        "[AudioTracker] VRPermissionsHandler lleva 15 s sin estar " +
+                        "listo. Sigo esperando.");
+                    ReportarEstadoAudio("permissions_slow");
+                }
             }
 
             if (!VRPermissionsHandler.IsReady)
@@ -365,18 +378,22 @@ namespace GossipSDK.Components
             }
         }
 
-        /// <summary>Solo el primer estado se manda: el que explica por que.</summary>
-        private bool _estadoAudioReportado;
+        /// <summary>Ultimo estado enviado: solo se manda uno nuevo si cambia.</summary>
+        private string _ultimoEstadoAudio;
 
         /// <summary>
         /// Avisa al backend de por que el tracker de audio no esta midiendo -- o de que
         /// si lo esta. Antes solo salia del visor una de las seis salidas posibles (el
         /// permiso denegado); las demas dejaban el mismo rastro que 'no hubo reacciones'.
+        /// El pestillo de antes congelaba el PRIMER estado, asi que un aviso temporal
+        /// como "permissions_slow" habria impedido que despues llegara el "ok" real.
+        /// El procesador hace upsert por sessionID: la ultima escritura corrige a la
+        /// anterior.
         /// </summary>
         private void ReportarEstadoAudio(string estado)
         {
-            if (_estadoAudioReportado) return;
-            _estadoAudioReportado = true;
+            if (_ultimoEstadoAudio == estado) return;
+            _ultimoEstadoAudio = estado;
             StartCoroutine(EnviarEstadoAudio(estado));
         }
 

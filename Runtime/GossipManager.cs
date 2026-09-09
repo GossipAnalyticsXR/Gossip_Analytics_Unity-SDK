@@ -308,7 +308,14 @@ go.AddComponent<GossipSDK.Heatmaps.HeatmapPanoramaAutoCapture>();
             Ensure(typeof(PlayableAreaComponent),               autoTrackersHost);
             Ensure(typeof(PeripheralAutoTrackerComponent),      autoTrackersHost);
             Ensure(typeof(PauseComponent),                      autoTrackersHost);
-            Ensure(typeof(DifficultyComponent),                 autoTrackersHost);
+            // PAUSADO 9-sep-2026. DifficultyComponent trae autoReportOnStart en true y
+            // defaultDifficultyId "normal", asi que emitia un cambio de dificultad en
+            // cada arranque que nadie habia elegido: los 78 documentos del periodo eran
+            // ese auto-informe. El propio Instrumentation Manager ya lo marcaba REVIEW.
+            // No se borra nada: el tracker, el componente, la coleccion y los datos siguen
+            // en su sitio. Para reactivarlo basta con quitar el comentario de esta linea.
+            // Ensure(typeof(DifficultyComponent),                 autoTrackersHost);
+            Ensure(typeof(LevelChangeComponent),                autoTrackersHost);
             Ensure(typeof(MultiplayerTrackerComponent),         autoTrackersHost);
             Ensure(typeof(ServerStatusComponent),               autoTrackersHost);
             Ensure(typeof(AvatarTrackerComponent),              autoTrackersHost);

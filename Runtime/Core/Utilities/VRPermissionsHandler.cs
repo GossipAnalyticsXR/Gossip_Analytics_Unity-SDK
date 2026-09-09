@@ -21,8 +21,25 @@ public class VRPermissionsHandler : MonoBehaviour
     public static bool IsReady = false;
     private bool _isAppFocused = true;
 
+    // Guardia de instancia unica. IsReady es static: sin esta guarda, un segundo
+    // VRPermissionsHandler en escena volvia IsReady a false en su Awake y apagaba
+    // el permiso YA concedido para todos los que lo consultan --
+    // AudioReactionTrackerComponent, MicPermissionComponent y GossipManager.
+    // Es la misma clase de fallo que se cerro en SessionManager.
+    private static VRPermissionsHandler _instance;
+
     void Awake()
     {
+        if ((UnityEngine.Object)_instance != null && _instance != this)
+        {
+            Debug.LogWarning(
+                "[VRPermissionsHandler] Ya hay un gestor de permisos vivo. Este " +
+                "duplicado no toca IsReady ni vuelve a pedir permisos.");
+            enabled = false;
+            return;
+        }
+        _instance = this;
+
         IsReady = false;
         DontDestroyOnLoad(this.gameObject);
 
