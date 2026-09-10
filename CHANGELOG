@@ -1,3 +1,72 @@
+## [2.0.8] - 2026-09
+
+### Added
+
+- Contrato de nivel tipado. `UserEventsTracker.LevelEvents` expone las dos constantes que el
+  panel busca (`EventName` y `CompletedCategory`), y `CaptureLevelCompleted()` las emite.
+  Hasta ahora esos dos literales los escribia a mano quien integraba, copiandolos del sample:
+  una letra distinta y el evento se guardaba igual, sin error en ningun sitio, y el sintoma
+  aparecia mucho despues como cards de escenas vacias en el panel de un cliente. Del contrato
+  responde ahora el compilador. `CaptureEvent` no cambia de firma, asi que quien ya la use con
+  literales sigue funcionando; el metodo nuevo se anade al lado. El sample `PlayerDemo.cs`
+  pasa a llamarlo, porque el sample es lo que se copia.
+- `NetworkPlayerCountResolver`: lee el numero de jugadores de la capa de red presente en el
+  proyecto (sondas Photon PUN y Netcode for GameObjects) por reflexion, sin dependencia dura.
+  Si no reconoce ninguna devuelve `unknown`, no un numero a medias.
+- `CountSource` en el snapshot de multiplayer: `integrator`, `network-auto` o `unknown`. Con
+  el, un `PlayerCount` de 1 deja de ser ambiguo y el backend puede contar solo lo medido.
+  Misma idea que `IsEditor` en la 2.0.5: el dato declara de donde viene.
+- `LevelChangeTracker` y `LevelChangeComponent`, este ultimo dado de alta en los trackers
+  automaticos: el cambio de escena activa se detecta y viaja solo.
+- `ReflectionUtil.FindTypeByFullName`, para resolver tipos por nombre completo cuando el
+  nombre simple es ambiguo entre librerias.
+
+### Changed
+
+- `SessionManager.ResolveSessionType()` deja de contar `GameObject`s con el tag `Player`.
+  Esa heuristica no media multijugador: en un juego en red los avatares remotos llevan ese
+  tag solo si el integrador lo puso, y en un juego de un jugador cualquier segundo objeto
+  etiquetado -- un rig espejo, un maniqui de tutorial -- lo hacia reportar `multi`. Orden
+  nuevo: manda el override; si no, el resolver; si tampoco, `null`, no `single`. El `null`
+  importa porque el backend ya excluye vacios, asi que una sesion sin medir deja de inflar
+  el lado individual en vez de contarse como solitaria.
+- `DifficultyComponent`: el auto-alta queda en pausa y `autoReportOnStart` pasa a `false`.
+- El `Runtime` completo pasa a ASCII estricto.
+
+### Fixed
+
+- El cambio de nivel no se enviaba: se guardaba en local y esperaba al reenvio de 30 s.
+  Faltaba la llamada a `SendDataToSocket()`.
+- `VRPermissionsHelper`: guardia de instancia unica. Y el plazo de permisos del tracker de
+  audio avisa en vez de abandonar el tracker.
+
+
+## [2.0.7] - 2026-09
+
+Esta version salio sin entrada; se documenta aqui a posteriori. Verificada en gafas el
+9-sep-2026 con un logcat de 42.012 lineas sobre una entrada de unos 50 s.
+
+### Added
+
+- `AudioTrackerStatus` viaja en el evento de permiso de microfono: el tracker dice por que
+  no mide, en vez de callar.
+
+### Fixed
+
+- Candado de reentrada en el envio de cada tracker (`SendDataToSocketGuardedAsync`), y
+  `UserPostureTracker` tambien pasa por el. El 8-sep se veian series de envios estrictamente
+  decrecientes (426, 425, 153), senal de que un envio entraba encima de otro. En la traza del
+  9-sep no aparece ninguna: cada tracker hace una serie que sube y baja, con el primer envio
+  grande (lo acumulado en el arranque) y el resto llevandose lo de unos 5 s.
+- Los cuatro trackers que faltaban en el reenvio de 30 s.
+- La telemetria no espera a los permisos. Medido: el primer envio sale a los 6,6 s del
+  arranque, 38,5 s antes de que termine la secuencia de permisos. Antes de este arreglo no
+  salia nada hasta esa linea.
+- Cada fila del bufer se lleva su propia sesion. En la misma traza salen tres `SessionID`
+  distintos: las filas que quedaron de arranques anteriores viajan con su id, no
+  reetiquetadas con la sesion que consigue vaciar el bufer.
+
+
 ## [2.0.6] - 2026-09
 
 ### Fixed
