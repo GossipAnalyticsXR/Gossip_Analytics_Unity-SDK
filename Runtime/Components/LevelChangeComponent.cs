@@ -117,6 +117,14 @@ public class LevelChangeComponent : MonoBehaviour
             }
 
             tracker.CapLevelChange(fromScene, toScene, dwellMs, isSessionStart);
+
+            // CapLevelChange solo escribe en la base local (LiteDB). Quien empuja al
+            // servidor es SendDataToSocket, y sin esta linea los cambios se quedaban en
+            // el disco del jugador: medido el 10-sep-2026, tres cambios en consola y cero
+            // en el ingest. Es el patron de la casa, mismo sitio que en DifficultyComponent
+            // y PassthroughComponent. Va sin condicion porque un cambio de nivel es un
+            // evento suelto y de baja frecuencia, no un muestreo continuo.
+            tracker.SendDataToSocket();
         }
         catch (System.Exception e)
         {
