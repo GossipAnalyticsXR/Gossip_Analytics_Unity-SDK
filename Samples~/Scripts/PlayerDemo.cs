@@ -76,7 +76,8 @@ public class PlayerDemo : MonoBehaviour
 
         if (Input.GetButtonDown("Jump") && isGrounded)
         {
-            Gossip.Instance.UserEventTracker?.CaptureEvent("Level", "CompleteLevel");
+            // API tipada: los literales viven en LevelEvents, no aqui.
+            Gossip.Instance.UserEventTracker?.CaptureLevelCompleted();
             velocity.y = Mathf.Sqrt(jumpForce * -2f * gravity);
         }
 
