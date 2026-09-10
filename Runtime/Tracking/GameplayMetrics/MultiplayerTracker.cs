@@ -8,6 +8,25 @@ using Newtonsoft.Json;
 
 namespace GossipSDK.Tracking.GameplayMetrics
 {
+    /// <summary>
+    /// Procedencia de PlayerCount. Va en cada snapshot para que el dato pueda decir si
+    /// esta medido o si nadie lo dijo.
+    ///
+    /// Se usan constantes de texto y no un enum porque el valor viaja en JSON al backend
+    /// y se guarda como string: un enum obligaria a mantener el mapeo en los dos lados.
+    /// </summary>
+    public static class PlayerCountSources
+    {
+        /// <summary>El integrador nos dio la lista de jugadores.</summary>
+        public const string Integrator = "integrator";
+
+        /// <summary>El SDK lo leyo de la capa de red presente en el proyecto.</summary>
+        public const string NetworkAuto = "network-auto";
+
+        /// <summary>Nadie nos lo dijo y no hay capa de red reconocible. NO es lo mismo que 1.</summary>
+        public const string Unknown = "unknown";
+    }
+
     [Serializable]
     public class MultiplayerTracker : GenericSocketConnection<MultiplayerTracker.EntityData, MultiplayerTracker.TrackerMessage>
     {
@@ -30,6 +49,13 @@ namespace GossipSDK.Tracking.GameplayMetrics
             public int PlayerCount { get; set; }
             public List<PlayerInfo> Players { get; set; } = new List<PlayerInfo>();
             public double? AveragePingMs { get; set; }
+
+            /// <summary>
+            /// De donde sale PlayerCount. Sin esto un 1 puede ser "hubo un jugador" o
+            /// "nadie nos lo dijo", que son cosas distintas y hasta ahora se guardaban igual.
+            /// Ver PlayerCountSources.
+            /// </summary>
+            public string CountSource { get; set; } = PlayerCountSources.Unknown;
             public string TimestampUtc { get; set; }
 
             [JsonConstructor] public EntityData() { }
@@ -38,7 +64,16 @@ namespace GossipSDK.Tracking.GameplayMetrics
         [Serializable]
         public class TrackerMessage : Message<EntityData> { }
 
+        /// <summary>
+        /// Firma historica. Se conserva para no romper a nadie: una llamada directa con una
+        /// lista propia significa que el integrador SI nos dijo los jugadores.
+        /// </summary>
         public void CapMatchSnapshot(string roomId, string matchType, List<PlayerInfo> players)
+        {
+            CapMatchSnapshot(roomId, matchType, players, PlayerCountSources.Integrator);
+        }
+
+        public void CapMatchSnapshot(string roomId, string matchType, List<PlayerInfo> players, string countSource)
         {
             try
             {
@@ -49,6 +84,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     Players = players ?? new List<PlayerInfo>(),
                     PlayerCount = players?.Count ?? 0,
                     AveragePingMs = players != null && players.Count > 0 ? (double?)ComputeAveragePing(players) : null,
+                    CountSource = string.IsNullOrEmpty(countSource) ? PlayerCountSources.Unknown : countSource,
                     TimestampUtc = DateTime.UtcNow.ToString("o")
                 };
 

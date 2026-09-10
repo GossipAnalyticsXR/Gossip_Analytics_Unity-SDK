@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using GossipSDK.Core;
+using System.Reflection;
 using GossipSDK.Tracking.GameplayMetrics;
 
 namespace GossipSDK.Components
@@ -18,6 +19,7 @@ namespace GossipSDK.Components
         public bool autoReportOnStart = true;
 
         private Coroutine snapshotRoutine;
+        private string cachedCountSource;
 
         void Start()
         {
@@ -70,8 +72,40 @@ namespace GossipSDK.Components
             tracker.CapMatchSnapshot(
                 roomId,
                 matchType,
-                players
+                players,
+                ResolveCountSource()
             );
+        }
+
+        /// <summary>
+        /// De donde sale el numero de jugadores de este snapshot.
+        ///
+        /// La implementacion por defecto de CollectPlayers() devuelve SIEMPRE uno: el propio
+        /// dispositivo. Sin una subclase que la sobrescriba, PlayerCount vale 1 en todas las
+        /// sesiones y eso no es una medida, es un hueco.
+        ///
+        /// Se mira si el metodo esta declarado en otra clase distinta de esta: es la forma
+        /// fiable de saber si alguien nos dio los jugadores de verdad. Se cachea porque el
+        /// tipo no cambia en ejecucion y esto corre cada 10 s.
+        /// </summary>
+        private string ResolveCountSource()
+        {
+            if (cachedCountSource != null)
+                return cachedCountSource;
+
+            MethodInfo collect = GetType().GetMethod(
+                "CollectPlayers",
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
+            );
+
+            bool overridden = collect != null
+                && collect.DeclaringType != typeof(MultiplayerTrackerComponent);
+
+            cachedCountSource = overridden
+                ? PlayerCountSources.Integrator
+                : PlayerCountSources.Unknown;
+
+            return cachedCountSource;
         }
 
         protected virtual List<MultiplayerTracker.PlayerInfo> CollectPlayers()
