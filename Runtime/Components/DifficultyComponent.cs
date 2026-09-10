@@ -6,7 +6,20 @@ using GossipSDK.Tracking.GameplayMetrics;
 [DisallowMultipleComponent]
 public class DifficultyComponent : MonoBehaviour
 {
-    public bool autoReportOnStart = true;
+    /// <summary>
+    /// Emitir un cambio de dificultad al arrancar. Por defecto FALSE desde el
+    /// 10-sep-2026: con true, el componente reportaba defaultDifficultyId en cada
+    /// arranque y esos documentos no eran eleccion de nadie. En el periodo medido
+    /// eran 78, todos "normal", y ensuciaban la metrica.
+    ///
+    /// Comentar el alta automatica en GossipManager no bastaba: el Instrumentation
+    /// Manager agrega el componente en tiempo de edicion con Undo.AddComponent, y
+    /// Ensure solo actua si el componente NO esta ya en la escena.
+    ///
+    /// Aviso: es un campo serializado. Una escena o prefab que ya lo tenga puesto
+    /// conserva el true guardado y hay que desmarcarlo a mano una vez.
+    /// </summary>
+    public bool autoReportOnStart = false;
 
     public bool sendImmediately = false;
 

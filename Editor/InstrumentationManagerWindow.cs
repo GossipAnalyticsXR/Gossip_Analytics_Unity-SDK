@@ -228,11 +228,20 @@ namespace GossipSDK.Editor
             new TrackerInfo {
                 componentTypeName = "DifficultyComponent",
                 displayName = "Difficulty Tracker",
-                description = "Reports difficulty level changes. Auto-reports a default level on start; call NotifyDifficulty() for real levels.",
+                description = "Reports difficulty level changes. Call NotifyDifficulty() from your difficulty UI.",
                 category = "Device",
                 target = TrackerTarget.AnyObject,
                 requiresConfiguration = false,
-                postAddHint = "Auto-reports defaultDifficultyId on start. Call GetComponent<DifficultyComponent>().NotifyDifficulty(id, value) from your difficulty UI."
+                postAddHint = "Does nothing on its own. Call GetComponent<DifficultyComponent>().NotifyDifficulty(id, value) from your difficulty UI. Tick autoReportOnStart only if you want a default level reported every session."
+            },
+            new TrackerInfo {
+                componentTypeName = "LevelChangeComponent",
+                displayName = "Level Change Tracker",
+                description = "Reports level changes: when the active scene changes, with origin, destination and time spent in the previous level.",
+                category = "Device",
+                target = TrackerTarget.AnyObject,
+                requiresConfiguration = false,
+                postAddHint = "Works with no setup. Add scene names to ignoredScenes if menus or loading screens should not count as levels."
             },
             new TrackerInfo {
                 componentTypeName = "MultiplayerTrackerComponent",
@@ -322,7 +331,8 @@ namespace GossipSDK.Editor
             {
                 { "ServerStatusComponent",       ("REVIEW", "Only applies if you have a dedicated game server. Turn off for non-multiplayer apps.") },
                 { "MultiplayerTrackerComponent", ("REVIEW", "Emits an empty room snapshot each session. Turn off for single-user apps.") },
-                { "DifficultyComponent",         ("REVIEW", "Emits a default difficulty level each session. Turn off if your app has no difficulty system.") },
+                { "DifficultyComponent",         ("CODE",   "Reports nothing until you call NotifyDifficulty(). It no longer emits a default level each session.") },
+                { "LevelChangeComponent",        ("AUTO",   "Detects active scene changes on its own. No code needed.") },
                 { "AvatarTrackerComponent",      ("CODE",   "Call NotifyAvatar() from your purchase flow.") },
                 { "AccessoriesComponent",        ("CODE",   "Call ReportPurchased() from your purchase flow.") },
                 { "AdComponent",                 ("CODE",   "Call RecordImpression()/RecordReward() from your ad SDK callbacks.") },
