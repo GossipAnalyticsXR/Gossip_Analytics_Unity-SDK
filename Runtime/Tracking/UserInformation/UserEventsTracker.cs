@@ -69,6 +69,35 @@ namespace GossipSDK.Tracking.GameplayMetrics
             CaptureEvent(eventName, category, label, pos, properties);
         }
 
+        /// <summary>
+        /// Los dos literales que el panel busca para las cards de escenas.
+        ///
+        /// La agregacion filtra por EventName "Level" y da por completada la
+        /// que trae Category "CompleteLevel". Estaban escritos a mano en el
+        /// script de ejemplo, y a mano otra vez en el backend, sin nada que los
+        /// atara: una letra distinta y las cards se quedaban vacias para
+        /// siempre, sin error en ningun sitio.
+        /// </summary>
+        public static class LevelEvents
+        {
+            public const string EventName = "Level";
+            public const string CompletedCategory = "CompleteLevel";
+        }
+
+        /// <summary>
+        /// Marca la escena activa como completada por este usuario.
+        ///
+        /// Usar esto en vez de CaptureEvent con los dos literales a mano: aqui
+        /// del contrato responde el compilador, no la memoria de quien integra.
+        ///
+        /// La escena no se pasa: sale sola de la escena activa, que es por lo
+        /// que agrupa el panel.
+        /// </summary>
+        public void CaptureLevelCompleted(string label = null, Dictionary<string, object> properties = null)
+        {
+            CaptureEvent(LevelEvents.EventName, LevelEvents.CompletedCategory, label, null, properties);
+        }
+
         public int GetPendingCountSafe()
         {
             try { return GetPendingCount(); }
