@@ -81,5 +81,44 @@ namespace GossipSDK.Core.Utilities
             _cache[simpleName] = null;
             return null;
         }
+
+        /// <summary>
+        /// Finds a type by its FULL name (namespace included) across all loaded assemblies.
+        /// Returns null if not found.
+        ///
+        /// FindType matches by simple name, and that is ambiguous for the names that matter
+        /// here: NetworkManager exists in Unity.Netcode, in Mirror and in the old UNet, and
+        /// the first match wins and gets cached. Probing a specific networking library needs
+        /// the namespace, or it silently reads the wrong type.
+        /// </summary>
+        public static Type FindTypeByFullName(string fullName)
+        {
+            if (string.IsNullOrEmpty(fullName))
+                return null;
+
+            // Separate cache key space: a simple name and a full name are different queries
+            // and must not collide.
+            string key = "full:" + fullName;
+
+            if (_cache.TryGetValue(key, out Type cached))
+                return cached;
+
+            foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    Type t = asm.GetType(fullName, false);
+                    if (t != null)
+                    {
+                        _cache[key] = t;
+                        return t;
+                    }
+                }
+                catch { /* skip assemblies that cannot be reflected */ }
+            }
+
+            _cache[key] = null;
+            return null;
+        }
     }
 }

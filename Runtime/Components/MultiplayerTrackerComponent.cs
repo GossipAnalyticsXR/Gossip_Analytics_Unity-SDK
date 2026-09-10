@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using GossipSDK.Core;
+using GossipSDK.Core.Utilities;
 using System.Reflection;
 using GossipSDK.Tracking.GameplayMetrics;
 
@@ -68,13 +69,48 @@ namespace GossipSDK.Components
                 return;
 
             List<MultiplayerTracker.PlayerInfo> players = CollectPlayers();
+            string source = ResolveCountSource();
+
+            // Si nadie sobrescribio CollectPlayers(), la lista trae solo este dispositivo y
+            // no vale como medida. Antes de rendirse, se le pregunta a la capa de red.
+            if (source == PlayerCountSources.Unknown)
+            {
+                NetworkPlayerCount fromNetwork = NetworkPlayerCountResolver.Resolve();
+                if (fromNetwork.Known)
+                {
+                    players = BuildPlaceholders(fromNetwork.Count);
+                    source = PlayerCountSources.NetworkAuto;
+                }
+            }
 
             tracker.CapMatchSnapshot(
                 roomId,
                 matchType,
                 players,
-                ResolveCountSource()
+                source
             );
+        }
+
+        /// <summary>
+        /// La capa de red nos da CUANTOS, no QUIENES. Se rellena la lista con marcadores para
+        /// que PlayerCount cuadre, y sin inventar identidades: sin PlayerId y sin ping, que es
+        /// justo lo que no sabemos.
+        /// </summary>
+        private static List<MultiplayerTracker.PlayerInfo> BuildPlaceholders(int count)
+        {
+            var list = new List<MultiplayerTracker.PlayerInfo>();
+
+            for (int i = 0; i < count; i++)
+            {
+                list.Add(new MultiplayerTracker.PlayerInfo
+                {
+                    PlayerId = null,
+                    DisplayName = null,
+                    PingMs = null
+                });
+            }
+
+            return list;
         }
 
         /// <summary>

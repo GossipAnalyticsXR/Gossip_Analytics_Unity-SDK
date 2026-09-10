@@ -3,6 +3,7 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using GossipSDK.Core;
+using GossipSDK.Core.Utilities;
 using GossipSDK.Tracking.GameplayMetrics;
 
 namespace GossipSDK.Components
@@ -11,7 +12,7 @@ namespace GossipSDK.Components
     public class SessionManager : MonoBehaviour
     {
         [SerializeField] private string sessionId;
-        [Tooltip("Leave empty to auto-detect from Player tag count. Set 'single' or 'multi' to override.")]
+        [Tooltip("Leave empty to auto-detect from the networking layer in the project. Set 'single' or 'multi' to override.")]
         [SerializeField] private string sessionTypeOverride = "";
         [SerializeField] private string subscriptionTypeOverride = "";
 
@@ -39,12 +40,29 @@ namespace GossipSDK.Components
         /// </summary>
         private static SessionManager _instance;
 
+        /// <summary>
+        /// Individual o de grupo, y null si no lo sabemos.
+        ///
+        /// Antes contaba GameObjects con el tag "Player" en la escena local, que no es
+        /// multijugador: en red, que los avatares remotos lleven ese tag depende de los
+        /// prefabs del integrador, y en un juego de un jugador cualquier segundo objeto
+        /// etiquetado Player (un rig espejo, un maniqui) daba "multi".
+        ///
+        /// null y no "single" cuando no se sabe: el backend excluye null al filtrar, asi que
+        /// una sesion sin medir deja de contar como solitaria en vez de inflar ese lado.
+        /// Medido el 10-sep-2026: las 107 sesiones de dev estaban TODAS en single y no habia
+        /// forma de saber cuantas lo eran de verdad.
+        /// </summary>
         private string ResolveSessionType()
         {
             if (!string.IsNullOrEmpty(sessionTypeOverride))
                 return sessionTypeOverride;
-            var players = GameObject.FindGameObjectsWithTag("Player");
-            return players.Length > 1 ? "multi" : "single";
+
+            NetworkPlayerCount players = NetworkPlayerCountResolver.Resolve();
+            if (!players.Known)
+                return null;
+
+            return players.Count > 1 ? "multi" : "single";
         }
 
         private string ResolveSubscriptionType()
