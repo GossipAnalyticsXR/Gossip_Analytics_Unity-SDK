@@ -40,6 +40,13 @@ namespace GossipSDK.Components
         // once _standingHeadY reaches this floor (a standing adult always exceeds 1.0 m).
         private const float _minStandingHeadY = 1.0f;
 
+        // Los tres unicos estados que el backend sabe leer. Antes del PR #308
+        // cualquier otro se contaba como de pie; hoy se cuenta aparte, pero
+        // sigue siendo un dato perdido. Se valida aqui, en la puerta.
+        public const string PostureSitting = "Sitting";
+        public const string PostureStanding = "Standing";
+        public const string PostureCrouching = "Crouching";
+
         float timer = 0f;
         string lastPosture = "Unknown";
 
@@ -63,8 +70,31 @@ namespace GossipSDK.Components
         public void PushPostureState(string posture)
         {
             if (string.IsNullOrWhiteSpace(posture)) return;
-            lastPosture = posture;
-            TrySend(posture, GetHeadPosition());
+
+            string normalizado = NormalizarPostura(posture);
+            if (normalizado == null)
+            {
+                Debug.LogError(
+                    "[UserPostureTracker] PushPostureState recibio un estado desconocido: " + posture +
+                    ". Solo se aceptan " + PostureSitting + ", " + PostureStanding +
+                    " o " + PostureCrouching + ". La muestra NO se envia.");
+                return;
+            }
+
+            lastPosture = normalizado;
+            TrySend(normalizado, GetHeadPosition());
+        }
+
+        // Mayusculas y espacios de sobra son un error de tipeo, no un estado
+        // nuevo: se normalizan en vez de tirar la muestra. Lo que no coincide
+        // con ninguno de los tres devuelve null y no sale del dispositivo.
+        string NormalizarPostura(string posture)
+        {
+            string limpio = posture.Trim();
+            if (string.Equals(limpio, PostureSitting, StringComparison.OrdinalIgnoreCase)) return PostureSitting;
+            if (string.Equals(limpio, PostureStanding, StringComparison.OrdinalIgnoreCase)) return PostureStanding;
+            if (string.Equals(limpio, PostureCrouching, StringComparison.OrdinalIgnoreCase)) return PostureCrouching;
+            return null;
         }
 
         void SampleAndSend()
@@ -91,15 +121,15 @@ namespace GossipSDK.Components
             // has not yet seen a full-standing sample, so fall back to absolute thresholds.
             if (_standingHeadY < _minStandingHeadY)
             {
-                if (headWorldY <= sitThreshold) return "Sitting";
-                if (headWorldY <= crouchThreshold) return "Crouching";
-                return "Standing";
+                if (headWorldY <= sitThreshold) return PostureSitting;
+                if (headWorldY <= crouchThreshold) return PostureCrouching;
+                return PostureStanding;
             }
 
             // Relative classification against the session running-max head height.
-            if (headWorldY <= _standingHeadY * sitRatio) return "Sitting";
-            if (headWorldY <= _standingHeadY * crouchRatio) return "Crouching";
-            return "Standing";
+            if (headWorldY <= _standingHeadY * sitRatio) return PostureSitting;
+            if (headWorldY <= _standingHeadY * crouchRatio) return PostureCrouching;
+            return PostureStanding;
         }
 
         void TrySend(string postureState, Vector3 headPos)
