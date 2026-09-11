@@ -1,3 +1,31 @@
+## [2.0.13] - 2026-09
+
+### Changed
+
+- `UserPostureComponent.PushPostureState(string)` valida el estado contra los tres que el
+  backend sabe leer, ahora expuestos como constantes publicas: `PostureSitting`,
+  `PostureStanding` y `PostureCrouching`. Acepta mayusculas y espacios de sobra
+  (" standing " -> "Standing"), porque un error de tipeo no deberia costar la muestra, y
+  lo que no coincide con ninguno de los tres NO se envia: queda en consola con
+  `Debug.LogError` nombrando los tres validos. `InferPostureFromHeadY` usa las mismas
+  constantes, asi que hay una sola fuente para esos nombres.
+
+  Por que hacia falta: era API publica y aceptaba cualquier cadena. Un estado que el
+  backend no reconoce se contaba como de pie y ademas rompia la racha de Crouching, que
+  es lo que decide si un agachado cuenta como de pie o como sentado. Medido en la base
+  forzando 6.462 muestras a un estado desconocido: el reparto viejo absorbia 6.657 en
+  standing, y 195 de ellas eran muestras de Crouching reales recolocadas porque la racha
+  se reiniciaba.
+
+  Cambio de comportamiento: quien empuje un estado propio deja de verlo llegar. Medido,
+  los tres estados conocidos cubren el 100% de 25.770 muestras.
+
+### Removed
+
+- El campo privado `lastPosture`, que se escribia en dos sitios y no se leia en ninguno.
+  Con el desaparece el literal "Unknown", que era el unico sitio del SDK donde vivia un
+  cuarto estado de postura.
+
 ## [2.0.12] - 2026-09
 
 ### Added
