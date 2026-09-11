@@ -48,7 +48,6 @@ namespace GossipSDK.Components
         public const string PostureCrouching = "Crouching";
 
         float timer = 0f;
-        string lastPosture = "Unknown";
 
         void Start()
         {
@@ -81,7 +80,6 @@ namespace GossipSDK.Components
                 return;
             }
 
-            lastPosture = normalizado;
             TrySend(normalizado, GetHeadPosition());
         }
 
@@ -102,7 +100,6 @@ namespace GossipSDK.Components
             Vector3 headPos = GetHeadPosition();
             _standingHeadY = Mathf.Max(_standingHeadY, headPos.y);
             string posture = InferPostureFromHeadY(headPos.y);
-            lastPosture = posture;
 
             TrySend(posture, headPos);
         }
