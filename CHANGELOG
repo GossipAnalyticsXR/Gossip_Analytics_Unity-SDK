@@ -1,3 +1,26 @@
+## [2.0.12] - 2026-09
+
+### Added
+
+- El SDK sella el objetivo de refresco del visor en cada muestra de memoria:
+  `MemoryTracker.EntityData.TargetHz`, leido del XRDisplaySubsystem por el nuevo
+  `GossipSDK.Utilities.GossipDisplay`. Se lee del modulo XR de Unity, no de OVR, asi
+  que no arrastra el CS0234 de referenciar tipos de Oculus sin el paquete. Devuelve 0
+  cuando no se puede leer, y 0 aguas abajo significa no medido, no un objetivo de 0 Hz.
+
+  Por que hacia falta: el backend puntuaba el FPS contra un 72 fijo, y ese numero no es
+  el objetivo de nadie. Una Quest 3 corre a 72, 90 o 120 segun lo que elija el usuario en
+  sus ajustes. Medido el 11-sep-2026, la card marcaba 73,99 fps sobre 963 muestras, por
+  encima del supuesto techo, asi que la puntuacion saturaba al 100% sin saber contra que
+  corria. Con el objetivo real, cada muestra se compara con el suyo.
+
+  Viaja CON la muestra y no en `devices` a proposito: el usuario puede cambiar el refresco
+  sin cerrar la app, asi que es una propiedad del instante, no del usuario.
+
+  El backend ya lo espera: `Backend-SDK` lo acepta desde el PR #57 y `Backend-Front` lo
+  puntua desde el PR #304. Medido el 11-sep-2026, antes de esta version: 0 de 1.074
+  muestras traian objetivo, asi que el pilar de calidad dejaba el FPS fuera del promedio.
+
 ## [2.0.11] - 2026-09
 
 ### Fixed

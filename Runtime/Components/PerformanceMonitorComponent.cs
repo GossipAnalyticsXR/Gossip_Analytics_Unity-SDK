@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using GossipSDK.Core;
 using GossipSDK.Tracking.GameplayMetrics;
+using GossipSDK.Utilities;
 
 namespace GossipSDK.Components
 {
@@ -85,6 +86,8 @@ namespace GossipSDK.Components
                     GcCollectionsGen1 = GC.CollectionCount(1),
                     GcCollectionsGen2 = GC.CollectionCount(2),
                     CurrentFPS = currentFps,
+                    // El objetivo del visor en ESTE instante. Cero si no se pudo leer.
+                    TargetHz = GossipDisplay.TargetHz(),
                     TimestampUtc = DateTime.UtcNow.ToString("o")
                 };
 
