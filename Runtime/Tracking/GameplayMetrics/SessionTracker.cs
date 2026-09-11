@@ -34,7 +34,15 @@ namespace GossipSDK.Tracking.GameplayMetrics
         private DateTime lastEventTime = DateTime.MinValue;
         private readonly double dedupeWindowSeconds = 0.5;
 
-        public void RecordEvent(string eventType, double durationSeconds = 0.0, string sessionType = "single", string subscriptionType = "free_trial")
+        // `occurredAtUtc` deja que quien llama diga CUANDO paso el evento, no cuando se
+        // graba. Lo necesita el cierre de una sesion huerfana: ese `session_end` se manda
+        // en el arranque SIGUIENTE, y si se sellara con la hora de grabacion empujaria el
+        // `lastEventAt` de la sesion cerrada hasta ese arranque. Es exactamente el sesgo
+        // que cerro el PR #59 del Backend-SDK, de vuelta y esta vez en todas las sesiones.
+        //
+        // Si no se pasa, se sella con `now`, que es lo de siempre. La ventana de deduplicado
+        // de abajo sigue usando `now` a proposito: esa mide LLEGADA, no captura.
+        public void RecordEvent(string eventType, double durationSeconds = 0.0, string sessionType = "single", string subscriptionType = "free_trial", DateTime? occurredAtUtc = null)
         {
             try
             {
@@ -56,7 +64,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
                 var data = new EntityData
                 {
                     EventType = eventType,
-                    TimestampUtc = now.ToString("o"),
+                    TimestampUtc = (occurredAtUtc ?? now).ToString("o"),
                     DurationSeconds = durationSeconds,
                     SceneName = SceneManager.GetActiveScene().name,
                     PlayerId = Gossip.Instance?.PlayerID,

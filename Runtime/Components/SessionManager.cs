@@ -24,6 +24,18 @@ namespace GossipSDK.Components
         private const string PendingSessionIdKey = "gossip_pending_session_id";
         private const string PendingSessionStartKey = "gossip_pending_session_start";
 
+        // Ultima vez que se vio viva la sesion, en segundos unix. Sin esto, el cierre por
+        // huerfana solo puede calcular `ahora - inicio`, y ese `ahora` es el arranque
+        // SIGUIENTE: la duracion de cada sesion pasaria a ser el hueco hasta que el usuario
+        // vuelve a abrir la app.
+        private const string PendingSessionLastSeenKey = "gossip_pending_session_lastseen";
+
+        // Cada cuanto se refresca el latido. A 5 s el cierre por huerfana puede quedarse
+        // como mucho 5 s corto: error acotado y hacia abajo, en vez de ilimitado y hacia arriba.
+        private const double LastSeenIntervaloSegundos = 5.0;
+
+        private double siguienteLastSeen;
+
         private string playerId;
         private double sessionStartTimeRealtime;
         private bool sessionStarted = false;
@@ -114,13 +126,31 @@ namespace GossipSDK.Components
             if (PlayerPrefs.HasKey(PendingSessionIdKey))
             {
                 string orphanSessionId = PlayerPrefs.GetString(PendingSessionIdKey, string.Empty);
-                long orphanStartUnix = long.Parse(PlayerPrefs.GetString(PendingSessionStartKey, "0"));
-                double orphanDuration = System.Math.Max(0.0, (double)(System.DateTimeOffset.UtcNow.ToUnixTimeSeconds() - orphanStartUnix));
 
-                if (!string.IsNullOrWhiteSpace(orphanSessionId) && orphanSessionId != sessionId)
+                // La duracion sale de `lastseen`, NO de la hora de ahora. Este session_end se
+                // manda en el arranque SIGUIENTE, asi que `ahora - inicio` seria el hueco de
+                // reloj de pared hasta que el usuario volvio a abrir la app: horas o dias.
+                // Con el quit ya sin enviar nada, esta ruta cierra TODAS las sesiones, asi que
+                // ese error dejaria de ser una rareza de 6 fichas y pasaria a ser la norma.
+                long orphanStartUnix;
+                if (!long.TryParse(PlayerPrefs.GetString(PendingSessionStartKey, "0"), out orphanStartUnix))
+                    orphanStartUnix = 0;
+
+                long orphanLastSeenUnix;
+                bool hayLastSeen = long.TryParse(PlayerPrefs.GetString(PendingSessionLastSeenKey, ""), out orphanLastSeenUnix);
+                if (orphanLastSeenUnix < orphanStartUnix) orphanLastSeenUnix = orphanStartUnix;
+
+                double orphanDuration = System.Math.Max(0.0, (double)(orphanLastSeenUnix - orphanStartUnix));
+                DateTime orphanEndUtc = System.DateTimeOffset.FromUnixTimeSeconds(orphanLastSeenUnix).UtcDateTime;
+
+                // Sin `lastseen` no sabemos cuando acabo: es una sesion que arranco con una
+                // version anterior del SDK. No se cierra inventandole un cero ni la hora de
+                // llegada; se deja como esta y se limpia el pending. Un hueco y un cero medido
+                // no pueden acabar pareciendose.
+                if (hayLastSeen && orphanStartUnix > 0 && !string.IsNullOrWhiteSpace(orphanSessionId) && orphanSessionId != sessionId)
                 {
                     SetCurrentIdsSafe(playerId, orphanSessionId);
-                    SendSessionEvent("session_end", orphanDuration, orphanSessionId);
+                    SendSessionEvent("session_end", orphanDuration, orphanSessionId, orphanEndUtc);
                     SetCurrentIdsSafe(playerId, sessionId);
                 }
 
@@ -134,6 +164,10 @@ namespace GossipSDK.Components
             sessionStarted = true;
             PlayerPrefs.SetString(PendingSessionIdKey, sessionId);
             PlayerPrefs.SetString(PendingSessionStartKey, System.DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString());
+            // El latido arranca en la hora de inicio: una sesion que muera antes del primer
+            // Update cierra con duracion 0, que es la verdad, y no con un hueco inventado.
+            PlayerPrefs.SetString(PendingSessionLastSeenKey, System.DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString());
+            siguienteLastSeen = Time.realtimeSinceStartupAsDouble + LastSeenIntervaloSegundos;
             PlayerPrefs.Save();
         }
 
@@ -322,7 +356,39 @@ namespace GossipSDK.Components
         {
             PlayerPrefs.DeleteKey(PendingSessionIdKey);
             PlayerPrefs.DeleteKey(PendingSessionStartKey);
+            PlayerPrefs.DeleteKey(PendingSessionLastSeenKey);
             PlayerPrefs.Save();
+        }
+
+        /// <summary>
+        /// Deja escrito CUANDO se vio viva la sesion por ultima vez. Es lo que permite que el
+        /// arranque siguiente cierre la huerfana con su duracion real, en vez de con el hueco
+        /// de reloj de pared hasta esa reapertura.
+        /// </summary>
+        private void TouchLastSeen(bool guardarYa)
+        {
+            PlayerPrefs.SetString(PendingSessionLastSeenKey, System.DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString());
+            if (guardarYa) PlayerPrefs.Save();
+        }
+
+        private void Update()
+        {
+            if (!sessionStarted) return;
+            if (Time.realtimeSinceStartupAsDouble < siguienteLastSeen) return;
+            siguienteLastSeen = Time.realtimeSinceStartupAsDouble + LastSeenIntervaloSegundos;
+            // Sin Save(): PlayerPrefs.Save() escribe a disco y esto corre cada 5 s. Unity
+            // vuelca solo al pausar y al salir, y el Save() explicito lo hace OnApplicationPause.
+            TouchLastSeen(false);
+        }
+
+        /// <summary>
+        /// En Android y Quest esta SI se ejecuta antes de que maten el proceso, al contrario
+        /// que OnApplicationQuit. Es el momento bueno para dejar el latido en disco.
+        /// </summary>
+        private void OnApplicationPause(bool pausando)
+        {
+            if (!sessionStarted || !pausando) return;
+            TouchLastSeen(true);
         }
 
         private void OnApplicationQuit()
@@ -333,13 +399,21 @@ namespace GossipSDK.Components
                 return;
             }
 
-            double totalDuration = Time.realtimeSinceStartupAsDouble - sessionStartTimeRealtime;
+            // NO se manda el session_end y NO se borra el pending, a proposito.
+            //
+            // Medido el 6-sep-2026 sobre 8.482 sesiones: solo 6 tienen `end` (0,07%), y las
+            // seis con createdAt igual a updatedAt al milisegundo, o sea cerradas por la ruta
+            // de huerfana. Ninguna sesion que arranco con `start` llego jamas a `end` por
+            // aqui: en Android el proceso muere antes de que salga el envio asincrono
+            // (CapSession solo escribe en LiteDB local, y el envio va con .Forget()).
+            //
+            // Y al borrar el pending se llevaba por delante la unica via que si funciona: el
+            // arranque siguiente cerrando la huerfana. Dejandolo, esa ruta la cierra con su
+            // duracion y su hora reales.
+            //
+            // `sessionStarted = false` SE QUEDA: es lo que hace que OnDestroy, que Unity llama
+            // justo despues del quit, salga por su guarda y no duplique el cierre.
             sessionStarted = false;
-            if ((UnityEngine.Object)Gossip.Instance != null)
-                SendSessionEvent("session_end", totalDuration);
-            else
-                Debug.LogWarning("[SessionManager] Gossip.Instance null on quit -- session_end not sent");
-            ClearPendingSession();
         }
 
         private void OnDestroy()
@@ -363,7 +437,7 @@ namespace GossipSDK.Components
             ClearPendingSession();
         }
 
-        private void SendSessionEvent(string eventType, double durationSeconds, string sessionIdOverride = null)
+        private void SendSessionEvent(string eventType, double durationSeconds, string sessionIdOverride = null, DateTime? occurredAtUtc = null)
         {
             try
             {
@@ -375,17 +449,20 @@ namespace GossipSDK.Components
                     return;
                 }
 
-                var recordMethod = tracker.GetType().GetMethod("RecordEvent", new Type[] { typeof(string), typeof(double), typeof(string), typeof(string) });
+                // Si el tracker fuese de una version anterior sin el parametro de hora, esta
+                // busqueda devuelve null y se cae al camino de EntityData de abajo, que sella
+                // la hora igual de bien. Degrada sin perder la fecha.
+                var recordMethod = tracker.GetType().GetMethod("RecordEvent", new Type[] { typeof(string), typeof(double), typeof(string), typeof(string), typeof(DateTime?) });
                 if (recordMethod != null)
                 {
-                    recordMethod.Invoke(tracker, new object[] { eventType, durationSeconds, ResolveSessionType(), ResolveSubscriptionType() });
+                    recordMethod.Invoke(tracker, new object[] { eventType, durationSeconds, ResolveSessionType(), ResolveSubscriptionType(), occurredAtUtc });
                     return;
                 }
 
                 var data = new SessionTracker.EntityData
                 {
                     EventType = eventType,
-                    TimestampUtc = DateTime.UtcNow.ToString("o"),
+                    TimestampUtc = (occurredAtUtc ?? DateTime.UtcNow).ToString("o"),
                     DurationSeconds = durationSeconds,
                     SceneName = SceneManager.GetActiveScene().name,
                     PlayerId = playerId,
