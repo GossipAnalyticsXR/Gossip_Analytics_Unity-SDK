@@ -9,10 +9,10 @@ public class VRPermissionsHandler : MonoBehaviour
     [Tooltip("Request Eye Tracking permission on Meta Quest. Required for gaze analytics.")]
     public bool enableEyeTracking = true;
 
-    [Tooltip("Request Scene/Spatial permission on Meta Quest. Required for environment heatmaps.")]
+    [Tooltip("Request Scene/Spatial permission on Meta Quest. RESERVED: the environment heatmap that recreates the room will need it. Nothing in the SDK calls the Scene API today (measured 10-sep-2026).")]
     public bool enableSpatialScene = true;
 
-    [Tooltip("Request Headset Camera permission on Meta Quest. Required for passthrough and MR.")]
+    [Tooltip("Request Headset Camera permission on Meta Quest. RESERVED for future MR capture. Nothing reads the headset camera today, and passthrough detection does NOT go through it (measured 10-sep-2026).")]
     public bool enableHeadsetCamera = true;
 
     [Tooltip("Request Microphone permission. Audio is processed on-device and immediately discarded. No recordings stored or transmitted.")]
@@ -61,24 +61,51 @@ public class VRPermissionsHandler : MonoBehaviour
         if (enableSpatialScene)   permissionsToRequest.Add("com.oculus.permission.USE_SCENE");
         if (enableHeadsetCamera)  permissionsToRequest.Add("horizonos.permission.HEADSET_CAMERA");
 
+        // Los permisos se piden en UNA sola llamada, no de uno en uno.
+        //
+        // Medido el 10-sep-2026 en gafas (sesion 1c6bf4ed, Hospital Zone): pedirlos
+        // por separado costo TRES esperas de ~11 s = ~33 s de arranque con la
+        // telemetria parada. Cada RequestUserPermission que no abre dialogo agota
+        // el plazo entero, porque la unica salida temprana es que vuelva el FOCO y
+        // aqui el foco no se pierde: lo que parpadea es el montaje del visor
+        // (~100 ms), y este gestor no lo escucha. Con una sola llamada el plazo se
+        // paga una vez, no una por permiso.
+        var pendientes = new List<string>();
         foreach (var permission in permissionsToRequest)
         {
             if (!Permission.HasUserAuthorizedPermission(permission))
+                pendientes.Add(permission);
+        }
+
+        if (pendientes.Count > 0)
+        {
+            _isAppFocused = false;
+            Permission.RequestUserPermissions(pendientes.ToArray());
+
+            float timeout = 0f;
+            while (!TodosConcedidos(pendientes) && !_isAppFocused && timeout < 10f)
             {
-                _isAppFocused = false;
-                Permission.RequestUserPermission(permission);
-                float timeout = 0f;
-                while (!Permission.HasUserAuthorizedPermission(permission) && !_isAppFocused && timeout < 10f)
-                {
-                    yield return new WaitForSecondsRealtime(0.2f);
-                    timeout += 0.2f;
-                }
                 yield return new WaitForSecondsRealtime(0.2f);
+                timeout += 0.2f;
             }
+
+            yield return new WaitForSecondsRealtime(0.2f);
         }
 
         Debug.Log("[VRPermissionsHandler] Permission sequence complete. System ready.");
         IsReady = true;
+    }
+
+    // Cierta solo cuando NO queda ningun permiso pendiente. El bucle de espera
+    // pregunta por el grupo entero, no por uno.
+    private static bool TodosConcedidos(List<string> permisos)
+    {
+        foreach (var p in permisos)
+        {
+            if (!Permission.HasUserAuthorizedPermission(p)) return false;
+        }
+
+        return true;
     }
 
     public static IEnumerator RequestEyeTrackingPermission()

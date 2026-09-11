@@ -1,3 +1,20 @@
+## [2.0.10] - 2026-09
+
+### Fixed
+
+- Los permisos se piden en **una sola llamada** (`Permission.RequestUserPermissions`) con un plazo
+  unico para el grupo, en vez de uno por permiso con su propio plazo de 10 s. La unica salida
+  temprana de esa espera era que volviera el FOCO, y el foco no se pierde: lo que parpadea al
+  arrancar es el montaje del visor, que este gestor no escucha. Cada permiso que no abria dialogo
+  se comia su plazo entero. Medido en gafas el 10-sep-2026: tres parpadeos separados 11,19 s y
+  10,89 s. Tres esperas pasan a ser una: ~33 s a ~11 s.
+- Los tooltips de los dos permisos reservados dicen RESERVED y para que haran falta, en vez de
+  afirmar como hecho lo que es intencion. Esa redaccion ya hizo que dos analisis concluyeran que
+  esos permisos se podian quitar.
+
+Los dos cambios se mergearon el 10-sep en la rama dev, que no publica al espejo publico, asi que
+no llegaron al paquete hasta esta version.
+
 ## [2.0.9] - 2026-09
 
 ### Changed
