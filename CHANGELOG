@@ -1,3 +1,28 @@
+## [2.0.11] - 2026-09
+
+### Fixed
+
+- El cierre de sesion lo hace ahora el arranque SIGUIENTE, no el quit. `OnApplicationQuit` ya no
+  manda `session_end` ni borra el pending: en Android el proceso muere antes de que salga el envio
+  asincrono (`CapSession` solo escribe en LiteDB local y el envio va con `.Forget()`), y al borrar
+  el pending se llevaba por delante la unica via que si funciona. Medido el 6-sep-2026 sobre 8.482
+  sesiones: solo 6 tenian `end`, el 0,07%, y las seis cerradas por la ruta de huerfana. El 42,4%
+  se quedaba con el ciclo de vida en `null`.
+- La duracion de la sesion cerrada por esa ruta sale de un latido nuevo
+  (`gossip_pending_session_lastseen`, refrescado cada 5 s en `Update` y volcado a disco en
+  `OnApplicationPause(true)`, que en Quest si corre antes del kill). Antes se calculaba como
+  `ahora - inicio`, y ese `ahora` es el arranque siguiente: con el quit ya sin enviar, la duracion
+  de CADA sesion habria pasado a ser el hueco de reloj de pared hasta la reapertura, horas o dias.
+  El latido a 5 s deja el cierre como mucho 5 s corto: error acotado y hacia abajo.
+- El `session_end` tardio lleva la hora real de la sesion, no la de llegada. `RecordEvent` acepta
+  un `occurredAtUtc` opcional y sella con el el `TimestampUtc`. Sin esto, el `$max: lastEventAt`
+  del ingest habria empujado el `lastEventAt` de la sesion ya cerrada hasta el arranque siguiente:
+  el mismo sesgo de duracion inflada que cerro el PR #59 del Backend-SDK esa misma manana, de
+  vuelta y en todas las sesiones en vez de solo en las que cruzaban el bufer.
+
+Una sesion sin latido, arrancada con 2.0.10 o anterior, NO se cierra: no se sabe cuando acabo y no
+se le inventa ni un cero ni la hora de llegada. Afecta solo a la transicion.
+
 ## [2.0.10] - 2026-09
 
 ### Fixed
