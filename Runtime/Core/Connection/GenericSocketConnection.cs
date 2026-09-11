@@ -46,6 +46,18 @@ namespace GossipSDK.Core.Connection
         private DateTime envioIniciadoEn;
         private const double EnvioColgadoSegundos = 120.0;
 
+        // Tope de sobres por pasada. El bucle es SECUENCIAL dentro del candado, asi que
+        // NO sube la concurrencia de pico: medido el 10-sep-2026 en gafas, el SDK ya
+        // dispara 11-24 POST por tick (mediana 569 ms, maximo 1899 ms). Solo alarga la
+        // cadena, y hay 120 s de margen antes de que el candado se libere solo. Sin tope,
+        // un aparato dias sin red encadenaria cientos de POST: el 9-sep un POST ya murio
+        // con Curl 28 a los 10011 ms con 24 POST por tick.
+        private const int SobresPorTick = 5;
+
+        // Sobres que siguen pendientes tras el ultimo envio, para que el bucle sepa
+        // cuando parar sin volver a abrir LiteDB.
+        private int sobresRestantes;
+
         public void Initialize()
         {
             if (initialized)
@@ -181,7 +193,19 @@ namespace GossipSDK.Core.Connection
 
             try
             {
-                return await SendDataToSocketAsync(serverURL);
+                // Drena hasta SobresPorTick sobres en la misma pasada, uno por POST. El
+                // sobre de la sesion en curso va PRIMERO (lo elige SendDataToSocketAsync),
+                // asi que un atraso acumulado ya no retrasa el evento de la sesion actual.
+                // Medido el 10-sep-2026 en gafas: el hueco startedAt->createdAt fue de 9,7 s
+                // con la cola limpia y de 29,6 s con cinco sobres por delante.
+                bool ok = false;
+                for (int sobre = 0; sobre < SobresPorTick; sobre++)
+                {
+                    ok = await SendDataToSocketAsync(serverURL);
+                    if (!ok || sobresRestantes <= 0)
+                        break;
+                }
+                return ok;
             }
             finally
             {
@@ -265,31 +289,46 @@ namespace GossipSDK.Core.Connection
                 List<BsonValue> sentIds = new List<BsonValue>();
                 string lotePlayerID = null;
                 string loteSessionID = null;
+                int sobresPendientes = 0;
                 lock (dbLock)
                 {
                     using var db = CreateLiteDatabaseWithRetry();
                     var rawCol = db.GetCollection(DataBaseName);
+                    var pendientes = new List<BsonDocument>(rawCol.FindAll());
 
                     // Un POST lleva UN sobre, asi que un envio solo puede llevar filas de
-                    // una sesion. Se toma la del primer documento pendiente y se dejan las
-                    // demas para el ciclo siguiente, que llega en 5 s.
-                    foreach (var rawDoc in rawCol.FindAll())
+                    // una sesion. Se cuentan los sobres pendientes y se elige cual va en
+                    // esta pasada: PRIMERO el de la sesion en curso si tiene filas, y si no,
+                    // el mas antiguo. Antes iba siempre el mas antiguo, y por eso el evento
+                    // de la sesion actual era el ULTIMO de la cola: medido el 10-sep-2026,
+                    // 29,6 s con cinco sobres por delante contra 9,7 s con la cola limpia.
+                    var sobres = new List<string>();
+                    foreach (var rawDoc in pendientes)
                     {
-                        var p = rawDoc.ContainsKey("__playerID")
-                            ? rawDoc["__playerID"].AsString
-                            : null;
-                        var s = rawDoc.ContainsKey("__sessionID")
-                            ? rawDoc["__sessionID"].AsString
-                            : null;
+                        var clave = SobreDe(rawDoc);
+                        if (!sobres.Contains(clave))
+                            sobres.Add(clave);
+                    }
+                    sobresPendientes = sobres.Count;
+
+                    string claveActual = ClaveSobre(gossip.CurrentPlayerId, gossip.CurrentSessionId);
+                    string claveElegida = sobres.Contains(claveActual)
+                        ? claveActual
+                        : (sobres.Count > 0 ? sobres[0] : null);
+
+                    foreach (var rawDoc in pendientes)
+                    {
+                        if (SobreDe(rawDoc) != claveElegida)
+                            continue;
 
                         if (sentIds.Count == 0)
                         {
-                            lotePlayerID = p;
-                            loteSessionID = s;
-                        }
-                        else if (p != lotePlayerID || s != loteSessionID)
-                        {
-                            continue;
+                            lotePlayerID = rawDoc.ContainsKey("__playerID")
+                                ? rawDoc["__playerID"].AsString
+                                : null;
+                            loteSessionID = rawDoc.ContainsKey("__sessionID")
+                                ? rawDoc["__sessionID"].AsString
+                                : null;
                         }
 
                         sentIds.Add(rawDoc["_id"]);
@@ -297,6 +336,7 @@ namespace GossipSDK.Core.Connection
                     }
                 }
 
+                sobresRestantes = sobresPendientes > 0 ? sobresPendientes - 1 : 0;
                 Data.Messages = snapshot;
 
                 if (gossip != null)
@@ -327,7 +367,7 @@ namespace GossipSDK.Core.Connection
                     return false;
                 }
 
-                Debug.Log($"[GenericSocketConnection] Preparing send {EventName} - PlayerID={Data.PlayerID}, SessionID={Data.SessionID}, Items={Data.Messages?.Count}");
+                Debug.Log($"[GenericSocketConnection] Preparing send {EventName} - PlayerID={Data.PlayerID}, SessionID={Data.SessionID}, Items={Data.Messages?.Count}, sobresPendientes={sobresPendientes}");
 
                 if (useHttp)
                 {
@@ -431,6 +471,21 @@ namespace GossipSDK.Core.Connection
 
             Debug.LogError("Could not emit");
             return false;
+        }
+
+        // Clave del sobre de una fila. El separador es una barra vertical porque
+        // PlayerID y SessionID son GUID y no pueden contenerla, asi que dos sobres
+        // distintos no pueden colisionar en la misma clave.
+        private static string ClaveSobre(string playerID, string sessionID)
+        {
+            return (playerID ?? string.Empty) + "|" + (sessionID ?? string.Empty);
+        }
+
+        private static string SobreDe(BsonDocument rawDoc)
+        {
+            var p = rawDoc.ContainsKey("__playerID") ? rawDoc["__playerID"].AsString : null;
+            var s = rawDoc.ContainsKey("__sessionID") ? rawDoc["__sessionID"].AsString : null;
+            return ClaveSobre(p, s);
         }
 
         public int GetPendingCount()
