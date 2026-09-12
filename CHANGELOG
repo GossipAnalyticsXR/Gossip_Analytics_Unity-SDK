@@ -1,3 +1,25 @@
+## [2.0.18] - 2026-09
+
+### Fixed
+- UserBalanceTrackerComponent leia transform.position, o sea la posicion del
+  GameObject donde estuviera colgado, no la de la cabeza. Medido el 12-sep-2026
+  en el log de un visor real: colgado del root de XR Origin devolvia
+  COP=(0.37, 0.00, 2.00) en las 120 muestras de la sesion, con Y=0 a ras de
+  suelo, mientras el heatmap de movimiento de esa MISMA sesion registraba 949
+  celdas distintas: la camara si se movia, el tracker no la leia. En Mongo son
+  48208 filas desde el 30-may-2026 con UNA sola posicion por sesion (1887
+  muestras, 1 valor), y SwayMagnitude binario: 90,4 por ciento exactamente 0 y
+  9,0 por ciento saturado en 1.
+  Ahora la pose sale de XRBootstrap.HeadPose (CommonUsages.devicePosition del
+  XRNode.Head), que viene en espacio de tracking y no depende de la jerarquia.
+  Mismo patron que PlayableArea y que UserPosture en 2.0.17.
+- UserBalanceTrackerComponent: sin pose del visor no se muestrea, en vez de caer
+  a un transform que no es la cabeza. Un hueco es mejor que un dato inventado.
+- UserBalanceTrackerComponent: la primera pose de cada sesion solo siembra la
+  referencia y no se emite. Antes lastPosition se sembraba en Start() con
+  transform.position, asi que el primer sway restaba una posicion del rig a una
+  pose de cabeza.
+
 ## [2.0.17] - 2026-09
 
 ### Fixed
