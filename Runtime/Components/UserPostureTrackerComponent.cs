@@ -40,6 +40,10 @@ namespace GossipSDK.Components
         // once _standingHeadY reaches this floor (a standing adult always exceeds 1.0 m).
         private const float _minStandingHeadY = 1.0f;
 
+        // El aviso de arranque en frio se emite UNA vez por sesion: el muestreo
+        // es continuo y un log por muestra son miles de lineas.
+        private bool _avisoArranqueEnFrioEmitido = false;
+
         // Los tres unicos estados que el backend sabe leer. Antes del PR #308
         // cualquier otro se contaba como de pie; hoy se cuenta aparte, pero
         // sigue siendo un dato perdido. Se valida aqui, en la puerta.
@@ -118,6 +122,25 @@ namespace GossipSDK.Components
             // has not yet seen a full-standing sample, so fall back to absolute thresholds.
             if (_standingHeadY < _minStandingHeadY)
             {
+                // Medido el 12-09-2026: si el transform que se lee no es la cabeza,
+                // _standingHeadY no llega nunca a 1,0 m, esta rama no se sale nunca y
+                // cada muestra sale etiquetada con los umbrales absolutos. En el log de
+                // un visor real la Y valia 0,56 m toda la sesion y las 120 muestras
+                // salieron como Sitting, con total confianza y sin que nadie lo supiera.
+                //
+                // La guarda ya detectaba el caso; lo que faltaba era contarlo.
+                if (!_avisoArranqueEnFrioEmitido)
+                {
+                    _avisoArranqueEnFrioEmitido = true;
+                    Debug.LogWarning(
+                        "[Gossip] Postura sin calibrar: la altura maxima de cabeza vista " +
+                        "es " + _standingHeadY.ToString("F2") + " m, por debajo del minimo " +
+                        "de " + _minStandingHeadY.ToString("F2") + " m. Se estan usando umbrales " +
+                        "absolutos, no la calibracion por usuario. Comprueba que headTransform " +
+                        "apunta a la camara XR."
+                    );
+                }
+
                 if (headWorldY <= sitThreshold) return PostureSitting;
                 if (headWorldY <= crouchThreshold) return PostureCrouching;
                 return PostureStanding;

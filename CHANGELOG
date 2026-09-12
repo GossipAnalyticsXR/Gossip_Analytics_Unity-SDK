@@ -1,3 +1,17 @@
+## [2.0.16] - 2026-09
+
+### Fixed
+- UserPostureTrackerComponent: la guarda de arranque en frio usa umbrales
+  absolutos hasta que _standingHeadY (el maximo de altura de cabeza visto en la
+  sesion) alcanza 1,0 m. Si el transform que se lee no es la cabeza ese maximo no
+  llega nunca, la rama no se sale nunca, y cada muestra sale etiquetada por el
+  fallback con toda confianza. Medido el 12-sep-2026 en el log de un visor real:
+  la Y valia 0,56 m toda la sesion y las 120 muestras salieron como Sitting. En la
+  base son 4 sesiones y 627 muestras de 33967 (1,8 por ciento) sin calibrar. La
+  guarda ya detectaba el caso; lo que faltaba era contarlo. Ahora avisa por log una
+  vez por sesion, con la altura vista y el minimo exigido. Una vez por sesion y no
+  por muestra: el muestreo es continuo. La clasificacion no cambia.
+
 ## [2.0.15] - 2026-09
 
 ### Fixed
