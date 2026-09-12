@@ -1,3 +1,28 @@
+## [2.0.19] - 2026-09
+
+### Added
+- GossipVersion, el unico sitio del SDK donde se decide que se manda como version
+  de la app, con su .cs.meta. Venia sin publicar desde la rama dev, y alli no
+  tenia .meta, asi que Unity lo ignoraba.
+- PlatformMonitor: se envia RenderScale, la escala a la que la app renderiza
+  respecto al defecto del dispositivo (XRSettings.eyeTextureResolutionScale).
+  Es el denominador que le faltaba a Resolution: esa cadena ya es la textura de
+  ojo de la app, no el panel, asi que el backend la estaba dividiendo entre los
+  pixeles de una Quest 3, una constante de otro visor. La ingesta ya lo esperaba
+  (DTO y procesador) y el dashboard ya lo agregaba descartando toda fila sin el;
+  medido el 12-sep-2026, eso era el 100 por cien de las filas, porque el SDK no
+  lo habia emitido nunca. Cero significa que no se pudo leer, no una escala de 0.
+
+### Fixed
+- PlatformMonitor: la version de la app deja de sustituirse. Este era el unico
+  de los diez sitios del runtime que, si Application.version venia vacia o
+  0.0.0, mandaba 1.0.0 mientras los otros nueve mandaban la cruda. Esa cadena es
+  la clave con la que el backend cruza el eje de FPS (experienceinfos.AppVersion)
+  con el de resolucion (devices.version), asi que la discrepancia dejaba un eje
+  sin medir en silencio. Ahora pasa por GossipVersion.App, que devuelve
+  Application.version tal cual: introducirlo no mueve ningun dato, solo quita la
+  excepcion.
+
 ## [2.0.18] - 2026-09
 
 ### Fixed

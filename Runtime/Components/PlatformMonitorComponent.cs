@@ -4,6 +4,7 @@ using UnityEngine.XR;
 using UnityEngine.XR.Provider;
 using GossipSDK.Tracking.PlatformSpecification;
 using GossipSDK.Core;
+using GossipSDK.Utilities;
 
 namespace GossipSDK.Components
 {
@@ -92,16 +93,26 @@ namespace GossipSDK.Components
                 trackingAccuracy = (float)fullyTracked / controllers.Count;
             }
 
+            // La escala de render, que es el denominador de la resolucion: resW/resH ya
+            // son la textura de ojo de la app, no el panel. Se lee junto a ellas para que
+            // las tres salgan del mismo instante. 0 si no hay XR.
+            float renderScale = 0f;
+            try { renderScale = UnityEngine.XR.XRSettings.eyeTextureResolutionScale; }
+            catch { renderScale = 0f; }
+
             var data = new PlatformTracker.EntityData
             {
-                Version = (string.IsNullOrEmpty(Application.version) || Application.version == "0.0.0")
-                    ? "1.0.0"
-                    : Application.version,
+                // Aqui habia un sustituto: si Application.version venia vacia o "0.0.0"
+                // este sitio mandaba "1.0.0" y los otros nueve la cruda, asi que el cruce
+                // de AppVersion contra devices.version se rompia en silencio. Ahora los
+                // diez pasan por el mismo sitio y no hay convenio que cumplir.
+                Version = GossipVersion.App,
                 PlatformName = Application.platform.ToString(),
                 Model = SystemInfo.deviceModel,
                 Device = SystemInfo.deviceModel,
                 Brand = brand,
                 Resolution = $"{resW}x{resH}",
+                RenderScale = renderScale,
                 GeneralSound = AudioListener.volume > 0f,
                 ControllersLatency = hasLatencyData,
                 MotionToPhotonMs = hasLatencyData ? latencyMs : 0f,

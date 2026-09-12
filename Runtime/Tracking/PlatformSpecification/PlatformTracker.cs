@@ -31,6 +31,15 @@ namespace GossipSDK.Tracking.PlatformSpecification
             [field: SerializeField] public string Brand { get; set; }
             [field: SerializeField] public string OsVersion { get; set; }
             [field: SerializeField] public string Resolution { get; set; }
+            // La escala a la que la app renderiza respecto al DEFECTO que propone el
+            // dispositivo. Es el denominador que le faltaba a `Resolution`: esa cadena ya
+            // es la textura de ojo de la app (PlatformMonitorComponent lee
+            // XRSettings.eyeTextureWidth/Height), no el panel, asi que el backend la
+            // estaba dividiendo entre los pixeles de una Quest 3, una constante de otro
+            // visor. Con esto, `defecto = Resolution / RenderScale` y la proporcion sale
+            // sin comparar contra ningun aparato de referencia. Cero significa que no se
+            // pudo leer: no es una escala de 0.
+            [field: SerializeField] public float RenderScale { get; set; }
             [field: SerializeField] public string PlatformName { get; set; }
             [JsonConstructor] public EntityData() { }
         }
