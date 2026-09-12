@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.XR;
 using GossipSDK.Core;
 
 namespace GossipSDK.Components
@@ -39,6 +40,12 @@ namespace GossipSDK.Components
         // Used as a cold-start guard: relative thresholds are applied only
         // once _standingHeadY reaches this floor (a standing adult always exceeds 1.0 m).
         private const float _minStandingHeadY = 1.0f;
+
+        // Banda de altura de cabeza plausible para una persona con visor. Es la
+        // misma que el backend usa para declarar postureSignalPlausible, asi que
+        // las dos puntas de la cadena juzgan la senal con el mismo criterio.
+        private const float _minPlausibleHeadY = 0.8f;
+        private const float _maxPlausibleHeadY = 2.2f;
 
         // El aviso de arranque en frio se emite UNA vez por sesion: el muestreo
         // es continuo y un log por muestra son miles de lineas.
@@ -84,7 +91,16 @@ namespace GossipSDK.Components
                 return;
             }
 
-            TrySend(normalizado, GetHeadPosition());
+            if (!TryGetHeadPosition(out Vector3 headPos))
+            {
+                Debug.LogError(
+                    "[UserPostureTracker] PushPostureState no encontro pose del visor. " +
+                    "HeadY saldria en espacio de mundo, que es la altitud dentro del nivel " +
+                    "y no la altura sobre el suelo. La muestra NO se envia.");
+                return;
+            }
+
+            TrySend(normalizado, headPos);
         }
 
         // Mayusculas y espacios de sobra son un error de tipeo, no un estado
@@ -101,17 +117,47 @@ namespace GossipSDK.Components
 
         void SampleAndSend()
         {
-            Vector3 headPos = GetHeadPosition();
-            _standingHeadY = Mathf.Max(_standingHeadY, headPos.y);
+            // Sin pose del visor no se manda muestra. El fallback a
+            // transform.position media la ALTITUD del jugador dentro del nivel:
+            // medido en produccion el 12-sep-2026, 4 sesiones del 14 de julio con
+            // HeadY media -588,79 m y un pico de +847,98 m, que arrastraron la
+            // media de 124 sesiones de 1,28 m hasta -17,15 m. Un proxy sobre
+            // coordenadas de mundo es peor que no tener proxy: la misma regla que
+            // el PR #90 dejo escrita en PlayableAreaComponent.
+            if (!TryGetHeadPosition(out Vector3 headPos)) return;
+
+            // El techo solo crece con alturas que puedan ser la cabeza de una
+            // persona. Medido el 12-sep-2026 en el rango limpio: el maximo se
+            // despega 0,321 m de la media con desviacion 0,092 m, o sea 3,5 sigma,
+            // y en la peor sesion 1,209 m, que pone el techo en unos 2,5 m. Un
+            // gesto (el visor en la mano) no puede fijar el techo de la sesion.
+            if (headPos.y >= _minPlausibleHeadY && headPos.y <= _maxPlausibleHeadY)
+            {
+                _standingHeadY = Mathf.Max(_standingHeadY, headPos.y);
+            }
+
             string posture = InferPostureFromHeadY(headPos.y);
 
             TrySend(posture, headPos);
         }
 
-        Vector3 GetHeadPosition()
+        // devicePosition del HMD viene en espacio de TRACKING, o sea altura sobre
+        // el suelo de la sala, que es lo que la postura necesita.
+        // headTransform.position es espacio de MUNDO y ahi va dentro la locomocion
+        // del juego: teleport, joystick, plataforma, ascensor. Y cuando
+        // headTransform es null era peor: se leia el GameObject vacio del SDK, que
+        // es de donde salio el 0,56 m del arranque en frio del 2.0.16.
+        bool TryGetHeadPosition(out Vector3 posicion)
         {
-            if (headTransform != null) return headTransform.position;
-            return transform.position;
+            var hmd = InputDevices.GetDeviceAtXRNode(XRNode.Head);
+            if (hmd.isValid &&
+                hmd.TryGetFeatureValue(CommonUsages.devicePosition, out posicion))
+            {
+                return true;
+            }
+
+            posicion = Vector3.zero;
+            return false;
         }
 
         string InferPostureFromHeadY(float headWorldY)

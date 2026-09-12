@@ -1,3 +1,28 @@
+## [2.0.17] - 2026-09
+
+### Fixed
+- UserPosture: HeadY se enviaba en espacio de MUNDO. GetHeadPosition() devolvia
+  headTransform.position, asi que la locomocion del juego (teleport, joystick,
+  plataforma) entraba en la altura de cabeza y la postura clasificaba la ALTITUD
+  del jugador dentro del nivel. Medido en produccion el 12-sep-2026: 4 sesiones
+  del 14 de julio con HeadY media -588,79 m y un pico de +847,98 m, que
+  arrastraron la media de 124 sesiones de 1,28 m hasta -17,15 m; con esa media el
+  backend declara la senal no plausible, el pilar de postura no puntua y la card
+  Sitting and Standing deja de ensenar el reparto. Ahora sale de
+  CommonUsages.devicePosition del XRNode.Head, que viene en espacio de tracking.
+  Mismo patron que el PR #90 aplico a PlayableAreaComponent.
+- UserPosture: sin pose del visor no se envia muestra, ni desde el muestreo
+  automatico ni desde PushPostureState. Antes se caia a transform.position, que
+  cuando headTransform es null es el GameObject vacio del SDK: de ahi salia el
+  0,56 m del arranque en frio que el 2.0.16 aprendio a avisar. Un proxy sobre
+  coordenadas de mundo es peor que no tener proxy.
+- UserPosture: el techo _standingHeadY crecia con cualquier muestra, asi que un
+  gesto fijaba las dos fronteras de banda para el resto de la sesion. Ahora solo
+  crece con alturas entre 0,8 y 2,2 m, la misma banda con la que el backend juzga
+  la senal. Medido en el rango limpio: el maximo se despegaba 0,321 m de la media
+  (desviacion 0,092 m, o sea 3,5 sigma) y 1,209 m en la peor sesion, lo que ponia
+  el techo en unos 2,5 m.
+
 ## [2.0.16] - 2026-09
 
 ### Fixed
