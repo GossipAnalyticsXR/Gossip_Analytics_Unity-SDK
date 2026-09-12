@@ -281,8 +281,34 @@ go.AddComponent<GossipSDK.Heatmaps.HeatmapPanoramaAutoCapture>();
             void Ensure(System.Type t, GameObject host)
             {
                 if (host == null) return;
-                if (UnityEngine.Object.FindObjectOfType(t) == null)
+
+                var existente = UnityEngine.Object.FindObjectOfType(t) as Component;
+                if (existente == null)
+                {
                     host.AddComponent(t);
+                    return;
+                }
+
+                // Ya habia una instancia en la escena, asi que no se toca: puede
+                // haberla puesto el integrador a proposito. Pero si cuelga de otro
+                // objeto, los componentes que leen su PROPIO transform miden ese
+                // objeto y no la cabeza, y hasta ahora eso pasaba en silencio.
+                //
+                // Medido el 12-09-2026 en el log de un visor real:
+                // UserBalanceTrackerComponent colgado del root de XR Origin devolvio
+                // COP=(0.37, 0.00, 2.00) en las 120 muestras de la sesion, con Y=0 a
+                // ras de suelo. En Mongo son 1.887 muestras con UNA sola posicion.
+                // El dato llegaba completo y parecia bueno: por eso nadie lo vio.
+                if (existente.gameObject != host)
+                {
+                    Debug.LogWarning(
+                        "[Gossip] " + t.Name +
+                        " ya existe en \"" + existente.gameObject.name +
+                        "\", no en \"" + host.name + "\". " +
+                        "Si lee su propio transform, estara midiendo ese objeto " +
+                        "en vez de la cabeza. Muevelo a \"" + host.name + "\"."
+                    );
+                }
             }
 
             // GROUP A: own-transform readers -- attach to Camera GO

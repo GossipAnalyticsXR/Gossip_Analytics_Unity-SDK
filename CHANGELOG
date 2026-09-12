@@ -1,3 +1,18 @@
+## [2.0.15] - 2026-09
+
+### Fixed
+- GossipManager.Ensure: solo anadia un tracker automatico si no existia ninguna
+  instancia de ese tipo en la escena, y si el integrador ya tenia una colgada de
+  otro GameObject la dejaba ahi sin decir nada. Para los componentes que leen su
+  PROPIO transform eso significa medir ese objeto en vez de la cabeza, y el dato
+  sale completo y con pinta de bueno. Medido el 12-sep-2026 en el log de un visor
+  real: UserBalanceTrackerComponent colgado del root de XR Origin devolvio
+  COP=(0.37, 0.00, 2.00) en las 120 muestras de la sesion, con Y=0 a ras de suelo,
+  mientras el heatmap de movimiento de esa MISMA sesion registraba 949 celdas
+  distintas. En Mongo son 48208 filas desde mayo con una sola posicion por sesion.
+  Ahora avisa por log con el nombre del objeto donde esta y el del host previsto.
+  No cambia que componentes se anaden ni donde: solo deja de callarselo.
+
 ## [2.0.14] - 2026-09
 
 ### Fixed
