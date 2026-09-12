@@ -18,6 +18,6 @@ namespace GossipSDK.Core
         //
         // No se lee de package.json en runtime a proposito: UnityEditor.PackageManager
         // no existe en un build, asi que no hay forma de resolverlo desde el paquete.
-        public const string SdkVersion = "2.0.13";
+        public const string SdkVersion = "2.0.14";
     }
 }

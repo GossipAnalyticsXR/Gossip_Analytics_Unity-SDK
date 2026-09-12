@@ -17,7 +17,10 @@ namespace GossipSDK.Tracking.PlatformSpecification
         {
             public string PlayerID { get; set; }
             public string SessionID { get; set; }
-            public bool HadBoundaryPressure { get; set; }
+            // null = el SDK no pudo leer el limite del guardian en esta sesion.
+            // Newtonsoft lo serializa como null, y el ingest lo guarda como null
+            // desde el PR #60 del Backend-SDK.
+            public bool? HadBoundaryPressure { get; set; }
             public string SceneId { get; set; }
             public string TimestampUtc { get; set; }
 

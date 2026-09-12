@@ -1,3 +1,32 @@
+## [2.0.14] - 2026-09
+
+### Fixed
+- PlayableArea: Width y Depth de las filas guardian eran siempre 0. Salian de
+  GetBounds(), que buscaba un Collider o un Renderer en el GameObject del
+  componente, y ese objeto es GossipAutoTrackers, que esta vacio: siempre
+  devolvia un Bounds de tamano cero. Ahora salen del propio poligono del limite,
+  que es de donde ya salia el area. GetBounds() se retira por no tener uso.
+- PlayableArea: el proxy de area usada acumulaba la posicion de MUNDO de la
+  camara, asi que sumaba la locomocion del juego (teleport, joystick) al
+  movimiento fisico y media el nivel virtual en vez de la sala. Medido el
+  11-sep-2026 en prod: 314 filas proxy_used_area con media de 331 m2. Ahora
+  acumula devicePosition del HMD, que viene en espacio de tracking, y si esa
+  pose no esta disponible no acumula nada en vez de inventar un area.
+- BoundaryPressure: el resumen de presion de limite ya no se emite una sola vez
+  por arranque. La guarda interna solo se reponia en OnEnable, asi que el bucle
+  periodico de 60 s emitia una vez y sus vueltas siguientes eran un no-op: la
+  presion detectada despues del primer sello no se reportaba nunca. Ahora se
+  reemite cuando el valor cambia (el ingest hace upsert por sessionID, o sea que
+  es idempotente) y una sesion sin cambios sigue mandando un unico sobre.
+
+### Changed
+- BoundaryPressure: HadBoundaryPressure pasa a bool nullable. null significa que
+  no hubo nada que muestrear -- sin OVRManager y con el subsistema XR devolviendo
+  0 puntos de limite, false era una afirmacion falsa. Medido el 11-sep-2026:
+  36 de 36 sesiones eran no-medido y la card ensenaba 0%.
+- BoundaryPressure: la linea de logcat anade medido= y enviado=, para poder
+  distinguir en una pasada si el limite se pudo leer.
+
 ## [2.0.13] - 2026-09
 
 ### Changed

@@ -16,7 +16,6 @@ namespace GossipSDK.Components
         public string areaTypeOverride = "";
 
         // -- proxy tracking fields --
-        private Transform _tracked;
         private Vector2 _minXZ;
         private Vector2 _maxXZ;
         private bool _hasSamples = false;
@@ -24,25 +23,35 @@ namespace GossipSDK.Components
 
         private void Start()
         {
-            _tracked = Camera.main != null ? Camera.main.transform : transform;
             // No immediate report: wait for Update to accumulate samples
         }
 
         private void Update()
         {
-            Vector3 pos = _tracked.position;
-            if (!_hasSamples)
+            // La posicion de MUNDO de la camara incluye la locomocion del juego
+            // (teleport, joystick), asi que la caja envolvente media el nivel virtual
+            // y no la sala. Medido el 11-sep-2026 en prod: 314 filas proxy_used_area
+            // con una media de 331 m2, que no es una habitacion.
+            // devicePosition del HMD viene en espacio de tracking, que si es la
+            // huella fisica del usuario. Sin esa pose no se acumula nada: un proxy
+            // sobre coordenadas de mundo es peor que no tener proxy.
+            var hmd = InputDevices.GetDeviceAtXRNode(XRNode.Head);
+            if (hmd.isValid &&
+                hmd.TryGetFeatureValue(CommonUsages.devicePosition, out Vector3 pos))
             {
-                _minXZ = new Vector2(pos.x, pos.z);
-                _maxXZ = new Vector2(pos.x, pos.z);
-                _hasSamples = true;
-            }
-            else
-            {
-                _minXZ.x = Mathf.Min(_minXZ.x, pos.x);
-                _minXZ.y = Mathf.Min(_minXZ.y, pos.z);
-                _maxXZ.x = Mathf.Max(_maxXZ.x, pos.x);
-                _maxXZ.y = Mathf.Max(_maxXZ.y, pos.z);
+                if (!_hasSamples)
+                {
+                    _minXZ = new Vector2(pos.x, pos.z);
+                    _maxXZ = new Vector2(pos.x, pos.z);
+                    _hasSamples = true;
+                }
+                else
+                {
+                    _minXZ.x = Mathf.Min(_minXZ.x, pos.x);
+                    _minXZ.y = Mathf.Min(_minXZ.y, pos.z);
+                    _maxXZ.x = Mathf.Max(_maxXZ.x, pos.x);
+                    _maxXZ.y = Mathf.Max(_maxXZ.y, pos.z);
+                }
             }
 
             _reportTimer += Time.deltaTime;
@@ -77,6 +86,9 @@ namespace GossipSDK.Components
                 float height = 0f;
                 float depth = 0f;
                 string resolvedAreaType = "";
+                // El poligono del limite se guarda para poder sacar de EL el ancho y el
+                // fondo, en vez de inventarlos con GetBounds().
+                Vector3[] poligonoLimite = null;
 
 #if UNITY_ANDROID && !UNITY_EDITOR
                 // Path (a): Meta OVR guardian boundary
@@ -88,7 +100,8 @@ namespace GossipSDK.Components
                         Vector3[] points = boundary.GetGeometry(OVRBoundary.BoundaryType.PlayArea);
                         if (points != null && points.Length >= 3)
                         {
-                            area = CalculatePolygonArea(points);
+                            poligonoLimite = points;
+                            area = CalculatePolygonArea(poligonoLimite);
                             resolvedAreaType = "guardian";
                         }
                     }
@@ -108,7 +121,8 @@ namespace GossipSDK.Components
                             var pts = new List<Vector3>();
                             if (inputSubsystems[i].TryGetBoundaryPoints(pts) && pts.Count >= 3)
                             {
-                                area = CalculatePolygonArea(pts.ToArray());
+                                poligonoLimite = pts.ToArray();
+                                area = CalculatePolygonArea(poligonoLimite);
                                 resolvedAreaType = "guardian";
                                 break;
                             }
@@ -134,13 +148,28 @@ namespace GossipSDK.Components
                 if (string.IsNullOrEmpty(resolvedAreaType))
                     return;
 
-                // For guardian paths extract width/depth from bounds for metadata
-                if (resolvedAreaType == "guardian")
+                // Ancho y fondo salen del propio poligono del limite. Antes salian de
+                // GetBounds(), que buscaba un Collider o un Renderer en el GameObject del
+                // componente; ese objeto es GossipAutoTrackers, que esta vacio, asi que
+                // siempre caia en Bounds(pos, Vector3.zero) y sellaba Width y Depth a 0.
+                // Medido el 11-sep-2026: las 3 filas guardian de la base traen area 4 y
+                // Width/Depth a 0. Un area de juego no tiene altura, asi que height se
+                // queda en 0, igual que en el camino del proxy.
+                if (resolvedAreaType == "guardian" && poligonoLimite != null &&
+                    poligonoLimite.Length > 0)
                 {
-                    Bounds b = GetBounds();
-                    width = b.size.x;
-                    height = b.size.y;
-                    depth = b.size.z;
+                    float minX = poligonoLimite[0].x, maxX = poligonoLimite[0].x;
+                    float minZ = poligonoLimite[0].z, maxZ = poligonoLimite[0].z;
+                    for (int i = 1; i < poligonoLimite.Length; i++)
+                    {
+                        minX = Mathf.Min(minX, poligonoLimite[i].x);
+                        maxX = Mathf.Max(maxX, poligonoLimite[i].x);
+                        minZ = Mathf.Min(minZ, poligonoLimite[i].z);
+                        maxZ = Mathf.Max(maxZ, poligonoLimite[i].z);
+                    }
+                    width = maxX - minX;
+                    depth = maxZ - minZ;
+                    height = 0f;
                 }
 
                 string finalAreaType = !string.IsNullOrEmpty(areaTypeOverride)
@@ -172,19 +201,6 @@ namespace GossipSDK.Components
             {
                 Debug.LogException(ex);
             }
-        }
-
-        private Bounds GetBounds()
-        {
-            Collider col = GetComponent<Collider>();
-            if (col != null)
-                return col.bounds;
-
-            Renderer rend = GetComponent<Renderer>();
-            if (rend != null)
-                return rend.bounds;
-
-            return new Bounds(transform.position, Vector3.zero);
         }
 
         private float CalculatePolygonArea(Vector3[] pts)
