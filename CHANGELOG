@@ -249,7 +249,7 @@ Esta version salio sin entrada; se documenta aqui a posteriori. Verificada en ga
   `GetPendingCount()` abre LiteDB con lock, y son 30 llamadas por tick: repartirlas evita
   el tiron de frame cada 5 s. Antes ese yield no se ejecutaba nunca.
 
-## [2.0.5] — 2026-09
+## [2.0.5] - 2026-09
 
 ### Added
 
@@ -261,13 +261,13 @@ Esta version salio sin entrada; se documenta aqui a posteriori. Verificada en ga
   y reacciones sin tocar cada tracker.
 
 
-## [2.0.4] — 2026-09
+## [2.0.4] - 2026-09
 
 ### Changed
 
 - AudioReactionTracker: el disparador distingue un golpe de una frase. La senal de
-  voz ya no se multiplica por VoiceQuality —que detecta recorte digital y valia
-  1,000 en los 137 clips medidos, o sea multiplicaba por uno siempre— sino por
+  voz ya no se multiplica por VoiceQuality --que detecta recorte digital y valia
+  1,000 en los 137 clips medidos, o sea multiplicaba por uno siempre-- sino por
   VoiceBurstiness, el factor de cresta de la ventana (pico/rms en dB) normalizado.
   Medido en la ventana real del disparador: habla 9,9-12,0 dB, reacciones
   16,2-27,2 dB. Campos nuevos burstinessFloorDb (12 dB) y burstinessSpanDb (8 dB).
@@ -283,7 +283,7 @@ Esta version salio sin entrada; se documenta aqui a posteriori. Verificada en ga
   Se sustituye por FNV-1a propio, sin dependencias de la BCL. Medido en Quest con la
   2.0.3 instalada: 90 de 90 usuarios en formato GUID, ninguno con forma de hash.
 
-## [2.0.3] — 2026-09
+## [2.0.3] - 2026-09
 
 ### Fixed
 
@@ -291,8 +291,8 @@ Esta version salio sin entrada; se documenta aqui a posteriori. Verificada en ga
   estable a menos: persistentPlayerId del inspector, proveedor registrado con
   SetIdentityProvider, id de dispositivo hasheado, y Guid en PlayerPrefs como ultimo
   recurso. La rama anterior resolvia por reflexion una PlatformAdapter y un
-  GetUserId que no existen en ningun sitio —barrido de los 156 ficheros .cs del
-  repo, 156/156, 0 fallos—, asi que devolvia null siempre dentro de un catch vacio y
+  GetUserId que no existen en ningun sitio --barrido de los 156 ficheros .cs del
+  repo, 156/156, 0 fallos--, asi que devolvia null siempre dentro de un catch vacio y
   la identidad salia del Guid de PlayerPrefs, que en Android muere al desinstalar el
   APK. Era por INSTALACION, no por dispositivo ni por persona. Medido en dev:
   89 usuarios para 94 sesiones, New igual a Active en todos los rangos.
@@ -300,7 +300,7 @@ Esta version salio sin entrada; se documenta aqui a posteriori. Verificada en ga
   version de la APP. Ahora sale de la constante Constants.SdkVersion. app_version no
   cambia: esa si es Application.version y era correcta.
 
-## [2.0.2] — 2026-09
+## [2.0.2] - 2026-09
 
 ### Fixed
 
@@ -311,7 +311,7 @@ Esta version salio sin entrada; se documenta aqui a posteriori. Verificada en ga
   Medido con gafas el 05/09/2026: los disparos reales estaban entre -34 y
   -18 dBFS; el unico falso positivo, a -79.7 dBFS.
 
-## [2.0.1] — 2026-09
+## [2.0.1] - 2026-09
 
 ### Fixed
 
@@ -324,9 +324,9 @@ Esta version salio sin entrada; se documenta aqui a posteriori. Verificada en ga
   el sessionId nuevo en vez del huerfano.
 - AudioReactionTracker: el audio llega continuo (fin del pegado en bloques de 256).
 
-## [2.0.0] — 2026-05
+## [2.0.0] - 2026-05
 
-Internal development branch — see public SDK repo for full release notes:
+Internal development branch -- see public SDK repo for full release notes:
 
 https://github.com/GossipAnalyticsXR/Gossip_Analytics_Unity-SDK/blob/main/CHANGELOG
 
@@ -341,14 +341,14 @@ https://github.com/GossipAnalyticsXR/Gossip_Analytics_Unity-SDK/blob/main/CHANGE
 - HandControllerTrackingComponent: removed fabricated pose event on Start()
 - TextNarrationCoverageTracker: dynamic sdk_version via Application.version
 
-## [1.1.1] — 2026-05
+## [1.1.1] - 2026-05
 
 (see public SDK repo for details)
 
-## [1.1.0] — 2026-05
+## [1.1.0] - 2026-05
 
 (see public SDK repo for details)
 
-## [1.0.0] — 2026-05
+## [1.0.0] - 2026-05
 
 Initial release.
