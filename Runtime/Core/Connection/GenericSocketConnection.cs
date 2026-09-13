@@ -358,6 +358,11 @@ namespace GossipSDK.Core.Connection
                     // Punto unico de inyeccion del sobre: con esta linea TODOS los
                     // eventos (sesion, pausas, perifericos, reacciones) llevan la marca.
                     Data.IsEditor = Application.isEditor;
+
+                    // Misma razon y mismo sitio: la version del SDK es del proceso que
+                    // envia. Con esta linea TODOS los tipos de evento la llevan en el sobre,
+                    // no solo AudioReactionTracker, que era el unico que la mandaba.
+                    Data.SdkVersion = Constants.SdkVersion;
                 }
 
 

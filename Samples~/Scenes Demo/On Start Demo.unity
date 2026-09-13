@@ -229,7 +229,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6e4ad70d34bcdc4d9ab2be66574703b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GossipSDK::MistakeReporter
-  autoReportOnStart: 1
+  autoReportOnStart: 0
   mistakeType: WrongAction
   severity: 0
 --- !u!114 &85688987

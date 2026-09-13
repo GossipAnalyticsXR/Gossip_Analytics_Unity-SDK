@@ -1,3 +1,30 @@
+## [2.0.20] - 2026-09
+
+### Added
+- La version del SDK viaja ahora en el sobre de TODOS los eventos, no solo en el
+  de AudioReactionTracker. Message<T> gana SdkVersion y GenericSocketConnection la
+  inyecta desde Constants.SdkVersion en el mismo punto unico donde ya pone Engine
+  e IsEditor. Antes la version solo acababa guardada en audioreactions, asi que
+  cortar el dato por epoca se hacia comparando fechas a mano: fue lo que hubo que
+  hacer el 12-sep para separar las tandas de 2.0.10 y 2.0.19 al medir los PR #66 y
+  #67 del backend, y funciono por suerte, porque cayeron en dias distintos. El
+  backend la guarda en el documento de sesion, asi que cualquier evento se puede
+  atribuir a una version por su sessionID.
+
+### Fixed
+- MistakeReporter deja de emitir un issue al arrancar. Con los valores de
+  fabrica el componente llamaba a ReportMistake(gameObject, "Demo Mistake") en
+  su Awake, asi que cada sesion con el componente en escena creaba un issue de
+  tipo UX llamado Demo Mistake, indistinguible de uno real. Es la unica fuente
+  de issues UX del SDK: no hay ningun otro emisor de TrackingMistake. Medido el
+  12-sep-2026 sobre main: el defecto del codigo estaba en true y las dos escenas
+  del repo que llevan el componente lo traian serializado a 1. El valor guardado
+  en la escena manda sobre el defecto del codigo, asi que se cambian los dos: el
+  defecto pasa a false, y On Start Demo y GossipTest pasan a 0. Reportar sigue
+  siendo posible llamando a ReportMistake desde la app, que es su uso legitimo.
+  Una escena de cliente que ya tenga el componente guardado con 1 sigue
+  reportando hasta que se ponga a 0 a mano.
+
 ## [2.0.19] - 2026-09
 
 ### Added

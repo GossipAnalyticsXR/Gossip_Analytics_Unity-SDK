@@ -29,5 +29,14 @@ namespace GossipSDK.Core.Messaging
         // el punto de inyeccion (GenericSocketConnection) es unico.
         [field: SerializeField]
         public bool IsEditor { get; set; }
+
+        // Version del SDK que produjo el lote, desde Constants.SdkVersion. Va en el sobre
+        // por el mismo motivo que IsEditor y por el mismo sitio: el punto de inyeccion
+        // (GenericSocketConnection) es unico, asi que la llevan TODOS los tipos de evento.
+        //
+        // Antes la version solo viajaba en el payload de AudioReactionTracker, asi que
+        // cortar el dato por epoca se hacia comparando fechas a mano, que es fragil.
+        [field: SerializeField]
+        public string SdkVersion { get; set; }
     }
 }

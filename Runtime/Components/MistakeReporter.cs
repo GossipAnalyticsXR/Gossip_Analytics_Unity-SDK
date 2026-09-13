@@ -8,7 +8,9 @@ using GossipSDK.Tracking.GameplayMetrics;
 [DisallowMultipleComponent]
 public class MistakeReporter : MonoBehaviour
 {
-    public bool autoReportOnStart = true;
+    // Por defecto NO se reporta nada al arrancar: este componente emite un
+    // issue de tipo UX, y uno inventado por sesion no se distingue de uno real.
+    public bool autoReportOnStart = false;
     public string mistakeType = "WrongAction";
 
     public int severity = 0;
