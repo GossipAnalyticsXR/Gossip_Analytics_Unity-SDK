@@ -132,6 +132,16 @@ namespace GossipSDK.Components
                 }
 
                 // Path (c): proxy from accumulated movement bounding box
+                //
+                // Este numero NO es el area jugable y no es comparable entre sesiones: la
+                // caja envolvente se acumula desde que arranca el componente y no decae
+                // nunca, asi que crece con la duracion de la sesion aunque el jugador no
+                // se mueva mas. Medido el 12-sep-2026 en prod: 0,2032 m2 en una sesion
+                // sentado de ~3 min, en filas crecientes. Por eso el backend no lo lee
+                // para min/max/avg -- los filtra por AreaType guardian -- y solo cuenta
+                // la fila en el denominador de cobertura, que es donde si significa algo:
+                // "se intento medir y el guardian no estaba". Para convertirlo en metrica
+                // propia habria que normalizarlo por tiempo.
                 if (string.IsNullOrEmpty(resolvedAreaType))
                 {
                     if (_hasSamples)

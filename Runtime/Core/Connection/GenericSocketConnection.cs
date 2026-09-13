@@ -58,6 +58,39 @@ namespace GossipSDK.Core.Connection
         // cuando parar sin volver a abrir LiteDB.
         private int sobresRestantes;
 
+        // Ids ya confirmados por un POST cuyo borrado local NO llego a aplicarse. El borrado
+        // vive en un try/catch que solo avisa, asi que sin esto la fila vuelve a salir en
+        // CADA ciclo hasta que un borrado funcione: con un fallo transitorio son unos pocos
+        // mensajes, con uno persistente -disco lleno, fichero bloqueado- es un reenvio sin
+        // fin. Medido el 13-sep-2026 sobre interactiontrackings: 8 mensajes de 1286 (0,6 %)
+        // duplicados, los 8 repitiendo InteractionId, Action y TimestampUtc al milisegundo.
+        // Esto acota el reenvio a uno por vida del proceso.
+        private readonly HashSet<string> confirmadasSinBorrar = new HashSet<string>();
+
+        // Tope de seguridad. Si el borrado local esta roto de forma permanente el conjunto
+        // crece con cada envio; por encima del tope se vacia y se vuelve al comportamiento
+        // anterior. Un duplicado es preferible a quedarse sin memoria en unas gafas.
+        private const int MaxConfirmadasSinBorrar = 20000;
+
+        private static string ClaveFila(BsonValue id)
+        {
+            return id == null ? string.Empty : id.ToString();
+        }
+
+        private void MarcarConfirmadas(List<BsonValue> ids)
+        {
+            if (ids == null) return;
+            if (confirmadasSinBorrar.Count > MaxConfirmadasSinBorrar)
+                confirmadasSinBorrar.Clear();
+            foreach (var id in ids) confirmadasSinBorrar.Add(ClaveFila(id));
+        }
+
+        private void OlvidarConfirmadas(List<BsonValue> ids)
+        {
+            if (ids == null) return;
+            foreach (var id in ids) confirmadasSinBorrar.Remove(ClaveFila(id));
+        }
+
         public void Initialize()
         {
             if (initialized)
@@ -294,7 +327,16 @@ namespace GossipSDK.Core.Connection
                 {
                     using var db = CreateLiteDatabaseWithRetry();
                     var rawCol = db.GetCollection(DataBaseName);
-                    var pendientes = new List<BsonDocument>(rawCol.FindAll());
+                    // Se descartan aqui, ANTES de contar sobres, las filas que ya confirmo
+                    // un POST y que siguen en LiteDB porque su borrado fallo. Filtrarlas mas
+                    // abajo dejaria un sobre ya confirmado contando como pendiente, y podria
+                    // elegirse para un envio vacio.
+                    var pendientes = new List<BsonDocument>();
+                    foreach (var rawDoc in rawCol.FindAll())
+                    {
+                        if (!confirmadasSinBorrar.Contains(ClaveFila(rawDoc["_id"])))
+                            pendientes.Add(rawDoc);
+                    }
 
                     // Un POST lleva UN sobre, asi que un envio solo puede llevar filas de
                     // una sesion. Se cuentan los sobres pendientes y se elige cual va en
@@ -334,6 +376,15 @@ namespace GossipSDK.Core.Connection
                         sentIds.Add(rawDoc["_id"]);
                         snapshot.Add(BsonMapper.Global.ToObject<T1>(rawDoc));
                     }
+                }
+
+                // GetPendingCount cuenta la coleccion cruda, asi que el llamador no sabe del
+                // filtro de arriba: el bufer puede tener filas y no quedar nada que enviar.
+                // Se corta aqui para no mandar un sobre vacio.
+                if (sentIds.Count == 0)
+                {
+                    sobresRestantes = 0;
+                    return false;
                 }
 
                 sobresRestantes = sobresPendientes > 0 ? sobresPendientes - 1 : 0;
@@ -420,6 +471,10 @@ namespace GossipSDK.Core.Connection
 
                     if (postSuccess)
                     {
+                        // El POST ya esta confirmado. Pase lo que pase con el borrado local,
+                        // estas filas no vuelven a salir de este proceso.
+                        MarcarConfirmadas(sentIds);
+
                         try
                         {
                         lock (dbLock)
@@ -428,10 +483,11 @@ namespace GossipSDK.Core.Connection
                             var col = db.GetCollection(DataBaseName);
                             foreach (var id in sentIds) col.Delete(id);
                             }
+                            OlvidarConfirmadas(sentIds);
                         }
                         catch (Exception cleanupEx)
                         {
-                            Debug.LogWarning($"[GenericSocketConnection] POST OK but local cleanup failed for {EventName} (will retry next cycle): {cleanupEx.Message}");
+                            Debug.LogWarning($"[GenericSocketConnection] POST OK but local cleanup failed for {EventName} (no se reenviara en este proceso): {cleanupEx.Message}");
                         }
 
                         Debug.Log($"[GenericSocketConnection] POST {EventName} -> {endpoint} (items={Data.Messages?.Count})");
@@ -451,6 +507,10 @@ namespace GossipSDK.Core.Connection
                     string json = JsonConvert.SerializeObject(Data, Formatting.Indented);
                     await EmitStringAsJSONAsync(EventName, json);
 
+                    // Mismo caso que en la rama HTTP: la emision ya salio, asi que estas
+                    // filas quedan marcadas aunque el borrado local falle.
+                    MarcarConfirmadas(sentIds);
+
                         try
                         {
                         lock (dbLock)
@@ -459,10 +519,11 @@ namespace GossipSDK.Core.Connection
                             var col = db.GetCollection(DataBaseName);
                             foreach (var id in sentIds) col.Delete(id);
                             }
+                            OlvidarConfirmadas(sentIds);
                         }
                         catch (Exception cleanupEx)
                         {
-                            Debug.LogWarning($"[GenericSocketConnection] Socket emit OK but local cleanup failed for {EventName} (will retry next cycle): {cleanupEx.Message}");
+                            Debug.LogWarning($"[GenericSocketConnection] Socket emit OK but local cleanup failed for {EventName} (no se reenviara en este proceso): {cleanupEx.Message}");
                         }
 
                     Debug.Log($"[GenericSocketConnection] Emitted {EventName} via socket (items={Data.Messages?.Count})");

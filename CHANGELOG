@@ -1,3 +1,29 @@
+## [2.0.22] - 2026-09
+
+### Fixed
+- Lo que un POST ya confirmo no vuelve a enviarse. El borrado de la cola local
+  (LiteDB) vive en un try/catch que solo escribe un warning, asi que una fila que el
+  servidor YA habia guardado volvia a salir en CADA ciclo hasta que un borrado
+  funcionase. Con un fallo transitorio son unos pocos mensajes; con uno persistente
+  -- disco lleno, fichero bloqueado -- era un reenvio sin fin, gastando red y bateria
+  del casco en datos que el servidor ya tenia. Ahora se recuerdan en memoria los ids
+  que un POST confirmo y se saltan al armar el sobre siguiente: el reenvio queda
+  acotado a uno por vida del proceso en vez de uno por ciclo.
+- Un sobre vacio ya no sale. Con ese filtro el bufer puede tener filas en LiteDB y aun
+  asi no quedar nada que enviar, y GetPendingCount cuenta la coleccion cruda, asi que
+  el llamador no podia saberlo.
+
+### Medido
+- 13-sep-2026, coleccion interactiontrackings: 8 mensajes de 1286 (0,6 %) estaban
+  duplicados, en 7 InteractionId, del 25-jul al 12-sep. Los 8 repetian InteractionId,
+  Action y TimestampUtc al milisegundo, con el mismo SequenceIndex, asi que nunca hubo
+  doble captura: era la misma fila guardada dos veces. Un caso lo ensena limpio, dos
+  documentos de la misma sesion con 4 mensajes cada uno, los 8 anomalos, separados
+  13 min 30 s.
+- Compilado antes de publicar: el fichero entero deja los mismos 6 errores que antes
+  del cambio (CS1525 sobre using var, que Mono no soporta) y ni uno nuevo, y el bloque
+  anadido compila limpio con Roslyn en C# 8.
+
 ## [2.0.21] - 2026-09
 
 ### Added
@@ -13,6 +39,20 @@
   llamar a la sobrecarga CaptureLevelCompleted(levelName) habria hecho ambigua la
   llamada de un solo argumento contra el parametro label de la que ya existe, y eso
   es un CS0121 en el proyecto del integrador, no en el nuestro.
+
+### Fixed
+- El resumen de presion de limite ya se escribe en sesiones cortas. El flush de
+  cierre existia, pero OnDisable y OnApplicationQuit hacian
+  StartCoroutine(EmitSummary()) y EmitSummary empezaba con un yield: la
+  documentacion de Unity dice que un yield devuelve la ejecucion en un frame
+  posterior, y en el cierre no hay frame posterior, asi que el cuerpo no llegaba a
+  CapSession y no se escribia nada, ni siquiera en LiteDB. Ahora el cuerpo vive en
+  un EmitSummaryNow() sincrono y la corrutina queda solo como envoltorio del bucle
+  periodico. Se anade OnApplicationPause, que en Quest si se ejecuta antes de que
+  maten el proceso, como ya documentaba SessionManager. Y la primera emision baja
+  de 60 s a 15 s, que es lo que de verdad cubre la sesion corta porque no depende
+  del cierre: mismo criterio y mismo valor que firstHeartbeatSeconds en
+  PeripheralAutoTrackerComponent.
 
 ### Verificado
 - 12-sep-2026, App VR en gafas, env prod, appId 6a0a80e9ba395fd44b3815c2: la cadena
