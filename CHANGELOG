@@ -1,3 +1,26 @@
+## [2.0.21] - 2026-09
+
+### Added
+- CaptureNamedLevelCompleted(levelName): marca un nivel completado dandole el
+  nombre a mano, en vez de deducirlo de la escena activa de Unity. La version sin
+  argumentos, CaptureLevelCompleted(), no cambia y sigue usando la escena activa.
+  Existe porque muchos juegos no hacen un nivel por escena -- niveles como prefabs
+  o estados dentro de una misma escena -- y ahi todas las completadas se apilaban
+  bajo un unico nombre, dejando la card de Scenes Completed sin poder distinguir
+  que nivel cuesta y cual se abandona.
+- Por dentro, CaptureEvent y el metodo nuevo comparten un privado
+  CaptureEventEnEscena(nombreEscena, ...). Ninguna firma publica existente cambia:
+  llamar a la sobrecarga CaptureLevelCompleted(levelName) habria hecho ambigua la
+  llamada de un solo argumento contra el parametro label de la que ya existe, y eso
+  es un CS0121 en el proyecto del integrador, no en el nuestro.
+
+### Verificado
+- 12-sep-2026, App VR en gafas, env prod, appId 6a0a80e9ba395fd44b3815c2: la cadena
+  de completadas quedo medida de punta a punta. Tres eventos Level, los tres con
+  Category CompleteLevel, dos en la escena activa (01:40:01) y uno en una escena
+  creada a proposito (01:40:04), y el desplegable de Scenes Completed los recoge.
+  Era la primera vez que CaptureLevelCompleted() se ejecutaba en un dispositivo.
+
 ## [2.0.20] - 2026-09
 
 ### Added

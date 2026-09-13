@@ -17,6 +17,11 @@ namespace GossipSDK.Components
         private const float NearEdgeThreshold = 0.25f;
         private const float PeriodicEmitInterval = 60f;
 
+        /// <summary>Primera emision, mucho mas corta que el resto: en gafas el cierre
+        /// suele ser abrupto y una sesion corta se quedaba sin fila. Mismo criterio que
+        /// firstHeartbeatSeconds en PeripheralAutoTrackerComponent.</summary>
+        private const float FirstEmitInterval = 15f;
+
         private bool _hadPressure;
         // _measured dice si hubo ALGO que muestrear. Sin OVRManager y sin poligono
         // del subsistema XR no se puede evaluar nada, y entonces false seria una
@@ -52,16 +57,31 @@ namespace GossipSDK.Components
                 StopCoroutine(_periodicCoroutine);
                 _periodicCoroutine = null;
             }
-            StartCoroutine(EmitSummary());
+            EmitSummaryNow();
         }
 
         private void OnApplicationQuit()
         {
-            StartCoroutine(EmitSummary());
+            EmitSummaryNow();
+        }
+
+        /// <summary>En Android y Quest esta SI se ejecuta antes de que maten el proceso,
+        /// al contrario que OnApplicationQuit. Mismo criterio que
+        /// SessionManager.OnApplicationPause.</summary>
+        private void OnApplicationPause(bool pausando)
+        {
+            if (pausando)
+                EmitSummaryNow();
         }
 
         private IEnumerator PeriodicEmitLoop()
         {
+            // El primer resumen no espera 60 s: hasta ahora una sesion corta solo podia
+            // salvarse por el flush de cierre, y ese no corria. Medido el 6-sep-2026 en
+            // PeripheralAutoTrackerComponent: en gafas el envio de OnApplicationQuit no
+            // llega.
+            yield return new WaitForSeconds(FirstEmitInterval);
+            yield return EmitSummary();
             while (true)
             {
                 yield return new WaitForSeconds(PeriodicEmitInterval);
@@ -176,23 +196,40 @@ namespace GossipSDK.Components
                 _hadPressure = true;
         }
 
+        /// <summary>Envoltorio para el bucle periodico: espera a que Gossip exista y
+        /// delega en la version sincrona.</summary>
         private IEnumerator EmitSummary()
         {
+            yield return new WaitUntil(() => (UnityEngine.Object)Gossip.Instance != null);
+            EmitSummaryNow();
+        }
+
+        /// <summary>La version sincrona, que es la que se llama al cerrar.
+        ///
+        /// Antes el cierre hacia StartCoroutine(EmitSummary()) y EmitSummary empezaba
+        /// con un yield. La documentacion de Unity dice que un yield devuelve la
+        /// ejecucion en un frame posterior, y en el cierre no hay frame posterior: el
+        /// cuerpo no llegaba a correr y no se escribia nada, ni siquiera en LiteDB.
+        /// PlayableAreaComponent hace lo mismo con un metodo normal y a el si le
+        /// funciona.</summary>
+        private void EmitSummaryNow()
+        {
+            if ((UnityEngine.Object)Gossip.Instance == null)
+                return;
             // Antes habia aqui un _summaryEmitted que solo se reponia en OnEnable, asi
             // que el PeriodicEmitLoop emitia UNA vez por arranque y sus vueltas
             // siguientes eran un no-op: la presion posterior al primer sello no se
             // reportaba nunca. Medido el 11-sep-2026 en la sesion 946178d5, con
             // createdAt igual a updatedAt y 3 min 26 s de sesion por delante.
-            yield return new WaitUntil(() => (UnityEngine.Object)Gossip.Instance != null);
             // Se reemite solo cuando el valor cambia, no cada 60 s: una sesion tranquila
             // sigue mandando un unico sobre. El processor hace upsert por sessionID,
             // asi que reemitir es idempotente.
             bool? valor = _measured ? (bool?)_hadPressure : null;
             if (_yaEmitido && valor == _ultimoEmitido)
-                yield break;
+                return;
             var tracker = Gossip.Instance?.BoundaryPressureSummaryTracker;
             if (tracker == null)
-                yield break;
+                return;
             var data = new BoundaryPressureSummaryTracker.EntityData
             {
                 PlayerID = Gossip.Instance?.PlayerID,

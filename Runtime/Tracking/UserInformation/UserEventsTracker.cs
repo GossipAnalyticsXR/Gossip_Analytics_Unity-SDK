@@ -34,6 +34,16 @@ namespace GossipSDK.Tracking.GameplayMetrics
 
         public void CaptureEvent(string eventName, string category = null, string label = null, Vector3? worldPos = null, Dictionary<string, object> properties = null)
         {
+            CaptureEventEnEscena(
+                UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
+                eventName, category, label, worldPos, properties);
+        }
+
+        /// <summary>
+        /// Igual que CaptureEvent, pero con el nombre de escena dado a mano.
+        /// </summary>
+        private void CaptureEventEnEscena(string nombreEscena, string eventName, string category, string label, Vector3? worldPos, Dictionary<string, object> properties)
+        {
             try
             {
                 Vector3 p = worldPos ?? Vector3.zero;
@@ -45,7 +55,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     X = p.x,
                     Y = p.y,
                     Z = p.z,
-                    SceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
+                    SceneName = nombreEscena,
                     TimestampUtc = DateTime.UtcNow.ToString("o"),
                     Properties = properties ?? new Dictionary<string, object>()
                 };
@@ -96,6 +106,23 @@ namespace GossipSDK.Tracking.GameplayMetrics
         public void CaptureLevelCompleted(string label = null, Dictionary<string, object> properties = null)
         {
             CaptureEvent(LevelEvents.EventName, LevelEvents.CompletedCategory, label, null, properties);
+        }
+
+        /// <summary>
+        /// Marca como completado un nivel que se nombra a mano.
+        ///
+        /// La version sin argumentos usa la escena activa de Unity. Esto sirve
+        /// cuando los niveles NO son escenas separadas -- prefabs o estados
+        /// dentro de una misma escena -- y sin esto todas las completadas se
+        /// apilarian bajo un unico nombre.
+        /// </summary>
+        public void CaptureNamedLevelCompleted(string levelName, string label = null, Dictionary<string, object> properties = null)
+        {
+            var nombre = string.IsNullOrEmpty(levelName)
+                ? UnityEngine.SceneManagement.SceneManager.GetActiveScene().name
+                : levelName;
+
+            CaptureEventEnEscena(nombre, LevelEvents.EventName, LevelEvents.CompletedCategory, label, null, properties);
         }
 
         public int GetPendingCountSafe()
