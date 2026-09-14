@@ -7,6 +7,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using GossipSDK.Components;
+using GossipSDK.Core.Configuration;
 using Object = UnityEngine.Object;
 
 namespace GossipSDK.Editor
@@ -100,6 +101,7 @@ namespace GossipSDK.Editor
             public string category;
             public TrackerTarget target;
             public bool requiresConfiguration;
+            public bool clientAdjustable;   // true = el cliente puede apagarlo
             public string preAddHint;   // shown in Case A (before adding)
             public string postAddHint;  // shown in Case B (after adding, when field may still be null)
         }
@@ -107,11 +109,11 @@ namespace GossipSDK.Editor
         private static readonly List<TrackerInfo> _recommendedTrackers = new List<TrackerInfo>
         {
             // SPATIAL
-            new TrackerInfo { componentTypeName = "PositionTrackerComponent", displayName = "Position Tracker", description = "Tracks player position (X,Y,Z) over time. Feeds heatmaps.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = false },
+            new TrackerInfo { componentTypeName = "PositionTrackerComponent", displayName = "Position", description = "Tracks player position (X,Y,Z) over time. Feeds heatmaps.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = false },
             new TrackerInfo { componentTypeName = "RotationAndVelocityTrackerComponent", displayName = "Rotation & Velocity", description = "Tracks player rotation, speed, and angular velocity.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = false },
             new TrackerInfo {
                 componentTypeName = "UserPostureComponent",
-                displayName = "Posture Tracker",
+                displayName = "Posture",
                 description = "Detects standing/sitting/crouching. Requires thresholds in Inspector.",
                 category = "Spatial",
                 target = TrackerTarget.Player,
@@ -129,21 +131,20 @@ namespace GossipSDK.Editor
                 preAddHint = "Requires a Player or XROrigin in the scene — the SDK will place it there automatically. Set worldMinXZ and worldMaxXZ to your scene bounds for accurate heatmap resolution.",
                 postAddHint = "Defaults: bounds ±50 m, cell 1 m, sample 0.25 s. Tighten worldMinXZ / worldMaxXZ to your actual play area for better heatmap resolution."
             },
-            new TrackerInfo { componentTypeName = "UserBalanceTrackerComponent", displayName = "Balance Tracker", description = "Records body stability and oscillation.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = false },
+            new TrackerInfo { componentTypeName = "UserBalanceTrackerComponent", displayName = "Balance", description = "Records body stability and oscillation.", category = "Spatial", target = TrackerTarget.Player, requiresConfiguration = false },
             // DEVICE & PERFORMANCE
-            new TrackerInfo { componentTypeName = "PerformanceMonitorComponent", displayName = "Performance Monitor", description = "Tracks FPS and memory usage automatically.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
-            new TrackerInfo { componentTypeName = "BatteryMonitorComponent", displayName = "Battery Monitor", description = "Tracks battery level and charging status automatically.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
-            new TrackerInfo { componentTypeName = "ConnectivityMonitorComponent", displayName = "Connectivity Monitor", description = "Tracks network connection type and speed automatically.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
-            new TrackerInfo { componentTypeName = "HandControllerTrackingComponent", displayName = "Hand & Controller Tracking", description = "Tracks hand and controller movement.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
-            new TrackerInfo { componentTypeName = "InputUsageTrackerComponent", displayName = "Input Usage Tracker", description = "Tracks time using controllers vs hand tracking.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
-            new TrackerInfo {
-                componentTypeName = "AudioVolumeTrackerComponent",
-                displayName = "Audio Volume Tracker",
-                description = "Tracks in-app audio volume (master, music, SFX). Assign an AudioMixer for per-channel tracking, or leave empty to use AudioListener.volume.",
-                category = "Device",
-                target = TrackerTarget.AnyObject,
-                requiresConfiguration = false
-            },
+            // 14-sep-2026: once fichas fuera del catalogo. Los componentes y sus trackers siguen
+            // en el SDK y SIGUEN MIDIENDO: este fichero vive en Editor/ y no viaja en la build
+            // del player, asi que quitar una ficha no apaga nada. Lo unico que cambia es que el
+            // cliente deja de verla en el catalogo.
+            // Sin nada que pintar (medido): Reality Mode (0 referencias en Backend-Front),
+            // Audio Volume (endpoint avg-audio-volumes vivo y cero llamadas en el front:
+            // 1637/1637 ficheros, 0 fallos, solo aparece en apidoc.json), Distance (solo lo lee
+            // jobs/export) y Peripheral (0 en el codigo del front).
+            // Con dato pero sin ficha, por decision de producto: Performance, Battery,
+            // Connectivity, Input Usage, Platform, Level Change y Pause. Sus cards del dashboard
+            // siguen pintando igual; solo dejan de tener entrada aqui.
+            new TrackerInfo { componentTypeName = "HandControllerTrackingComponent", displayName = "Hand & Controller", description = "Tracks hand and controller movement.", category = "Device", target = TrackerTarget.AnyObject, requiresConfiguration = false },
             new TrackerInfo {
                 componentTypeName = "ExperienceInfoComponent",
                 displayName = "Experience Info",
@@ -152,31 +153,6 @@ namespace GossipSDK.Editor
                 target = TrackerTarget.AnyObject,
                 requiresConfiguration = false,
                 postAddHint = "App version auto-filled from Player Settings (Application.version). Optionally set targetHardware to override the default value."
-            },
-            new TrackerInfo {
-                componentTypeName = "PauseComponent",
-                displayName = "Pause Tracker",
-                description = "Captures pause and resume events with duration. OS-level pauses (headset removal, Alt+Tab) are auto-detected via OnApplicationPause.",
-                category = "Device",
-                target = TrackerTarget.AnyObject,
-                requiresConfiguration = false,
-                postAddHint = "OS-level pauses are auto-captured. For in-game pause menus, also call component.OnPause() and component.OnResume() from your pause UI code."
-            },
-            new TrackerInfo {
-                componentTypeName = "PeripheralAutoTrackerComponent",
-                displayName = "Peripheral Tracker",
-                description = "Auto-detects connected XR peripherals (controllers, headset) and records type, brand, and session duration. No configuration required.",
-                category = "Device",
-                target = TrackerTarget.AnyObject,
-                requiresConfiguration = false
-            },
-            new TrackerInfo {
-                componentTypeName = "PlatformMonitorComponent",
-                displayName = "Platform Monitor",
-                description = "Reports platform, device model, screen resolution, and audio state on session start. All data is sourced from Unity system APIs.",
-                category = "Device",
-                target = TrackerTarget.AnyObject,
-                requiresConfiguration = false
             },
             // XR SPECIFIC
             new TrackerInfo {
@@ -191,21 +167,14 @@ namespace GossipSDK.Editor
             },
             new TrackerInfo {
                 componentTypeName = "AudioReactionTrackerComponent",
-                displayName = "Audio Reaction Tracker",
+                clientAdjustable = true,
+                displayName = "Audio Reaction",
                 description = "Detects emotional audio reactions via microphone. Requires Microphone permission.",
                 category = "XR",
                 target = TrackerTarget.Camera,
                 requiresConfiguration = true,
                 preAddHint = "The SDK will auto-assign the tracked transform to the main camera. Set worldMinXZ and worldMaxXZ to your scene bounds. Ensure Microphone permission is enabled in the Permissions tab. On Android, also add RECORD_AUDIO to your AndroidManifest.xml.",
                 postAddHint = "Tracked Transform: auto-assigned ✔  |  Set worldMinXZ and worldMaxXZ (in metres) to your scene bounds. Microphone permission must be enabled in the Permissions tab."
-            },
-            new TrackerInfo {
-                componentTypeName = "RealityModeMonitor",
-                displayName = "Reality Mode Monitor",
-                description = "Detects and records transitions between VR, MR, 2D, and unknown XR modes with per-mode duration. No configuration required.",
-                category = "XR",
-                target = TrackerTarget.AnyObject,
-                requiresConfiguration = false
             },
             new TrackerInfo {
                 componentTypeName = "PlayableAreaComponent",
@@ -235,44 +204,27 @@ namespace GossipSDK.Editor
             // puesto autoReportOnStart en false (10-sep), pero este catalogo agrega el
             // componente por su cuenta con Undo.AddComponent, asi que seguia apareciendo.
             new TrackerInfo {
-                componentTypeName = "LevelChangeComponent",
-                displayName = "Level Change Tracker",
-                description = "Reports level changes: when the active scene changes, with origin, destination and time spent in the previous level.",
-                category = "Device",
-                target = TrackerTarget.AnyObject,
-                requiresConfiguration = false,
-                postAddHint = "Works with no setup. Add scene names to ignoredScenes if menus or loading screens should not count as levels."
-            },
-            new TrackerInfo {
                 componentTypeName = "MultiplayerTrackerComponent",
-                displayName = "Multiplayer Tracker",
+                clientAdjustable = true,
+                displayName = "Multiplayer",
                 description = "Tracks multiplayer room/match snapshots. Emits on start with empty room unless configured.",
                 category = "Device",
                 target = TrackerTarget.AnyObject,
                 requiresConfiguration = false,
                 postAddHint = "Set roomId / matchType or call StartTracking() from your netcode. Deselect this tracker if the app is single-user."
             },
-            new TrackerInfo {
-                componentTypeName = "ServerStatusComponent",
-                displayName = "Server Status",
-                description = "Polls a game-server status on an interval. Deselect if there is no dedicated game server.",
-                category = "Device",
-                target = TrackerTarget.AnyObject,
-                requiresConfiguration = false,
-                postAddHint = "Checks server status on start and every pollInterval seconds. Deselect if the app has no backend game server."
-            },
-            new TrackerInfo {
-                componentTypeName = "DistanceTrackerComponent",
-                displayName = "Distance Tracker",
-                description = "Measures player displacement over the session. playerTransform is auto-assigned to the main camera.",
-                category = "Spatial",
-                target = TrackerTarget.AnyObject,
-                requiresConfiguration = false,
-                postAddHint = "playerTransform auto-assigned to main camera. Adjust sampleInterval / minDistanceThreshold if needed."
-            },
+            // Server Status fuera del catalogo el 14-sep-2026. El componente y el tracker
+            // siguen en el SDK; lo que desaparece es la ficha que lo ofrecia al cliente,
+            // porque describe algo que no ocurre: decia que hace polling al game-server del
+            // cliente, y DoCheck() llama a CheckServerAsync() SIN url, asi que el tracker cae
+            // en Settings.GetActiveServerUrl() y termina haciendo ping a NUESTRA ingesta.
+            // Ademas no lo lee nadie: barrido del Backend-Front (feature/analytics) 424/424
+            // ficheros, 0 fallos, 0 referencias a TrackingServerStatus; y del front en dev
+            // 1614/1614, 0 fallos, cero. Ni card, ni query, ni vista: el catalogo le daba al
+            // cliente un interruptor sobre algo que no ve y que no es suyo.
             new TrackerInfo {
                 componentTypeName = "PassthroughComponent",
-                displayName = "Passthrough Tracker",
+                displayName = "Passthrough",
                 description = "Tracks MR passthrough enable/disable events and active duration. Requires wiring to your passthrough toggle logic.",
                 category = "XR",
                 target = TrackerTarget.AnyObject,
@@ -282,7 +234,8 @@ namespace GossipSDK.Editor
             },
             new TrackerInfo {
                 componentTypeName = "AvatarTrackerComponent",
-                displayName = "Avatar Tracker",
+                clientAdjustable = true,
+                displayName = "Avatar",
                 description = "Tracks avatar selections and purchases. Configure in Inspector. Call NotifyAvatar() from your purchase code -- no parameters needed.",
                 category = "Device",
                 target = TrackerTarget.AnyObject,
@@ -292,7 +245,8 @@ namespace GossipSDK.Editor
             },
             new TrackerInfo {
                 componentTypeName = "AccessoriesComponent",
-                displayName = "Accessories Tracker",
+                clientAdjustable = true,
+                displayName = "Accessories",
                 description = "Tracks in-app item and accessory purchases. Configure in Inspector. Call ReportPurchased() from your purchase code -- no parameters needed.",
                 category = "Device",
                 target = TrackerTarget.AnyObject,
@@ -302,7 +256,7 @@ namespace GossipSDK.Editor
             },
             new TrackerInfo {
                 componentTypeName = "CrashReporterComponent",
-                displayName = "Crash Reporter",
+                displayName = "Crash",
                 description = "Auto-captures Unity exceptions and errors. Subscribes to Application.logMessageReceived. captureExceptions = true by default.",
                 category = "Device",
                 target = TrackerTarget.AnyObject,
@@ -312,7 +266,8 @@ namespace GossipSDK.Editor
             },
             new TrackerInfo {
                 componentTypeName    = "AdComponent",
-                displayName          = "Ad Tracker",
+                clientAdjustable = true,
+                displayName          = "Ad",
                 description          = "Tracks ad impressions, interactions, rewards and session duration. Configure Ad ID, network and placement in Inspector. Call RecordImpression(), RecordInteraction() or RecordReward() from your ad SDK callbacks.",
                 category             = "Device",
                 target               = TrackerTarget.AnyObject,
@@ -329,9 +284,7 @@ namespace GossipSDK.Editor
         private static readonly Dictionary<string, (string chipLabel, string whyText)> s_chipInfo =
             new Dictionary<string, (string, string)>
             {
-                { "ServerStatusComponent",       ("REVIEW", "Only applies if you have a dedicated game server. Turn off for non-multiplayer apps.") },
                 { "MultiplayerTrackerComponent", ("REVIEW", "Emits an empty room snapshot each session. Turn off for single-user apps.") },
-                { "LevelChangeComponent",        ("AUTO",   "Detects active scene changes on its own. No code needed.") },
                 { "AvatarTrackerComponent",      ("CODE",   "Call NotifyAvatar() from your purchase flow.") },
                 { "AccessoriesComponent",        ("CODE",   "Call ReportPurchased() from your purchase flow.") },
                 { "AdComponent",                 ("CODE",   "Call RecordImpression()/RecordReward() from your ad SDK callbacks.") },
@@ -1165,6 +1118,38 @@ namespace GossipSDK.Editor
         }
 
         // --- Tab: Trackers ---
+        // Puente entre este catalogo (Editor/) y el runtime. Al apagar un tracker
+        // ajustable se anota en el asset de GossipSettings, que es lo unico que
+        // EnsureTrackers() consulta antes de volver a anadir el componente.
+        private static GossipSettings _settingsCache;
+
+        private static GossipSettings FindGossipSettings()
+        {
+            if (_settingsCache != null) return _settingsCache;
+            var guids = AssetDatabase.FindAssets("t:GossipSettings");
+            if (guids == null || guids.Length == 0) return null;
+            _settingsCache = AssetDatabase.LoadAssetAtPath<GossipSettings>(
+                AssetDatabase.GUIDToAssetPath(guids[0]));
+            return _settingsCache;
+        }
+
+        private static void MarcarTrackerApagado(string componentTypeName, bool apagado)
+        {
+            var ajustes = FindGossipSettings();
+            if (ajustes == null)
+            {
+                Debug.LogWarning("[Gossip] No se encontro el asset GossipAnalyticsSettings, " +
+                                 "asi que no se pudo guardar el estado de " + componentTypeName +
+                                 ". El tracker se volvera a anadir al arrancar.");
+                return;
+            }
+
+            Undo.RecordObject(ajustes, "Gossip tracker");
+            ajustes.SetTrackerDisabled(componentTypeName, apagado);
+            EditorUtility.SetDirty(ajustes);
+            AssetDatabase.SaveAssets();
+        }
+
         private void DrawTrackersTab()
         {
             EditorGUILayout.Space(6);
@@ -1279,11 +1264,22 @@ namespace GossipSDK.Editor
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
                 EditorGUILayout.BeginHorizontal();
                 bool wasPresent = isPresent;
+                // Tres estados. Ajustable: el checkbox funciona y ademas se anota en
+                // GossipSettings, que es lo que EnsureTrackers consulta al arrancar.
+                // Informativo: se ve el estado, pero no se puede tocar, porque apagarlo
+                // dejaria sin dato una pantalla que el cliente ya usa.
+                bool ajustable = info.clientAdjustable;
+                bool _guiAntes = GUI.enabled;
+                if (!ajustable) GUI.enabled = false;
                 bool nowSelected = EditorGUILayout.Toggle(wasPresent, GUILayout.Width(20));
-                if (nowSelected != wasPresent)
+                GUI.enabled = _guiAntes;
+                if (ajustable && nowSelected != wasPresent)
                 {
                     if (nowSelected)
+                    {
                         AddTracker(info);
+                        MarcarTrackerApagado(info.componentTypeName, false);
+                    }
                     else
                     {
                         bool confirm = EditorUtility.DisplayDialog(
@@ -1294,6 +1290,7 @@ namespace GossipSDK.Editor
                         {
                             var _scnRem = existing.gameObject.scene;
                             Undo.DestroyObjectImmediate(existing);
+                            MarcarTrackerApagado(info.componentTypeName, true);
                             _lastTrackerCountTime = 0;
                             _trackerComponentCache.Clear();
                             EditorSceneManager.MarkSceneDirty(_scnRem);
@@ -1311,6 +1308,8 @@ namespace GossipSDK.Editor
                     string _chipDisp = _chipLabel == "AUTO" ? "● AUTO" : (_chipLabel == "REVIEW" ? "● REVIEW" : "● CODE");
                     GUILayout.Label(_chipDisp, _cStyle, GUILayout.ExpandWidth(false));
                 }
+                if (!info.clientAdjustable)
+                    GUILayout.Label("ALWAYS ON", EditorStyles.miniBoldLabel, GUILayout.ExpandWidth(false));
                 EditorGUILayout.BeginVertical();
                 EditorGUILayout.LabelField(info.displayName, EditorStyles.boldLabel);
                 EditorGUILayout.LabelField(info.description, _wordWrapMiniLabel);

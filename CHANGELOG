@@ -1,3 +1,30 @@
+## [2.0.24] - 2026-09
+
+### Fixed
+- Los textos que la 2.0.23 anadio al desinstalador salian en espanol mientras el resto
+  del SDK habla ingles: el aviso previo de scripts que usan el SDK, el dialogo final y
+  el del camino de fallo. Traducidos. Solo cambian cadenas de interfaz; los comentarios
+  del codigo se quedan en espanol, como el resto del repo.
+
+### Added
+- El catalogo de trackers distingue por fin entre lo que el cliente puede apagar y lo
+  que solo puede ver. Los cinco ajustables (Audio Reaction, Multiplayer, Ad, Avatar y
+  Accessories) llevan un checkbox que ahora significa algo; el resto lo enseña
+  deshabilitado con la etiqueta ALWAYS ON y su motivo.
+- `GossipSettings` guarda la lista de trackers que el integrador ha apagado, y
+  `GossipManager.EnsureTrackers()` la consulta antes de anadir nada. Hasta ahora el
+  checkbox era decorativo: quitabas el componente en el editor y el SDK lo volvia a
+  poner al arrancar y en cada cambio de escena.
+
+### Changed
+- El catalogo baja de 29 a 17 fichas. Salen Server Status y Reality Mode (cero
+  consumidores medidos en el backend), Audio Volume, Distance y Peripheral (sin
+  pantalla que los pinte) y, por decision de producto, Performance, Battery,
+  Connectivity, Input Usage, Platform, Level Change y Pause. Ninguno se apaga: este
+  catalogo vive en `Editor/` y no viaja en la build, asi que los trackers siguen
+  midiendo exactamente igual.
+
+
 ## [2.0.23] - 2026-09
 
 ### Fixed

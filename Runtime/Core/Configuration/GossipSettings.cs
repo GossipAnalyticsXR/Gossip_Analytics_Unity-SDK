@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace GossipSDK.Core.Configuration
@@ -78,6 +79,33 @@ namespace GossipSDK.Core.Configuration
 
             const string fallback = "https://service-a-unity-sdk.onrender.com";
             return string.IsNullOrEmpty(stored) ? fallback : stored;
+        }
+        // ------------------------------------------------------------------
+        // Trackers que el integrador ha apagado desde el catalogo del editor.
+        // Hasta hoy el checkbox del catalogo era decorativo: quitabas el
+        // componente de la escena y GossipManager.EnsureTrackers() lo volvia a
+        // anadir al arrancar y en cada sceneLoaded. Esta lista es lo que Ensure
+        // consulta antes de anadir nada. Solo los trackers marcados como
+        // ajustables en el catalogo pueden llegar aqui.
+        // ------------------------------------------------------------------
+        [SerializeField] [HideInInspector] private List<string> disabledTrackers = new List<string>();
+
+        public bool IsTrackerDisabled(string componentTypeName)
+        {
+            if (disabledTrackers == null || string.IsNullOrEmpty(componentTypeName)) return false;
+            for (int i = 0; i < disabledTrackers.Count; i++)
+                if (disabledTrackers[i] == componentTypeName) return true;
+            return false;
+        }
+
+        public void SetTrackerDisabled(string componentTypeName, bool disabled)
+        {
+            if (string.IsNullOrEmpty(componentTypeName)) return;
+            if (disabledTrackers == null) disabledTrackers = new List<string>();
+
+            bool yaEsta = IsTrackerDisabled(componentTypeName);
+            if (disabled && !yaEsta) disabledTrackers.Add(componentTypeName);
+            else if (!disabled && yaEsta) disabledTrackers.Remove(componentTypeName);
         }
 
         public string ApiKeyValue

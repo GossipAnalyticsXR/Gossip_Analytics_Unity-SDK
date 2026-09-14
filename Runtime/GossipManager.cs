@@ -281,6 +281,11 @@ go.AddComponent<GossipSDK.Heatmaps.HeatmapPanoramaAutoCapture>();
             void Ensure(System.Type t, GameObject host)
             {
                 if (host == null) return;
+                // El integrador puede apagar los trackers que el catalogo marca como
+                // ajustables. Hasta hoy ese checkbox era decorativo: quitabas el
+                // componente en el editor y esta linea lo volvia a poner al arrancar y
+                // en cada sceneLoaded. Ahora se consulta la lista de GossipSettings.
+                if (settings != null && settings.IsTrackerDisabled(t.Name)) return;
 
                 var existente = UnityEngine.Object.FindObjectOfType(t) as Component;
                 if (existente == null)

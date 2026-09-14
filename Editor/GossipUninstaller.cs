@@ -27,10 +27,10 @@ namespace GossipAnalytics.Editor
             if (referencias.Count > 0)
             {
                 var sb = new System.Text.StringBuilder();
-                sb.Append("\n\nATENCION: estos scripts tuyos usan el SDK y no compilaran al quitarlo:\n");
+                sb.Append("\n\nWARNING: these scripts of yours use the SDK and will not compile once it is gone:\n");
                 for (int i = 0; i < referencias.Count && i < 10; i++) sb.Append("\n- " + referencias[i]);
-                if (referencias.Count > 10) sb.Append("\n- ...y " + (referencias.Count - 10) + " mas");
-                sb.Append("\n\nMientras haya errores de compilacion el Editor seguira mostrando el SDK aunque ya este desinstalado. Borralos o sacalos de Assets/ antes de continuar.");
+                if (referencias.Count > 10) sb.Append("\n- ...and " + (referencias.Count - 10) + " more");
+                sb.Append("\n\nWhile there are compile errors Unity cannot reload the domain, so the Editor will keep showing the SDK even though it is already uninstalled. Delete them or move them out of Assets/ before continuing.");
                 aviso = sb.ToString();
             }
 
@@ -389,7 +389,7 @@ private static void RunStep1_RemoveSceneComponents()
                 CleanPackageCache();
                 EditorUtility.DisplayDialog(
                     "Gossip Analytics - uninstall incomplete",
-                    "Los componentes y los assets se han borrado, pero no se pudo ni pedir la retirada del paquete com.gossip.core. Mira la consola y quitalo a mano desde el Package Manager.",
+                    "Components and assets were removed, but the removal of the com.gossip.core package could not even be requested. Check the console and remove it by hand from the Package Manager.",
                     "Close");
                 return;
             }
@@ -414,8 +414,8 @@ private static void RunStep1_RemoveSceneComponents()
                 EditorUtility.DisplayDialog(
                     ok ? "Gossip Analytics removed" : "Gossip Analytics - uninstall incomplete",
                     ok
-                        ? "El SDK se ha desinstalado: componentes fuera de las escenas, assets borrados y el paquete com.gossip.core retirado del proyecto. Tus escenas y tus scripts siguen intactos.\n\nUnity va a recompilar ahora; eso tarda unos segundos y ya no depende de nosotros.\n\nSi algun script tuyo usaba el SDK, veras errores de compilacion hasta que lo quites.\n\nEsperamos verte pronto."
-                        : "Los componentes y los assets se han borrado, pero UPM no pudo retirar el paquete com.gossip.core. Mira la consola para el motivo y quitalo a mano desde el Package Manager.",
+                        ? "The SDK is uninstalled: components out of your scenes, assets deleted and the com.gossip.core package removed from the project. Your scenes and your scripts are untouched.\n\nUnity will recompile now; that takes a few seconds and is no longer up to us.\n\nIf any script of yours used the SDK, you will see compile errors until you remove it.\n\nWe hope to see you again soon."
+                        : "Components and assets were removed, but UPM could not remove the com.gossip.core package. Check the console for the reason and remove it by hand from the Package Manager.",
                     "Close");
             };
             EditorApplication.update += poll;
