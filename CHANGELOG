@@ -1,3 +1,33 @@
+## [2.0.23] - 2026-09
+
+### Fixed
+- El desinstalador ya no le arranca a UPM la carpeta que esta usando. `Client.Remove`
+  es asincrono y la version anterior lanzaba la peticion y, sin esperarla, borraba a
+  mano `Library/PackageCache/com.gossip.core@*`. Ahora se espera a que el
+  `RemoveRequest` termine y solo entonces se limpia la cache, y si UPM falla se
+  escribe el motivo en consola en vez de tragarselo.
+- El desinstalador avisa de los scripts TUYOS que usan el SDK antes de tocar nada.
+  Un solo fichero en `Assets/` con `using GossipSDK` no compila al quitar el paquete,
+  y con errores de compilacion Unity no puede recargar el dominio: el menu y los
+  componentes se quedan a la vista como si la desinstalacion no hubiera hecho nada,
+  hasta que cierras el Editor. Medido el 13-sep-2026 en un proyecto real: tres
+  desinstalaciones seguidas parecian no hacer nada mientras UPM ya respondia
+  "Package name [com.gossip.core] cannot be found in the project manifest".
+  Ahora el dialogo lista los ficheros que van a romper la compilacion.
+
+- El Difficulty Tracker deja de ofrecerse en el Instrumentation Manager. La metrica
+  queda DESCONECTADA, no borrada: el componente y el tracker siguen en el SDK para que
+  las escenas que ya lo tengan no se rompan. Nadie consumia el dato: barrido del
+  dashboard el 14-sep-2026, 1633/1633 ficheros leidos, 0 fallos, y las dos unicas
+  coincidencias eran la documentacion de la API y el nombre del evento en una union de
+  tipos. Ya se habia pausado su alta automatica (9-sep) y apagado autoReportOnStart
+  (10-sep), pero el catalogo del Instrumentation Manager lo agregaba por su cuenta.
+
+- El aviso de "desinstalacion terminada" sale cuando termina de verdad. Salia antes de
+  pedirle nada a UPM: pulsabas Close y el borrado seguia corriendo por detras. Ahora lo
+  muestra el paso 3 al completarse el RemoveRequest, y dice cosas distintas segun UPM
+  pudiera retirar el paquete o no. La barra de progreso tampoco se apaga antes de tiempo.
+
 ## [2.0.22] - 2026-09
 
 ### Fixed

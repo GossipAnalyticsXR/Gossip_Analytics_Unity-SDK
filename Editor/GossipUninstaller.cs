@@ -15,9 +15,28 @@ namespace GossipAnalytics.Editor
         [MenuItem("Window/Gossip Analytics/Uninstall SDK", false, 100)]
         public static void RunUninstall()
         {
+            // Antes que nada: los scripts del usuario que usan el SDK no compilan
+            // cuando el paquete se va, y con errores de compilacion Unity NO puede
+            // recargar el dominio: el menu y los componentes siguen a la vista como si
+            // no se hubiera desinstalado nada, hasta cerrar el Editor. Medido el
+            // 13-sep-2026 en un proyecto real: un unico fichero suelto en Assets/ con
+            // using GossipSDK bastaba para que tres desinstalaciones seguidas
+            // pareciesen no hacer nada (Editor.log: CS0246 entre intento y intento).
+            var referencias = FindUserScriptsReferencingSdk();
+            string aviso = string.Empty;
+            if (referencias.Count > 0)
+            {
+                var sb = new System.Text.StringBuilder();
+                sb.Append("\n\nATENCION: estos scripts tuyos usan el SDK y no compilaran al quitarlo:\n");
+                for (int i = 0; i < referencias.Count && i < 10; i++) sb.Append("\n- " + referencias[i]);
+                if (referencias.Count > 10) sb.Append("\n- ...y " + (referencias.Count - 10) + " mas");
+                sb.Append("\n\nMientras haya errores de compilacion el Editor seguira mostrando el SDK aunque ya este desinstalado. Borralos o sacalos de Assets/ antes de continuar.");
+                aviso = sb.ToString();
+            }
+
             bool confirm = EditorUtility.DisplayDialog(
                 "Uninstall Gossip Analytics SDK",
-                "This will remove:\n\n- All Gossip Analytics components from your scenes (GossipAnalyticsManager, InteractableComponent, VRPermissionsHandler, and all tracker components)\n\n- GossipAnalyticsSettings asset\n\n- GossipInstrumentationData asset\n\n- Assets/Samples/Gossip Analytics SDK/ folder\n\n- The SDK package itself (com.gossip.core)\n\nThis will NOT remove:\n\n- Your own scripts or scenes\n\n- Dependency packages (LiteDB, R3, UniTask, XR packages)\n\n- README, CHANGELOG or LICENSE files (removed with the package automatically)",
+                "This will remove:\n\n- All Gossip Analytics components from your scenes (GossipAnalyticsManager, InteractableComponent, VRPermissionsHandler, and all tracker components)\n\n- GossipAnalyticsSettings asset\n\n- GossipInstrumentationData asset\n\n- Assets/Samples/Gossip Analytics SDK/ folder\n\n- The SDK package itself (com.gossip.core)\n\nThis will NOT remove:\n\n- Your own scripts or scenes\n\n- Dependency packages (LiteDB, R3, UniTask, XR packages)\n\n- README, CHANGELOG or LICENSE files (removed with the package automatically)" + aviso,
                 "Uninstall",
                 "Cancel");
 
@@ -33,19 +52,12 @@ namespace GossipAnalytics.Editor
                 EditorUtility.ClearProgressBar();
             }
 
-            EditorUtility.DisplayDialog(
-                "Gossip Analytics removed",
-                "Gossip Analytics components and assets have been removed from your project. Your scenes and scripts are untouched.\n\nWhen you click Close, Unity will remove the SDK package (com.gossip.core) and recompile. That final step may take a few seconds.\n\nWe hope to see you again soon.",
-                "Close");
-
-            try
-            {
-                RunStep3_RemovePackage();
-            }
-            finally
-            {
-                EditorUtility.ClearProgressBar();
-            }
+            // El aviso de "listo" ya no sale aqui. El paso 3 es asincrono y este dialogo
+            // se mostraba ANTES de pedirle nada a UPM: decias Close y el borrado seguia
+            // corriendo por detras. Ahora lo muestra RunStep3_RemovePackage cuando UPM
+            // confirma que el paquete se fue, que es cuando termina lo nuestro.
+            // Tampoco se limpia aqui la barra de progreso: la apaga el paso 3 al acabar.
+            RunStep3_RemovePackage();
         }
 
         [MenuItem("Window/Gossip Analytics/Uninstall SDK", true, 100)]
@@ -317,18 +329,53 @@ private static void RunStep1_RemoveSceneComponents()
             AssetDatabase.Refresh();
         }
 
+        // ---- Pre-flight: scripts del usuario que referencian el SDK ----
+
+        private static List<string> FindUserScriptsReferencingSdk()
+        {
+            var encontrados = new List<string>();
+            try
+            {
+                string assets  = Application.dataPath;
+                string samples = System.IO.Path.Combine(assets, "Samples", "Gossip Analytics SDK");
+                var ficheros   = System.IO.Directory.GetFiles(assets, "*.cs", System.IO.SearchOption.AllDirectories);
+                foreach (var f in ficheros)
+                {
+                    // El sample lo borra el paso 2, asi que no cuenta como codigo del usuario.
+                    if (f.StartsWith(samples, StringComparison.Ordinal)) continue;
+                    string texto;
+                    try { texto = System.IO.File.ReadAllText(f); }
+                    catch { continue; }
+                    if (texto.IndexOf("GossipSDK", StringComparison.Ordinal) < 0) continue;
+                    encontrados.Add("Assets" + f.Substring(assets.Length).Replace('\\', '/'));
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[GossipUninstaller] Could not scan for SDK references: " + ex.Message);
+            }
+            return encontrados;
+        }
+
         // ---- Step 3: Remove package ----
 
+        // Client.Remove es ASINCRONO. La version anterior lanzaba la peticion y, sin
+        // esperarla, borraba a mano Library/PackageCache/com.gossip.core@*: le quitaba a
+        // UPM el directorio del que el propio Editor esta ejecutando sus ensamblados
+        // mientras la operacion seguia en vuelo. Ahora se espera a que termine y solo
+        // entonces se limpia la cache.
         private static void RunStep3_RemovePackage()
         {
             EditorUtility.DisplayProgressBar(
-                "Gossip Analytics — Uninstalling...",
+                "Gossip Analytics - Uninstalling...",
                 "Removing com.gossip.core package...",
                 0.9f);
 
+            UnityEditor.PackageManager.Requests.RemoveRequest request = null;
+
             try
             {
-                UnityEditor.PackageManager.Client.Remove("com.gossip.core");
+                request = UnityEditor.PackageManager.Client.Remove("com.gossip.core");
                 Debug.Log("[GossipUninstaller] Package removal requested: com.gossip.core");
             }
             catch (Exception ex)
@@ -336,11 +383,54 @@ private static void RunStep1_RemoveSceneComponents()
                 Debug.LogWarning("[GossipUninstaller] Could not remove package com.gossip.core: " + ex.Message);
             }
 
-            // Clean up all cached versions of com.gossip.core from Library/PackageCache
+            if (request == null)
+            {
+                EditorUtility.ClearProgressBar();
+                CleanPackageCache();
+                EditorUtility.DisplayDialog(
+                    "Gossip Analytics - uninstall incomplete",
+                    "Los componentes y los assets se han borrado, pero no se pudo ni pedir la retirada del paquete com.gossip.core. Mira la consola y quitalo a mano desde el Package Manager.",
+                    "Close");
+                return;
+            }
+
+            EditorApplication.CallbackFunction poll = null;
+            poll = () =>
+            {
+                if (!request.IsCompleted) return;
+
+                EditorApplication.update -= poll;
+                EditorUtility.ClearProgressBar();
+
+                if (request.Status == UnityEditor.PackageManager.StatusCode.Failure)
+                {
+                    string motivo = request.Error != null ? request.Error.message : "unknown error";
+                    Debug.LogWarning("[GossipUninstaller] UPM could not remove com.gossip.core: " + motivo);
+                }
+
+                CleanPackageCache();
+
+                bool ok = request.Status != UnityEditor.PackageManager.StatusCode.Failure;
+                EditorUtility.DisplayDialog(
+                    ok ? "Gossip Analytics removed" : "Gossip Analytics - uninstall incomplete",
+                    ok
+                        ? "El SDK se ha desinstalado: componentes fuera de las escenas, assets borrados y el paquete com.gossip.core retirado del proyecto. Tus escenas y tus scripts siguen intactos.\n\nUnity va a recompilar ahora; eso tarda unos segundos y ya no depende de nosotros.\n\nSi algun script tuyo usaba el SDK, veras errores de compilacion hasta que lo quites.\n\nEsperamos verte pronto."
+                        : "Los componentes y los assets se han borrado, pero UPM no pudo retirar el paquete com.gossip.core. Mira la consola para el motivo y quitalo a mano desde el Package Manager.",
+                    "Close");
+            };
+            EditorApplication.update += poll;
+        }
+
+        // Con una dependencia git Unity cachea por hash, y una reinstalacion puede
+        // reutilizar la copia vieja: por eso se limpia. Si el dominio se recarga antes de
+        // que esto corra no pasa nada, Unity poda las entradas sin referenciar en el
+        // siguiente resolve.
+        private static void CleanPackageCache()
+        {
             try
             {
-                string projectRoot    = System.IO.Path.GetDirectoryName(Application.dataPath);
-                string packageCache   = System.IO.Path.Combine(projectRoot, "Library", "PackageCache");
+                string projectRoot  = System.IO.Path.GetDirectoryName(Application.dataPath);
+                string packageCache = System.IO.Path.Combine(projectRoot, "Library", "PackageCache");
                 if (System.IO.Directory.Exists(packageCache))
                 {
                     var gossipDirs = System.IO.Directory.GetDirectories(packageCache, "com.gossip.core@*");

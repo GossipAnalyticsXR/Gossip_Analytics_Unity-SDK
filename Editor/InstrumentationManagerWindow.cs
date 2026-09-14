@@ -225,15 +225,15 @@ namespace GossipSDK.Editor
                 requiresConfiguration = false,
                 postAddHint = "Auto-captures on scene start. Adjust cameraHeight / padding / textureSize only if the top-down framing is off."
             },
-            new TrackerInfo {
-                componentTypeName = "DifficultyComponent",
-                displayName = "Difficulty Tracker",
-                description = "Reports difficulty level changes. Call NotifyDifficulty() from your difficulty UI.",
-                category = "Device",
-                target = TrackerTarget.AnyObject,
-                requiresConfiguration = false,
-                postAddHint = "Does nothing on its own. Call GetComponent<DifficultyComponent>().NotifyDifficulty(id, value) from your difficulty UI. Tick autoReportOnStart only if you want a default level reported every session."
-            },
+            // Difficulty Tracker fuera del catalogo el 14-sep-2026. La metrica queda
+            // DESCONECTADA, no borrada: el componente y el tracker siguen en el SDK para
+            // que las escenas que ya lo tienen no se rompan, pero deja de ofrecerse aqui.
+            // Por que: no lo consume nadie. Barrido del dashboard en dev el 14-sep-2026:
+            // 1633/1633 ficheros leidos, 0 fallos, y las dos unicas coincidencias eran
+            // apidoc.json y el nombre del evento en una union de tipos. Ni card, ni query,
+            // ni vista. Ya se habia pausado el alta automatica en GossipManager (9-sep) y
+            // puesto autoReportOnStart en false (10-sep), pero este catalogo agrega el
+            // componente por su cuenta con Undo.AddComponent, asi que seguia apareciendo.
             new TrackerInfo {
                 componentTypeName = "LevelChangeComponent",
                 displayName = "Level Change Tracker",
@@ -331,7 +331,6 @@ namespace GossipSDK.Editor
             {
                 { "ServerStatusComponent",       ("REVIEW", "Only applies if you have a dedicated game server. Turn off for non-multiplayer apps.") },
                 { "MultiplayerTrackerComponent", ("REVIEW", "Emits an empty room snapshot each session. Turn off for single-user apps.") },
-                { "DifficultyComponent",         ("CODE",   "Reports nothing until you call NotifyDifficulty(). It no longer emits a default level each session.") },
                 { "LevelChangeComponent",        ("AUTO",   "Detects active scene changes on its own. No code needed.") },
                 { "AvatarTrackerComponent",      ("CODE",   "Call NotifyAvatar() from your purchase flow.") },
                 { "AccessoriesComponent",        ("CODE",   "Call ReportPurchased() from your purchase flow.") },
