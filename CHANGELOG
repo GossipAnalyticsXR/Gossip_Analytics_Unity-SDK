@@ -1,3 +1,58 @@
+## [2.0.25] - 2026-09
+
+### Fixed
+- Un objeto en su socket ya no cuenta como interaccion. El sondeo del cableado XR miraba
+  interactorsSelecting.Count > 0, e interactorsSelecting incluye al XRSocketInteractor: un
+  objeto que descansa en su hueco esta seleccionado desde el frame 0. Consecuencia: cada
+  arranque de la app emitia un start por objeto instrumentado que no cerraba nunca; el agarre
+  real no se registraba, porque la cuenta seguia siendo mayor que cero al pasar del socket a la
+  mano; y la duracion que si llegaba a emitirse era el tiempo desde el arranque, no el tiempo en
+  la mano. Ahora se cuentan solo los interactores de usuario. Los ignorados se configuran en el
+  inspector y por defecto son "Socket" y "Snap".
+- El primer sondeo tras cablear fija el punto de partida sin emitir nada. Si al cablear el
+  objeto ya esta cogido, eso no es una interaccion que el SDK haya visto empezar.
+- RealityModeMonitor decia VR siempre en los proyectos OpenXR. Lo unico que miraba era
+  OVRManager.isInsightPassthroughEnabled, y en un rig OpenXR ese tipo no esta en escena, asi
+  que la lectura era null. Medido el 14-sep-2026 en Quest 3: 5863 de 5863 lecturas dieron
+  "mode=VR ptRaw=", 93 de ellas durante los 5,9 s en que el sistema estuvo en passthrough.
+  Por eso realitymodetransitions no tenia ni una fila con MR. Ahora se prueban tres fuentes
+  -OVRManager, OVRPassthroughLayer y el ARCameraManager de AR Foundation- y el log dice
+  source= cual contesto, para que un hueco se pueda distinguir de un no. La de AR Foundation
+  no se ha podido comprobar todavia en dispositivo.
+- La capa de passthrough ya no declara MR por su cuenta. La primera version de ese arreglo
+  trataba OVRPassthroughLayer como fuente independiente, y resulto ser un falso positivo: el
+  14-sep-2026, con una capa enabled=True y hidden=False en un rig sin OVRManager, 982 de 982
+  lecturas dijeron MR y se escribio una fila "MR > VR duration=15,02s" mientras el usuario no
+  veia su habitacion en ningun momento. Quince segundos de mixed reality inventados. Quien
+  compone el passthrough de Meta es el OVRManager, no la capa: su bandera pasa a ser
+  necesaria y la capa solo la refina. Sin OVRManager se registra source=layer-sin-ovrmanager
+  y no se cuenta como MR.
+- El passthrough que enciende el SISTEMA (doble toque, guardian, menu) sigue sin detectarse, y
+  queda dicho en el codigo para que no se invente: ahi el shell sustituye a la app y desde
+  dentro la firma es identica a abrir el menu del sistema.
+
+### Changed
+- Instrumentation Manager: cada ficha muestra un chip con su estado (AUTO / REVIEW / CODE) en
+  lugar de la etiqueta ALWAYS ON, y desaparece el boton Open Inspector. En la pestana
+  Permissions solo Microphone es tocable, con su Deselect Mic. (PR #122, mergeado sin bump a
+  proposito el 14-sep)
+
+### Medido
+- 14-sep-2026, coleccion interactiontrackings, 979 interacciones: 662 (68 %) nacian en rafagas
+  de 3 o mas dentro de 200 ms -- 3,94 objetos por rafaga, un bucle y no una mano -- y cerraban
+  al 13,9 %. Las 317 que hacia una persona (1,02 por ventana) cerraban al 74,8 %.
+- Prueba en gafas de tres minutos con unos 13 agarres reales: la coleccion guardo 12 filas, tres
+  sesiones por cuatro objetos, todas naciendo en el mismo milisegundo, y ninguna era un agarre.
+  La unica que cerro marcaba 83,47 s de duracion en una sesion de tres minutos.
+- Compilado antes de publicar: el fichero entero deja exactamente los mismos 10 errores que
+  antes del cambio (tipos de Unity ausentes en compilacion aislada) y ni uno nuevo. El bloque
+  anadido compila limpio con Roslyn en C# 8 y pasa 12 pruebas de comportamiento, incluida la
+  cadena socket -> mano -> soltar -> socket, que emite exactamente un start y un end.
+
+### Aviso
+- Events va a ensenar menos interacciones y tiempos mas cortos. No se ha perdido dato: es la
+  primera version en la que esos numeros miden lo que dicen medir.
+
 ## [2.0.24] - 2026-09
 
 ### Fixed

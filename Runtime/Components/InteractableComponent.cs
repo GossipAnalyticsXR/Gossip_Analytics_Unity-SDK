@@ -40,6 +40,13 @@ namespace GossipSDK.Components
         [Header("Heatmap Flush")]
         public float flushIntervalSeconds = 10f;
 
+        [Header("Interaction")]
+        [Tooltip("Interactores que NO cuentan como interaccion de usuario. Un objeto que " +
+                 "descansa en su socket esta seleccionado desde el frame 0, y eso es el estado " +
+                 "de reposo de la escena, no algo que el usuario haga. Se compara por subcadena " +
+                 "contra el nombre del tipo, sin distinguir mayusculas.")]
+        public string[] interactoresIgnorados = new string[] { "Socket", "Snap" };
+
         private static float lastFlushTime;
 
         private InteractionTracker Tracker => Gossip.Instance?.InteractionTracker;
@@ -90,6 +97,7 @@ namespace GossipSDK.Components
         private PropertyInfo _selectionPropInfo; // cached PropertyInfo for SelectionMember
         private PropertyInfo _countPropInfo;     // cached PropertyInfo for Count on the collection
         private bool         _wasSelected;
+        private bool         _primerSondeo = true;
         private string       _xrLabel;           // interactionType label = component type name
 
         private static void ResolveAdapterTypes()
@@ -138,6 +146,58 @@ namespace GossipSDK.Components
                 _xrLabel = string.IsNullOrEmpty(lbl) ? raw : lbl;
                 break; // use first matching framework
             }
+        }
+
+        // Cuenta los interactores que SI son una interaccion de usuario. Un socket sosteniendo
+        // el objeto no lo es: esta seleccionado desde el frame 0, y por eso cada arranque de la
+        // app emitia un start por objeto instrumentado que no cerraba nunca, con una duracion
+        // medida desde el arranque en vez de desde el agarre.
+        //
+        // Medido el 14-sep-2026 sobre interactiontrackings: de 979 interacciones, 662 (68 %)
+        // nacian en rafagas de 3 o mas dentro de 200 ms -- 3,94 objetos por rafaga, un bucle, no
+        // una mano -- y cerraban al 13,9 %. Lo que hacia una persona (317, 1,02 por ventana)
+        // cerraba al 74,8 %.
+        //
+        // XRI no ofrece una interfaz que distinga un socket: XRSocketInteractor hereda de
+        // XRBaseInteractor como los demas, asi que por reflexion lo unico disponible es el
+        // nombre del tipo. Por eso la lista es configurable en el inspector.
+        private int CuentaInteractoresDeUsuario(object coleccion)
+        {
+            if (coleccion == null) return 0;
+
+            var recorrible = coleccion as System.Collections.IEnumerable;
+            if (recorrible == null)
+            {
+                // No es recorrible: se cae al comportamiento anterior, contar por .Count.
+                if (_countPropInfo == null)
+                    _countPropInfo = coleccion.GetType().GetProperty("Count");
+                if (_countPropInfo == null) return 0;
+                return (int)_countPropInfo.GetValue(coleccion);
+            }
+
+            int cuenta = 0;
+            foreach (var interactor in recorrible)
+            {
+                if (interactor == null) continue;
+                if (EsInteractorIgnorado(interactor.GetType().Name)) continue;
+                cuenta++;
+            }
+            return cuenta;
+        }
+
+        private bool EsInteractorIgnorado(string nombreDeTipo)
+        {
+            if (string.IsNullOrEmpty(nombreDeTipo)) return false;
+            if (interactoresIgnorados == null) return false;
+
+            for (int i = 0; i < interactoresIgnorados.Length; i++)
+            {
+                string patron = interactoresIgnorados[i];
+                if (string.IsNullOrEmpty(patron)) continue;
+                if (nombreDeTipo.IndexOf(patron, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    return true;
+            }
+            return false;
         }
 
         private void Awake()
@@ -200,14 +260,23 @@ namespace GossipSDK.Components
                     }
                     else
                     {
-                        if (_countPropInfo == null && val != null)
-                            _countPropInfo = val.GetType().GetProperty("Count");
-                        isSelected = _countPropInfo != null && val != null && (int)_countPropInfo.GetValue(val) > 0;
+                        isSelected = CuentaInteractoresDeUsuario(val) > 0;
                     }
 
-                    if (isSelected && !_wasSelected) OnInteractStart(_xrLabel);
-                    if (!isSelected && _wasSelected) OnInteractEnd(_xrLabel);
-                    _wasSelected = isSelected;
+                    if (_primerSondeo)
+                    {
+                        // El primer sondeo solo fija el punto de partida. Si al cablear el
+                        // objeto ya esta cogido, eso no es una interaccion que hayamos visto
+                        // empezar, y emitir un start aqui seria inventarse un agarre.
+                        _primerSondeo = false;
+                        _wasSelected = isSelected;
+                    }
+                    else
+                    {
+                        if (isSelected && !_wasSelected) OnInteractStart(_xrLabel);
+                        if (!isSelected && _wasSelected) OnInteractEnd(_xrLabel);
+                        _wasSelected = isSelected;
+                    }
                 }
                 catch { /* reflection error -- silently skip */ }
             }
@@ -231,6 +300,7 @@ namespace GossipSDK.Components
 
             currentInteractionId = null;
             _wasSelected = false; // reset auto-wire state on disable
+            _primerSondeo = true;  // al re-activarse, el primer sondeo vuelve a ser linea base
         }
 
         public void OnInteractInstant(string interactionType)

@@ -1258,9 +1258,18 @@ namespace GossipSDK.Editor
                 _trackerComponentCache.TryGetValue(info.componentTypeName, out Component existing);
                 bool isPresent = (UnityEngine.Object)existing != null;
                 // Pre-capture chip data before any Begin* call (IMGUI rule)
+                // El chip ya no es un metadato suelto: dice en que estado esta la ficha.
+                //   AUTO   -> siempre activo y sin nada que hacer
+                //   REVIEW -> tu decides si lo quieres (checkbox real)
+                //   CODE   -> hay que llamar a algo desde tu codigo para que mida
+                // CODE gana sobre los otros dos: si el tracker necesita tu llamada, decirle
+                // AUTO al cliente seria mentirle. Es el caso de Passthrough, que no se puede
+                // desconectar y aun asi hay que cablearlo.
                 s_chipInfo.TryGetValue(info.componentTypeName, out var _chipEntry);
-                string _chipLabel = _chipEntry.chipLabel ?? "AUTO";
                 string _chipWhy   = _chipEntry.whyText;
+                string _chipLabel = _chipEntry.chipLabel == "CODE"
+                    ? "CODE"
+                    : (info.clientAdjustable ? "REVIEW" : "AUTO");
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
                 EditorGUILayout.BeginHorizontal();
                 bool wasPresent = isPresent;
@@ -1308,8 +1317,6 @@ namespace GossipSDK.Editor
                     string _chipDisp = _chipLabel == "AUTO" ? "● AUTO" : (_chipLabel == "REVIEW" ? "● REVIEW" : "● CODE");
                     GUILayout.Label(_chipDisp, _cStyle, GUILayout.ExpandWidth(false));
                 }
-                if (!info.clientAdjustable)
-                    GUILayout.Label("ALWAYS ON", EditorStyles.miniBoldLabel, GUILayout.ExpandWidth(false));
                 EditorGUILayout.BeginVertical();
                 EditorGUILayout.LabelField(info.displayName, EditorStyles.boldLabel);
                 EditorGUILayout.LabelField(info.description, _wordWrapMiniLabel);
@@ -1346,24 +1353,18 @@ namespace GossipSDK.Editor
                     bool showAutoAssignBtn = needsAutoAssign;
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.HelpBox(hintB, hintBType);
-                    EditorGUILayout.BeginVertical(GUILayout.Width(70));
+                    // El boton de abrir el Inspector se retiro el 14-sep-2026. El cliente instala,
+                    // no mide: entrar a las tripas del tracker le deja cambiar valores que SON el
+                    // dato. El caso medido es Passthrough, donde exposure y qualityMetric se
+                    // tecleaban a mano en el Inspector y acababan pintados en una card.
+                    // Se conserva solo la auto-asignacion, que es instalacion, no medida.
                     if (showAutoAssignBtn)
                     {
+                        EditorGUILayout.BeginVertical(GUILayout.Width(70));
                         if (GUILayout.Button("Auto-assign\nCamera", GUILayout.Width(70), GUILayout.Height(36)))
                             AutoAssignCameraField(existing, autoAssignField);
+                        EditorGUILayout.EndVertical();
                     }
-                    if (GUILayout.Button("Open\nInspector", GUILayout.Width(70), GUILayout.Height(36)))
-                    {
-                        Selection.activeGameObject = existing.gameObject;
-                        EditorApplication.delayCall += () =>
-                        {
-                            var inspectorType = typeof(UnityEditor.Editor).Assembly
-                                .GetType("UnityEditor.InspectorWindow");
-                            if (inspectorType != null)
-                                EditorWindow.GetWindow(inspectorType).Focus();
-                        };
-                    }
-                    EditorGUILayout.EndVertical();
                     EditorGUILayout.EndHorizontal();
                 }
                 if (isPresent && !info.requiresConfiguration && !string.IsNullOrEmpty(info.postAddHint))
@@ -1622,7 +1623,7 @@ namespace GossipSDK.Editor
             EditorGUILayout.Space(6);
             EditorGUILayout.HelpBox(
                 "These Android permissions are required for full data collection on Android XR devices. " +
-                "All are pre-enabled. Deselect only if your app does not use that feature.",
+                "Only Microphone can be deselected. The other three feed sections of your dashboard and stay on.",
                 MessageType.Info);
             EditorGUILayout.Space(4);
             if ((UnityEngine.Object)_cachedPermHandler == null)
@@ -1691,17 +1692,17 @@ namespace GossipSDK.Editor
             DrawPermissionRow(_vrHandlerSO, propEye,
                 "Eye Tracking",
                 "Gaze data and fixation. Powers heat-of-gaze analytics.",
-                "Deselecting will stop gaze data capture. Heat-of-gaze analytics will not function.");
+                "Deselecting will stop gaze data capture. Heat-of-gaze analytics will not function.", true);
 
             DrawPermissionRow(_vrHandlerSO, propSpatial,
                 "Scene / Spatial",
                 "Environment mesh for spatial heatmaps.",
-                "Deselecting will disable spatial heatmaps. Environment data will not be captured.");
+                "Deselecting will disable spatial heatmaps. Environment data will not be captured.", true);
 
             DrawPermissionRow(_vrHandlerSO, propCamera,
                 "Headset Camera",
                 "Passthrough and MR features.",
-                "Deselecting will disable passthrough and mixed reality features.");
+                "Deselecting will disable passthrough and mixed reality features.", true);
 
             DrawPermissionRow(_vrHandlerSO, propMic,
                 "Microphone",
@@ -1725,13 +1726,14 @@ namespace GossipSDK.Editor
                     _vrHandlerSO.ApplyModifiedProperties();
                 }
             }
-            if (GUILayout.Button("Deselect All", GUILayout.Width(90)))
+            if (GUILayout.Button("Deselect Mic", GUILayout.Width(90)))
             {
                 if (_vrHandlerSO != null)
                 {
                     _vrHandlerSO.Update();
-                    foreach (var p in new[]{"enableEyeTracking","enableSpatialScene",
-                                             "enableHeadsetCamera","enableMicrophone"})
+                    // Solo Microphone. Las otras tres estan bloqueadas en su fila, asi que este
+                    // boton no puede ser la puerta de atras que las apague.
+                    foreach (var p in new[]{"enableMicrophone"})
                     {
                         var prop = _vrHandlerSO.FindProperty(p);
                         if (prop != null) prop.boolValue = false;
@@ -1743,12 +1745,16 @@ namespace GossipSDK.Editor
         }
 
         // --- DrawPermissionRow ---
-        private void DrawPermissionRow(SerializedObject so, SerializedProperty prop, string label, string description, string deselectImpact)
+        private void DrawPermissionRow(SerializedObject so, SerializedProperty prop, string label, string description, string deselectImpact, bool bloqueado = false)
         {
             if (prop == null) return;
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             EditorGUILayout.BeginHorizontal();
+            // Bloqueado: se ve el estado, no se puede tocar. Solo Microphone es del cliente.
+            bool _guiAntes = GUI.enabled;
+            if (bloqueado) GUI.enabled = false;
             bool newVal = EditorGUILayout.Toggle(prop.boolValue, GUILayout.Width(18));
+            GUI.enabled = _guiAntes;
             EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
             var titleStyle = new GUIStyle(EditorStyles.label);
             titleStyle.fontStyle = FontStyle.Bold;
@@ -1757,7 +1763,7 @@ namespace GossipSDK.Editor
             descStyle.wordWrap = true;
             EditorGUILayout.LabelField(description, descStyle);
             EditorGUILayout.EndVertical();
-            if (newVal != prop.boolValue)
+            if (!bloqueado && newVal != prop.boolValue)
             {
                 if (!newVal)
                 {
