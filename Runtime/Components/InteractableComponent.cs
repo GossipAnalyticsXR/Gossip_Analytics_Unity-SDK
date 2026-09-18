@@ -98,6 +98,8 @@ namespace GossipSDK.Components
         private PropertyInfo _countPropInfo;     // cached PropertyInfo for Count on the collection
         private bool         _wasSelected;
         private bool         _primerSondeo = true;
+        private string       _uiLabel;      // nombre de clase del Selectable, si lo hay
+        private bool         _uiCableado;   // true si se engancho el onClick de Unity UI
         private string       _xrLabel;           // interactionType label = component type name
 
         private static void ResolveAdapterTypes()
@@ -134,11 +136,20 @@ namespace GossipSDK.Components
                 Component comp = GetComponent(_resolvedTypes[i]);
                 if ((UnityEngine.Object)comp == null) continue;
 
-                _xrInteractable    = comp;
-                _adapterIndex      = i;
-                _selectionPropInfo = _resolvedTypes[i].GetProperty(
+                PropertyInfo prop = _resolvedTypes[i].GetProperty(
                     _adapters[i].SelectionMember,
                     BindingFlags.Public | BindingFlags.Instance);
+
+                // Si el tipo casa por nombre pero no expone la propiedad que esperamos, NO es
+                // nuestro framework: se sigue buscando. Antes se aceptaba el match y se hacia
+                // break igual, con lo que un IInteractable de otra libreria -- un nombre muy
+                // comun -- dejaba el componente "cableado" a algo inutil, mudo, y sin llegar a
+                // probar los adaptadores restantes.
+                if (prop == null) continue;
+
+                _xrInteractable    = comp;
+                _adapterIndex      = i;
+                _selectionPropInfo = prop;
                 string raw = comp.GetType().Name;
                 string lbl = raw;
                 if (lbl.EndsWith("Interactable")) lbl = lbl.Substring(0, lbl.Length - "Interactable".Length);
@@ -146,6 +157,94 @@ namespace GossipSDK.Components
                 _xrLabel = string.IsNullOrEmpty(lbl) ? raw : lbl;
                 break; // use first matching framework
             }
+
+            if (_adapterIndex < 0)
+                TryWireUnityUi();
+        }
+
+        // Un boton de Unity UI no es un interactable de XR: no implementa IXRSelectInteractable,
+        // asi que el sondeo de Update no lo ve nunca. Medido el 15-sep-2026 en VR-Anatomy-Lab:
+        // QuizButton lleva UnityEngine.UI.Button + Image + este componente, su onClick va a
+        // GameObject.SetActive, y no habia emitido un solo mensaje en toda su vida. Un no-op
+        // mudo, que es peor que un error.
+        //
+        // Se engancha al onClick, que es el UnityEvent SIN argumentos de Button. Los eventos con
+        // argumento -- onValueChanged de Toggle, Slider o Dropdown -- necesitan un UnityAction<T>
+        // con el tipo correcto y quedan fuera de este cambio a proposito: se avisan por el log en
+        // vez de fallar en silencio.
+        private void TryWireUnityUi()
+        {
+            try
+            {
+                Component selectable = null;
+                foreach (var c in GetComponents<Component>())
+                {
+                    if ((UnityEngine.Object)c == null) continue;
+                    if (EsSelectableDeUi(c.GetType())) { selectable = c; break; }
+                }
+
+                if ((UnityEngine.Object)selectable == null)
+                {
+                    Debug.LogWarning("[Interactable] " + gameObject.name + ": no hay interactable de XR ni Selectable de UI. Este componente no va a medir nada por si solo; llama a OnInteractStart, OnInteractEnd o OnInteractInstant desde tu codigo.");
+                    return;
+                }
+
+                _uiLabel = selectable.GetType().Name;
+
+                object evento = LeerMiembro(selectable, "onClick");
+                if (evento == null)
+                {
+                    Debug.LogWarning("[Interactable] " + gameObject.name + ": " + _uiLabel + " no expone onClick. Engancha OnInteractInstant a su evento a mano.");
+                    return;
+                }
+
+                MethodInfo add = evento.GetType().GetMethod("AddListener", BindingFlags.Public | BindingFlags.Instance);
+                if (add == null) return;
+
+                ParameterInfo[] ps = add.GetParameters();
+                if (ps.Length != 1) return;
+
+                MethodInfo destino = GetType().GetMethod("PulsacionDeUi", BindingFlags.NonPublic | BindingFlags.Instance);
+                if (destino == null) return;
+
+                Delegate manejador = Delegate.CreateDelegate(ps[0].ParameterType, this, destino, false);
+                if (manejador == null)
+                {
+                    Debug.LogWarning("[Interactable] " + gameObject.name + ": el onClick de " + _uiLabel + " lleva argumento y todavia no se engancha solo.");
+                    return;
+                }
+
+                add.Invoke(evento, new object[] { manejador });
+                _uiCableado = true;
+            }
+            catch (Exception ex) { Debug.LogException(ex); }
+        }
+
+        private static bool EsSelectableDeUi(Type t)
+        {
+            while (t != null)
+            {
+                if (t.FullName == "UnityEngine.UI.Selectable") return true;
+                t = t.BaseType;
+            }
+            return false;
+        }
+
+        private static object LeerMiembro(object obj, string nombre)
+        {
+            if (obj == null) return null;
+            Type t = obj.GetType();
+            PropertyInfo p = t.GetProperty(nombre, BindingFlags.Public | BindingFlags.Instance);
+            if (p != null) { try { return p.GetValue(obj); } catch { return null; } }
+            FieldInfo f = t.GetField(nombre, BindingFlags.Public | BindingFlags.Instance);
+            if (f != null) { try { return f.GetValue(obj); } catch { return null; } }
+            return null;
+        }
+
+        // La pulsacion es instantanea por definicion: no tiene principio y fin que medir.
+        private void PulsacionDeUi()
+        {
+            OnInteractInstant(string.IsNullOrEmpty(_uiLabel) ? "Press" : _uiLabel);
         }
 
         // Cuenta los interactores que SI son una interaccion de usuario. Un socket sosteniendo
@@ -348,16 +447,43 @@ namespace GossipSDK.Components
                 string scene = SceneManager.GetActiveScene().name;
                 string ts = DateTime.UtcNow.ToString("o");
 
-                Tracker?.CapInteractionStart(
-                    currentInteractionId,
-                    gameObject.name,
-                    gameObject.tag,
-                    inputType,
-                    interactionType,
-                    pos,
-                    scene,
-                    ts
-                );
+                // El `start` NO se tira si el tracker todavia no esta montado.
+                //
+                // `Tracker` es `Gossip.Instance?.InteractionTracker`, y `GossipManager` anade los
+                // componentes a lo largo de varios frames: en la primera interaccion de una sesion
+                // puede ser null. Con el `?.` de antes, ese `start` desaparecia sin error, y el
+                // `end` -que llega segundos despues, ya con tracker- si salia: una interaccion con
+                // final y sin principio, que el dashboard no puede emparejar.
+                //
+                // Medido en Mongo el 17-sep-2026 sobre 90 dias: 9 `end` sin `start` en 140 sesiones,
+                // 4 de ellos en la POSICION 1 de su sesion cuando por azar se esperarian 1,22, y una
+                // sesion con tres seguidos en los primeros seis segundos.
+                var tracker = Tracker;
+                if (tracker != null)
+                {
+                    tracker.CapInteractionStart(
+                        currentInteractionId,
+                        gameObject.name,
+                        gameObject.tag,
+                        inputType,
+                        interactionType,
+                        pos,
+                        scene,
+                        ts
+                    );
+                }
+                else
+                {
+                    StartCoroutine(EnviarStartCuandoHayaTracker(
+                        currentInteractionId,
+                        gameObject.name,
+                        gameObject.tag,
+                        inputType,
+                        interactionType,
+                        pos,
+                        scene,
+                        ts));
+                }
 
                 if (registerHeatmapHit)
                     heatmap?.RegisterHit(pos);
@@ -366,6 +492,52 @@ namespace GossipSDK.Components
             }
             catch (Exception ex) { Debug.LogException(ex); }
         }
+
+        /// <summary>
+        /// Manda el `start` en cuanto el tracker exista, con su instante ORIGINAL.
+        /// </summary>
+        /// <remarks>
+        /// El `ts` viaja como parametro a proposito: si se recalculara al enviar, la
+        /// interaccion quedaria fechada cuando el SDK termino de arrancar y no cuando el
+        /// usuario agarro el objeto. La espera esta acotada; si el tracker no aparece, se
+        /// avisa por consola en vez de perderlo en silencio, que es lo que pasaba antes.
+        /// </remarks>
+        private IEnumerator EnviarStartCuandoHayaTracker(
+            string interactionId,
+            string objectName,
+            string objectTag,
+            string inputType,
+            string interactionType,
+            Vector3 pos,
+            string scene,
+            string timestampUtc)
+        {
+            float esperado = 0f;
+            while (Tracker == null && esperado < 10f)
+            {
+                esperado += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            var tracker = Tracker;
+            if (tracker == null)
+            {
+                Debug.LogWarning("[Interactable] " + objectName +
+                    ": el tracker no aparecio en 10 s, el start de esta interaccion se pierde.");
+                yield break;
+            }
+
+            tracker.CapInteractionStart(
+                interactionId,
+                objectName,
+                objectTag,
+                inputType,
+                interactionType,
+                pos,
+                scene,
+                timestampUtc);
+        }
+
 
         public void OnInteractEnd(string interactionType)
         {

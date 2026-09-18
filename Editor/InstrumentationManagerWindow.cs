@@ -20,6 +20,12 @@ namespace GossipSDK.Editor
         private Dictionary<string, bool> _sceneFoldouts = new Dictionary<string, bool>();
         private const int InteractablesPageSize = 50;
         private readonly Dictionary<string, bool> _sceneShowAll = new Dictionary<string, bool>();
+        // Ruta real de cada escena escaneada y las que estan en Build Settings. Sin esto,
+        // dos escenas de carpetas distintas con el mismo nombre eran indistinguibles: en
+        // VR-Anatomy-Lab salian dos grupos llamados 0 y 0 (1) que resultaron ser copias
+        // viejas en Assets/_Recovery/, fuera de Build Settings.
+        private readonly Dictionary<string, string> _scenePaths = new Dictionary<string, string>();
+        private readonly HashSet<string> _buildScenePaths = new HashSet<string>();
         private bool _hasNewObjects = false;
         private Vector2 _scrollPos;
         private static bool _isScanning = false;
@@ -285,10 +291,9 @@ namespace GossipSDK.Editor
             new Dictionary<string, (string, string)>
             {
                 { "MultiplayerTrackerComponent", ("REVIEW", "Emits an empty room snapshot each session. Turn off for single-user apps.") },
-                { "AvatarTrackerComponent",      ("CODE",   "Call NotifyAvatar() from your purchase flow.") },
-                { "AccessoriesComponent",        ("CODE",   "Call ReportPurchased() from your purchase flow.") },
-                { "AdComponent",                 ("CODE",   "Call RecordImpression()/RecordReward() from your ad SDK callbacks.") },
-                { "PassthroughComponent",        ("CODE",   "Wire OnPassthroughEnabled()/OnPassthroughDisabled() to your passthrough toggle.") },
+                { "AvatarTrackerComponent",      ("REVIEW", "Call NotifyAvatar() from your purchase flow.") },
+                { "AccessoriesComponent",        ("REVIEW", "Call ReportPurchased() from your purchase flow.") },
+                { "AdComponent",                 ("REVIEW", "Call RecordImpression()/RecordReward() from your ad SDK callbacks.") },
             };
         private static Dictionary<string, Type> _trackerTypeCache = null;
         private static Type _cachedXROriginType;
@@ -599,7 +604,12 @@ namespace GossipSDK.Editor
                 EditorGUILayout.BeginHorizontal();
                 int selectedCount = objs.Count(o => o.isChecked);
                 int totalCount = objs.Count;
-                string sceneLabel = $"{sceneName}  ({selectedCount} of {totalCount})";
+                string _carpeta = _scenePaths.TryGetValue(sceneName, out var _sp)
+                    ? System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(_sp)) : null;
+                bool _enBuild = _scenePaths.TryGetValue(sceneName, out var _sp2) && _buildScenePaths.Contains(_sp2);
+                string sceneLabel = $"{sceneName}  ({selectedCount} of {totalCount})"
+                    + (string.IsNullOrEmpty(_carpeta) ? "" : "   ·  " + _carpeta)
+                    + (_enBuild ? "" : "   ·  not in Build Settings");
                 _sceneFoldouts[sceneName] = EditorGUILayout.Foldout(
                     _sceneFoldouts[sceneName],
                     sceneLabel,
@@ -699,6 +709,10 @@ namespace GossipSDK.Editor
         {
             _sceneObjects.Clear();
             _sceneShowAll.Clear();
+            _scenePaths.Clear();
+            _buildScenePaths.Clear();
+            foreach (var _bs in EditorBuildSettings.scenes)
+                if (_bs.enabled && !string.IsNullOrEmpty(_bs.path)) _buildScenePaths.Add(_bs.path);
             var allStoredPaths = new Dictionary<string, HashSet<string>>();
             if (_data != null)
                 foreach (var entry in _data.scenes)
@@ -767,7 +781,10 @@ namespace GossipSDK.Editor
                         foreach (var root in scene.GetRootGameObjects())
                             CollectInteractableObjectsForScan(root, sceneName, scannedPaths, storedPaths, sceneList);
                         if (sceneList.Count > 0)
+                        {
                             _sceneObjects[sceneName] = sceneList;
+                            _scenePaths[sceneName] = scenePath;
+                        }
 
                     }
                     catch (System.Exception ex)
@@ -1258,17 +1275,19 @@ namespace GossipSDK.Editor
                 _trackerComponentCache.TryGetValue(info.componentTypeName, out Component existing);
                 bool isPresent = (UnityEngine.Object)existing != null;
                 // Pre-capture chip data before any Begin* call (IMGUI rule)
-                // El chip ya no es un metadato suelto: dice en que estado esta la ficha.
+                // El chip dice en que estado esta la ficha:
                 //   AUTO   -> siempre activo y sin nada que hacer
                 //   REVIEW -> tu decides si lo quieres (checkbox real)
                 //   CODE   -> hay que llamar a algo desde tu codigo para que mida
-                // CODE gana sobre los otros dos: si el tracker necesita tu llamada, decirle
-                // AUTO al cliente seria mentirle. Es el caso de Passthrough, que no se puede
-                // desconectar y aun asi hay que cablearlo.
+                // Por defecto se deriva del estado. s_chipInfo es la tabla de excepciones para
+                // los ajustables que ademas piden una llamada (Avatar y Accessories).
+                // Passthrough salio de CODE el 15-sep-2026: el dato no llega por la llamada del
+                // integrador sino por RealityModeMonitor, que es auto-tracker y lee el runtime
+                // cada frame. La via del trigger lleva 0 filas en produccion.
                 s_chipInfo.TryGetValue(info.componentTypeName, out var _chipEntry);
                 string _chipWhy   = _chipEntry.whyText;
-                string _chipLabel = _chipEntry.chipLabel == "CODE"
-                    ? "CODE"
+                string _chipLabel = !string.IsNullOrEmpty(_chipEntry.chipLabel)
+                    ? _chipEntry.chipLabel
                     : (info.clientAdjustable ? "REVIEW" : "AUTO");
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
                 EditorGUILayout.BeginHorizontal();

@@ -1,3 +1,39 @@
+## [2.0.26] - 2026-09
+
+### Added
+- Los botones de Unity UI ya se miden. `InteractableComponent` solo sondeaba interactables
+  de XR (`IXRSelectInteractable`), asi que un `UnityEngine.UI.Button` no emitia nunca.
+  Medido el 15-09 en VR-Anatomy-Lab: QuizButton llevaba Button + Image + este componente,
+  su `onClick` iba a `SetActive`, y no habia emitido un solo mensaje en toda su vida. Un
+  no-op mudo, que es peor que un error. Ahora el componente se engancha al `onClick`, y
+  cuando no encuentra nada que medir lo dice en vez de quedarse callado.
+
+### Fixed
+- El envio de cierre ya no pierde los mandos. Al cerrar, `InputDevices` deja de enumerar
+  los mandos porque el subsistema XR se esta desmontando: el visor sobrevive a esa ventana
+  y el mando no, asi que el cierre se atribuia solo al visor. Medido sobre nueve sesiones,
+  el mando se quedaba clavado en unos 14,92 s -el primer latido- durasen 45 s o 311. En la
+  corrida de 7 minutos del 18-09 el tramo perdido eran 105 s de 420: el 25 por ciento de la
+  sesion. Ahora se guarda la deteccion mas completa de la sesion y es esa la que viaja en
+  el cierre.
+- La primera interaccion ya no se pierde si el tracker todavia no esta montado. El envio
+  espera de forma acotada y conserva el `ts` del momento del agarre, no el de cuando el SDK
+  termino de arrancar; si el tracker no aparece, se avisa por consola en vez de perderlo en
+  silencio.
+- Un `IInteractable` de otra libreria ya no deja el componente cableado a algo inutil. Si el
+  tipo casa por nombre pero no expone la propiedad que esperamos, se sigue buscando en vez
+  de aceptar el match y parar. `IInteractable` es un nombre muy comun.
+
+### Changed
+- Los chips del catalogo dicen el estado de la ficha, no metadatos sueltos. Ad, Avatar y
+  Accessories pasan a REVIEW y Passthrough a AUTO: con eso los cuatro ajustables son REVIEW
+  y los trece informativos son AUTO, sin excepciones. Passthrough es AUTO porque su dato no
+  llega por la llamada del integrador sino por `RealityModeMonitor`, que es auto-tracker y
+  lee el runtime; la via del trigger lleva 0 filas en produccion.
+- Las escenas del Instrumentation Manager se identifican. Cada grupo enseña su carpeta y
+  avisa cuando la escena no esta en Build Settings, que es lo que hacia indistinguibles dos
+  copias viejas llamadas 0 y 0 (1).
+
 ## [2.0.25] - 2026-09
 
 ### Fixed

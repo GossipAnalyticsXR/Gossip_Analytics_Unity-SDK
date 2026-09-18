@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using GossipSDK.Core;
@@ -36,6 +37,21 @@ namespace GossipSDK.Components
         private float timer;
         public bool sendImmediately = true;
 
+        /// <summary>La deteccion mas completa de la sesion.
+        ///
+        /// Al cerrar, InputDevices deja de enumerar los mandos: el subsistema XR
+        /// ya se esta desmontando. El visor sobrevive a esa ventana y el mando no,
+        /// asi que el envio de cierre se atribuia solo al visor. Medido el
+        /// 18-09-2026 sobre nueve sesiones: el mando se quedaba clavado en unos
+        /// 14,92 s -el primer latido- durasen 45 s o 311, mientras el visor crecia
+        /// con la sesion.
+        ///
+        /// La corrida de 7 minutos del 18-09 confirmo que el mando SI se detecta en
+        /// el latido intermedio -mando y visor, 300,010275824 los dos-, asi que solo
+        /// se pierde al cerrar. Ese tramo final eran 105 s de 420: el 25 por ciento
+        /// de la sesion.</summary>
+        private List<DetectedPeripheral> deteccionMasCompleta;
+
 
         private void Start()
         {
@@ -55,22 +71,22 @@ namespace GossipSDK.Components
 
         private void OnDestroy()
         {
-            SendElapsed();
+            SendElapsed(true);
         }
 
         private void OnApplicationQuit()
         {
-            SendElapsed();
+            SendElapsed(true);
         }
 
         private void OnApplicationPause(bool paused)
         {
-            if (paused) SendElapsed();
+            if (paused) SendElapsed(true);
         }
 
         private void OnDisable()
         {
-            SendElapsed();
+            SendElapsed(true);
         }
 
         /// <summary>
@@ -78,22 +94,36 @@ namespace GossipSDK.Components
         /// total at shutdown) means usage survives an abrupt quit, which on standalone
         /// headsets is the common case.
         /// </summary>
-        private void SendElapsed()
+        private void SendElapsed(bool cierre = false)
         {
             double now = Time.realtimeSinceStartupAsDouble;
             double delta = now - lastSendTime;
             if (delta < MinReportedSeconds) return;
 
             lastSendTime = now;
-            SendAllPeripherals(delta);
+            SendAllPeripherals(delta, cierre);
         }
 
-        private void SendAllPeripherals(double duration)
+        private void SendAllPeripherals(double duration, bool cierre = false)
         {
             var tracker = Gossip.Instance?.PeripheralTracker;
             if (tracker == null) return;
 
             var peripherals = PeripheralAutoDetector.Detect();
+
+            // Memoria de la sesion, y sustitucion SOLO al cerrar. Mientras se juega
+            // manda la deteccion de verdad; en el envio de cierre, si trae menos
+            // aparatos que la mejor deteccion de la sesion, se usa esa. Asi el ultimo
+            // tramo se reparte entre los perifericos que estuvieron conectados, que
+            // es lo que la metrica quiere decir.
+            if (deteccionMasCompleta == null || peripherals.Count > deteccionMasCompleta.Count)
+            {
+                deteccionMasCompleta = peripherals;
+            }
+            else if (cierre && peripherals.Count < deteccionMasCompleta.Count)
+            {
+                peripherals = deteccionMasCompleta;
+            }
 
             foreach (var p in peripherals)
             {
