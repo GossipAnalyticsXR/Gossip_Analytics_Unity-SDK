@@ -356,6 +356,7 @@ go.AddComponent<GossipSDK.Heatmaps.HeatmapPanoramaAutoCapture>();
             Ensure(typeof(PassthroughComponent),                autoTrackersHost);
             Ensure(typeof(BoundaryPressureComponent), autoTrackersHost);
             Ensure(typeof(MicPermissionComponent), autoTrackersHost);
+            Ensure(typeof(SceneInventoryComponent),             autoTrackersHost);
 
             // Camera wiring: refresh to current Camera.main on every call
             var posture = UnityEngine.Object.FindObjectOfType<UserPostureComponent>();

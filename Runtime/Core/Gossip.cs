@@ -64,6 +64,7 @@ namespace GossipSDK.Core
         public AvatarTracker AvatarTracker { get; private set; }
         public DifficultyTracker DifficultyTracker { get; private set; }
         public LevelChangeTracker LevelChangeTracker { get; private set; }
+        public SceneInventoryTracker SceneInventoryTracker { get; private set; }
         public PauseTracker PauseTracker { get; private set; }
         public ServerStatusTracker ServerStatusTracker { get; private set; }
         public AccessoriesTracker AccessoriesTracker { get; private set; }
@@ -139,6 +140,7 @@ namespace GossipSDK.Core
             if (AvatarTracker == null) AvatarTracker = new AvatarTracker();
             if (DifficultyTracker == null) DifficultyTracker = new DifficultyTracker();
             if (LevelChangeTracker == null) LevelChangeTracker = new LevelChangeTracker();
+            if (SceneInventoryTracker == null) SceneInventoryTracker = new SceneInventoryTracker();
             if (PauseTracker == null) PauseTracker = new PauseTracker();
             if (ServerStatusTracker == null) ServerStatusTracker = new ServerStatusTracker();
             if (AccessoriesTracker == null) AccessoriesTracker = new AccessoriesTracker();

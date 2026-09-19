@@ -252,7 +252,7 @@ namespace GossipSDK.Editor
             new TrackerInfo {
                 componentTypeName = "AccessoriesComponent",
                 clientAdjustable = true,
-                displayName = "Accessories",
+                displayName = "Avatar Accessories",
                 description = "Tracks in-app item and accessory purchases. Configure in Inspector. Call ReportPurchased() from your purchase code -- no parameters needed.",
                 category = "Device",
                 target = TrackerTarget.AnyObject,

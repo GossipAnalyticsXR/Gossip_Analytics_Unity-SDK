@@ -15,8 +15,9 @@ namespace GossipSDK.Components
     [DisallowMultipleComponent]
     public class InteractableComponent : MonoBehaviour
     {
-        [Tooltip("E.g. Pickup, Button, Open, Inspect")]
+        [Tooltip("Demo only: on Start, sends one instant interaction named Demo Shoot.")]
         public bool autoTriggerOnStart = false;
+        [Tooltip("Demo only: on Start, opens an interaction that nothing ever closes.")]
         public bool autoStartOnEnable = false;
 
         [Header("Image Capture Optimization")]

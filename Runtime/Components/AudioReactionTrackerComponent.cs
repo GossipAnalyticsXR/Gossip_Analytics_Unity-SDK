@@ -312,12 +312,47 @@ namespace GossipSDK.Components
             }
 
             // 2. VERIFICACION DE SEGURIDAD
+            //
+            // El permiso puede llegar DESPUES de que IsReady valga true: el
+            // bucle de VRPermissionsHandler sale tambien por plazo -10 s- y
+            // por foco, no solo por concedido. Antes aqui habia un yield break
+            // directo, asi que la sesion se quedaba sin una sola reaccion
+            // aunque el usuario aceptara un segundo despues.
+            //
+            // Medido el 18-sep-2026: tres sesiones -11, 12 y 15-sep- con
+            // AudioTrackerStatus mic_permission_denied, del mismo aparato que
+            // en otras 73 sesiones si concedio el permiso. Un permiso denegado
+            // de verdad persiste entre arranques: cuatro denegaciones sueltas
+            // entre setenta y tres concesiones son un plazo, no una respuesta.
+            //
+            // Mismo remedio que arriba con permissions_timeout: avisar y seguir
+            // esperando hasta el techo en vez de rendirse. No hace falta
+            // reenviar MicDenied a mano: si el permiso llega, el tracker
+            // arranca y su ReportarEstadoAudio de mas abajo manda el booleano
+            // nuevo, que el processor escribe con $set sobre el viejo.
 #if UNITY_ANDROID && !UNITY_EDITOR
+            float esperaMic = 0f;
+            bool avisadoMic = false;
+            while (!Permission.HasUserAuthorizedPermission(Permission.Microphone)
+                   && esperaMic < 180f)
+            {
+                yield return new WaitForSecondsRealtime(0.2f);
+                esperaMic += 0.2f;
+
+                if (!avisadoMic && esperaMic >= 15f)
+                {
+                    avisadoMic = true;
+                    Debug.LogWarning(
+                        "[AudioTracker] El microfono lleva 15 s sin concederse. " +
+                        "Sigo esperando.");
+                }
+            }
+
             if (!Permission.HasUserAuthorizedPermission(Permission.Microphone))
             {
                 Debug.LogWarning("[AudioTracker] Sin permiso de microfono. Abortando.");
                 ReportarEstadoAudio("mic_permission_denied");
-                yield break; 
+                yield break;
             }
 #endif
 

@@ -1,3 +1,61 @@
+## [2.0.27] - 2026-09
+
+### Fixed
+- El permiso de microfono que llega tarde ya no se registra como denegacion, y ya no apaga
+  las reacciones de toda la sesion. `VRPermissionsHandler` sale de su bucle de espera por
+  tres puertas y solo una significa que el usuario contesto: las otras dos son que vuelva
+  el foco y que pasen 10 s. Detras, `AudioReactionTrackerComponent` leia el permiso una
+  sola vez y hacia `yield break`, sin reintento. Medido el 18-09 sobre 125 sesiones: 8
+  denegadas, y tres de ellas -11, 12 y 15-09- del mismo aparato que en otras 73 si
+  concedio el permiso; en Android un permiso concedido persiste entre arranques, asi que
+  eso es un plazo que vence, no una respuesta. Ahora se espera hasta el techo con aviso a
+  los 15 s, igual que ya se hacia con `permissions_timeout`.
+- El envio de cierre de perifericos ya no se queda a medias. `SendDataToSocket` iba dentro
+  del bucle, uno por periferico: al cerrar salia el primer mensaje y el segundo pillaba el
+  proceso ya muriendose, asi que se quedaba en LiteDB hasta el arranque siguiente. Medido
+  el 19-09 en dos sesiones de dos: en una, el mando no recibio su delta de cierre hasta
+  20 min 49 s despues, al volver a abrir la app. Ahora el vaciado va fuera del bucle y
+  todos los perifericos viajan en el mismo sobre.
+
+### Changed
+- Los dos interruptores de demo de `InteractableComponent` dicen por fin lo que hacen. El
+  `[Tooltip]` de `autoTriggerOnStart` describia un nombre de accion -- E.g. Pickup, Button,
+  Open, Inspect -- y `autoStartOnEnable` no tenia ninguno; los dos disparan desde `Start()`,
+  no desde `OnEnable`. Medido el 19-09 sobre la base: 0 filas `Demo Shoot` en 2.706 mensajes
+  y una sola `Demo Start Interaction`, abierta el 17-09 y todavia sin cerrar.
+- La ficha `Accessories` del catalogo pasa a llamarse **Avatar Accessories**. Mide compras
+  dentro de la app -nombre, precio, marca y forma de pago- y su dato aterriza en
+  Users > Avatars, pero se llamaba igual que la card *XR Accessories* de Immersive >
+  Presence, que es hardware (Headset, Controller, Haptic) y sale de `PeripheralUsage`. Un
+  cliente podia desmarcarla creyendo que apagaba los perifericos y lo que dejaba de medir
+  eran sus compras. Solo cambia el nombre visible: el `componentTypeName` sigue siendo
+  `AccessoriesComponent`, asi que nadie pierde su configuracion.
+### Added
+- El SDK envia el inventario de objetos instrumentados de cada escena. Hasta ahora el
+  dashboard solo conocia los objetos que alguien habia tocado, asi que no podia decir
+  cuantos habia y nunca contesto la pregunta mas util: que instrumentaste y nadie usa.
+  `SceneInventoryComponent` enumera los `InteractableComponent` de la escena cargada y
+  `SceneInventoryTracker` los envia como `TrackingSceneInventory`, una fila por objeto.
+- Cada fila lleva `ObjectPath`, la ruta en la jerarquia, porque el nombre NO identifica:
+  medido el 19-09-2026 en Hospital Zone, dos GameObjects distintos se llamaban igual y
+  el dashboard los sumaba como una sola fila. Y lleva `AppVersion`, porque el inventario
+  solo se compara dentro de una version de build: entre versiones la escena es otra.
+- Limite escrito a proposito: se enumera lo que esta cargado y activo, asi que un prefab
+  instanciado despues no entra. Por eso el denominador del dashboard es la union del
+  inventario con lo que se toco, y nunca solo el inventario.
+- El componente entra solo, por la misma via que el resto de trackers automaticos:
+  `GossipManager.EnsureTrackers()` lo anade al host `GossipAutoTrackers` y lo repite en
+  cada `sceneLoaded`. Sin esa linea el componente existia y no lo instanciaba nadie:
+  medido el 19-09-2026 sobre los 242 ficheros de escena, prefab y codigo del repo -0
+  fallos-, el GUID de `LevelChangeComponent`, que lleva meses emitiendo, no aparece en
+  ninguna escena ni prefab; esa llamada es toda su via de entrada.
+- Cada periferico dice ademas en que mano va, en el campo `Hand`: `left`, `right` o `none`.
+  `PeripheralAutoDetector` lo saca de las caracteristicas del dispositivo de XR. No se pinta
+  en ninguna card, se guarda: medido en la sesion 246f5d8f, las seis filas de mando eran tres
+  envios de dos aparatos distintos, identicas hasta el decimal, y sin este campo el dato no
+  puede decir cuantos mandos hubo.
+
+
 ## [2.0.26] - 2026-09
 
 ### Added
@@ -30,7 +88,7 @@
   y los trece informativos son AUTO, sin excepciones. Passthrough es AUTO porque su dato no
   llega por la llamada del integrador sino por `RealityModeMonitor`, que es auto-tracker y
   lee el runtime; la via del trigger lleva 0 filas en produccion.
-- Las escenas del Instrumentation Manager se identifican. Cada grupo enseña su carpeta y
+- Las escenas del Instrumentation Manager se identifican. Cada grupo muestra su carpeta y
   avisa cuando la escena no esta en Build Settings, que es lo que hacia indistinguibles dos
   copias viejas llamadas 0 y 0 (1).
 
@@ -100,7 +158,7 @@
 ### Added
 - El catalogo de trackers distingue por fin entre lo que el cliente puede apagar y lo
   que solo puede ver. Los cinco ajustables (Audio Reaction, Multiplayer, Ad, Avatar y
-  Accessories) llevan un checkbox que ahora significa algo; el resto lo enseña
+  Accessories) llevan un checkbox que ahora significa algo; el resto lo muestra
   deshabilitado con la etiqueta ALWAYS ON y su motivo.
 - `GossipSettings` guarda la lista de trackers que el integrador ha apagado, y
   `GossipManager.EnsureTrackers()` la consulta antes de anadir nada. Hasta ahora el

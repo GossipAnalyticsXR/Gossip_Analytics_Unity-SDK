@@ -54,7 +54,8 @@ namespace GossipSDK.Utilities
                     Name = string.IsNullOrEmpty(device.name) ? type : device.name,
                     Type = type,
                     Brand = string.IsNullOrEmpty(device.manufacturer) ? InferBrand() : device.manufacturer,
-                    IsHaptic = isHaptic
+                    IsHaptic = isHaptic,
+                    Hand = ClassifyHand(device.characteristics)
                 });
             }
             // Gamepads: solo cuando NO hay XR, mismo criterio que la pantalla tactil
@@ -141,6 +142,28 @@ namespace GossipSDK.Utilities
 
             return "other";
         }
+        /// <summary>
+        /// La mano del aparato, cuando la tiene.
+        ///
+        /// Los dos mandos reportan con el mismo nombre y la misma marca, y solo
+        /// los separan unos milisegundos de TimestampUtc. Medido el 19-09-2026:
+        /// en la sesion 246f5d8f las seis filas de mando eran tres envios por dos
+        /// aparatos, identicas hasta el decimal. Sin este campo el dato no puede
+        /// decir cuantos mandos hubo, y el indice unico lo estuvo tapando.
+        ///
+        /// No se pinta en ninguna card: se guarda. La card de accesorios mide
+        /// reloj de pared y agrupa por envio, asi que no se entera de esto.
+        /// </summary>
+        private static string ClassifyHand(InputDeviceCharacteristics characteristics)
+        {
+            if ((characteristics & InputDeviceCharacteristics.Left) != 0)
+                return "left";
+
+            if ((characteristics & InputDeviceCharacteristics.Right) != 0)
+                return "right";
+
+            return "none";
+        }
         private static string InferBrand()
         {
             // XRSettings.loadedDeviceName es la MISMA bandera inestable que hacia
@@ -176,5 +199,6 @@ namespace GossipSDK.Utilities
         public string Brand;
         public string Type;
         public bool IsHaptic;
+        public string Hand = "none";
     }
 }

@@ -20,6 +20,7 @@ namespace GossipSDK.Tracking.PlatformSpecification
             [field: SerializeField] public string Brand { get; set; }
             [field: SerializeField] public string PeripheralType { get; set; }
             [field: SerializeField] public bool IsHaptic { get; set; }
+            [field: SerializeField] public string Hand { get; set; }
             [field: SerializeField] public double UsageDurationSeconds { get; set; }
             [field: SerializeField] public string SceneName { get; set; }
             [field: SerializeField] public string TimestampUtc { get; set; }

@@ -133,6 +133,8 @@ namespace GossipSDK.Components
                     Brand = p.Brand,
                     PeripheralType = p.Type,
                     IsHaptic = p.IsHaptic,
+                    // La mano del mando, cuando la tiene. No se pinta: se guarda.
+                    Hand = p.Hand,
                     // UsageDurationSeconds es el DELTA de uso desde el ultimo envio, no el acumulado de la sesion.
                     // El backend suma los deltas por sesion para obtener el total de uso del accesorio.
                     UsageDurationSeconds = duration,
@@ -142,14 +144,34 @@ namespace GossipSDK.Components
 
                 tracker.CapSession(data);
 
-                if (sendImmediately)
-                    tracker.SendDataToSocket();
-
                 if (Gossip.Instance?.Settings?.EnableDebug == true)
                 {
                     Debug.Log($"[PeripheralAuto] {p.Type} {p.Name} ({p.Brand}) duration={duration:F1}s");
                 }
             }
+
+            // Un solo vaciado para TODO el lote, fuera del bucle.
+            //
+            // Antes el SendDataToSocket iba dentro del foreach, uno por
+            // periferico. Al cerrar la aplicacion salia el primer mensaje y el
+            // segundo pillaba el proceso ya muriendose: se quedaba en LiteDB
+            // hasta el arranque siguiente.
+            //
+            // Medido el 19-sep-2026, dos sesiones de dos. En la sesion 6d0261f4
+            // el visor recibio su delta de cierre -276,7569341849994- a las
+            // 02:59:42 y el mando no lo recibio hasta las 03:15:31, al volver a
+            // abrir la app: 20 min 49 s de retraso. En 12c7ea78, lo mismo con
+            // 19,65 contra 14,94.
+            //
+            // Con el vaciado fuera del bucle los dos perifericos viajan en el
+            // MISMO sobre: o salen los dos o no sale ninguno, y lo que no salga
+            // se reenvia entero. El processor ya sabe leer varios mensajes por
+            // sobre.
+            //
+            // La guarda de Count deja el comportamiento igual cuando no hay
+            // perifericos: antes el bucle no llegaba a vaciar nada.
+            if (sendImmediately && peripherals.Count > 0)
+                tracker.SendDataToSocket();
         }
     }
 }
