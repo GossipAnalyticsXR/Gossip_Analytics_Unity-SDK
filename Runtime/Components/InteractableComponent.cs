@@ -9,6 +9,7 @@ using GossipSDK.Heatmaps;
 using System.Collections.Generic;
 using System.Reflection;
 using GossipSDK.Core.XR;
+using GossipSDK.Utilities;
 
 namespace GossipSDK.Components
 {
@@ -300,6 +301,22 @@ namespace GossipSDK.Components
             return false;
         }
 
+        /// <summary>
+        /// La identidad de este objeto es su ruta en la jerarquia, no su nombre: dos
+        /// objetos pueden llamarse igual dentro de una escena. Se calcula una vez y se
+        /// guarda, para que coincida caracter a caracter con la que SceneInventoryComponent
+        /// ya manda en ObjectPath, que es la clave del inventario en el ingest.
+        /// </summary>
+        private string _ruta;
+        private string Ruta
+        {
+            get
+            {
+                if (_ruta == null) _ruta = Jerarquia.RutaDe(transform);
+                return _ruta;
+            }
+        }
+
         private void Awake()
         {
             if (!registerHeatmapHit) return;
@@ -396,7 +413,8 @@ namespace GossipSDK.Components
                 XRInteractionInputResolver.GetCurrentInputType().ToString(),
                 transform.position.x, transform.position.y, transform.position.z,
                 SceneManager.GetActiveScene().name,
-                currentInteractionId);
+                currentInteractionId,
+                Ruta);
 
             currentInteractionId = null;
             _wasSelected = false; // reset auto-wire state on disable
@@ -420,7 +438,8 @@ namespace GossipSDK.Components
                     interactionType,
                     pos,
                     scene,
-                    ts
+                    ts,
+                    Ruta
                 );
 
                 if (registerHeatmapHit)
@@ -470,7 +489,8 @@ namespace GossipSDK.Components
                         interactionType,
                         pos,
                         scene,
-                        ts
+                        ts,
+                        Ruta
                     );
                 }
                 else
@@ -536,7 +556,8 @@ namespace GossipSDK.Components
                 interactionType,
                 pos,
                 scene,
-                timestampUtc);
+                timestampUtc,
+                Ruta);
         }
 
 
@@ -568,7 +589,8 @@ namespace GossipSDK.Components
                     currentInteractionStartTimeRealtime,
                     now,
                     duration,
-                    ts
+                    ts,
+                    Ruta
                 );
 
                 currentInteractionId = null;

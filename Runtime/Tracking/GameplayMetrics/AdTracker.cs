@@ -46,10 +46,36 @@ namespace GossipSDK.Tracking.GameplayMetrics
         [Serializable]
         public class TrackerMessage : Message<EntityData> { }
 
+        /// <summary>
+        /// Un evento de anuncio sin adId no es un evento de anuncio.
+        ///
+        /// Hasta aqui, StartAdSession sustituia el vacio por un Guid nuevo y las otras
+        /// cuatro mandaban AdId vacio. Medido en gafas el 20/09/2026: el ad_start del
+        /// Guid no se cerraba jamas -un Not completed que no baja nunca- y el ad_end
+        /// del vacio NO llegaba a la base, porque el ingest lo rechaza sin dejar
+        /// rastro. Las dos mitades mentian, cada una a su manera.
+        ///
+        /// Ahora no se inventa un id ni se manda uno vacio: no se manda nada, y se
+        /// dice por que. Misma regla que la version de la app en la 2.0.19: si el dato
+        /// no esta, no se rellena con uno de mentira.
+        /// </summary>
+        private static bool IdValido(string adId, string metodo)
+        {
+            if (!string.IsNullOrEmpty(adId)) return true;
+
+            Debug.LogWarning(
+                "[AdTracker] " + metodo
+                    + " sin adId: no mando nada. Un evento de anuncio sin identificador"
+                    + " no se puede agregar ni comparar entre rangos.");
+            return false;
+        }
+
         public void CapImpression(string adId, string typePay,string adNetwork = null, string placementId = null, int? impressionCount = null)
         {
             try
             {
+                if (!IdValido(adId, "CapImpression")) return;
+
                 var e = new EntityData
                 {
                     EventType = "impression",
@@ -77,6 +103,8 @@ namespace GossipSDK.Tracking.GameplayMetrics
         {
             try
             {
+                if (!IdValido(adId, "CapInteraction")) return;
+
                 var e = new EntityData
                 {
                     EventType = "interaction",
@@ -105,6 +133,8 @@ namespace GossipSDK.Tracking.GameplayMetrics
         {
             try
             {
+                if (!IdValido(adId, "CapReward")) return;
+
                 var e = new EntityData
                 {
                     EventType = "reward",
@@ -134,7 +164,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
         {
             try
             {
-                if (string.IsNullOrEmpty(adId)) adId = Guid.NewGuid().ToString();
+                if (!IdValido(adId, "StartAdSession")) return;
 
                 adStartTimes[adId] = Time.realtimeSinceStartupAsDouble;
 
@@ -163,6 +193,8 @@ namespace GossipSDK.Tracking.GameplayMetrics
         {
             try
             {
+                if (!IdValido(adId, "EndAdSession")) return;
+
                 double? duration = null;
                 if (!string.IsNullOrEmpty(adId) && adStartTimes.TryGetValue(adId, out double start))
                 {

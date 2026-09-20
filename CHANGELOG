@@ -1,3 +1,49 @@
+## [2.0.28] - 2026-09
+
+### Fixed
+- La identidad de un anuncio ya no se inventa. `AdComponent` generaba un `Guid` nuevo
+  cuando `adId` estaba vacio, asi que el mismo cartel salia como un anuncio distinto en
+  cada ciclo, y `AdTracker` hacia lo mismo en sus cinco metodos publicos. Ahora se
+  resuelve una sola vez en `Awake` -el `adId` del inspector, y si esta vacio la ruta del
+  objeto en la jerarquia, con aviso por consola- y `AdTracker` descarta la llamada sin id
+  en vez de fabricarlo. Medido el 20-09 en gafas: dos ciclos seguidos del mismo cartel
+  daban dos GUID distintos, y 3 de las 5 filas de Navigation within Ads eran GUID. Esto
+  se mergeo despues de publicar la 2.0.27, asi que sale aqui.
+- El Instrumentation Manager ya no llama New a todo. Las dos ramas de la etiqueta imprimian el
+  MISMO texto, `New Tracked`, asi que el unico dato real era el color: verde lo que ya estaba
+  guardado, azul lo recien detectado. Medido el 19-09-2026 en Hospital Zone: 24 filas, y las 24
+  decian `New Tracked`. Ahora dicen `Tracked` y `New`, cada una con su color. Y queda escrito que
+  `New` dura UN escaneo: `CollectInteractableObjectsForScan` guarda la ruta en el asset nada mas
+  verla, asi que en el Refresh siguiente esa misma fila ya sale como `Tracked`.
+
+### Added
+- La interaccion lleva la ruta del objeto. `InteractionTracker` acepta `objectPath` en sus
+  cuatro metodos de captura -parametro opcional al final, asi que nada de lo que ya
+  compila cambia- y lo manda como `ObjectPath`. `InteractableComponent` la calcula una vez
+  y la pasa en las cinco llamadas.
+
+  Por que: el nombre no identifica. Dos objetos pueden llamarse igual dentro de una
+  escena, y el evento no llevaba ningun otro discriminante. Medido el 20-09-2026 contra la
+  base real: 2.846 de 2.846 mensajes con exactamente 16 campos, y ninguno es una ruta ni
+  un id; `X/Y/Z` dice donde agarro la mano, no que agarro. El inventario de escena ya lo
+  hacia bien -27 de 27 filas con su `ObjectPath`, que es la clave de su upsert-, asi que
+  hasta ahora una interaccion solo se podia atar a su fila del inventario por el nombre.
+
+  Necesita el ingest con `ObjectPath` (Backend-SDK #113). Sin el, el campo se descarta en
+  silencio y no cambia nada mas.
+- El log de `BoundaryPressure` dice CUAL de los tres fallos fue. Hasta ahora escribia solo
+  `polyNull`, y eso mezcla tres cosas distintas: cero subsistemas XR, `TryGetBoundaryPoints`
+  devolviendo false, o devolviendo menos de 3 puntos. El campo `diag` los separa -cuantos
+  subsistemas hay, que devolvio cada uno y con cuantos puntos, o el tipo de la excepcion-. Solo
+  escribe texto: no cambia ni una decision ni un dato enviado. Hace falta porque
+  `PlayableAreaComponent` llama a la MISMA API y si obtuvo puntos en 3 de 318 sesiones.
+
+### Changed
+- `Jerarquia.RutaDe` es la unica copia de la ruta de jerarquia. Estaba duplicada, identica,
+  en `SceneInventoryComponent` y en `AdComponent`. Una sola copia es lo que garantiza que
+  la ruta que viaja con una interaccion se pueda comparar, caracter a caracter, con la que
+  viaja en el inventario.
+
 ## [2.0.27] - 2026-09
 
 ### Fixed

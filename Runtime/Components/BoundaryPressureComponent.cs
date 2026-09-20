@@ -33,6 +33,12 @@ namespace GossipSDK.Components
         private Coroutine _periodicCoroutine;
 
         private Vector2[] _poly;
+        // SONDA A35b. El log de hoy solo dice polyNull, y eso mezcla TRES
+        // fallos distintos: cero subsistemas XR, la llamada devuelve false, o
+        // devuelve menos de 3 puntos. PlayableAreaComponent llama a la MISMA
+        // API y si obtuvo puntos en 3 de 318 sesiones, asi que hace falta
+        // saber cual de los tres es. Solo escribe texto: no cambia nada.
+        private static string _diagPoly = "sin-intento";
 
         private void OnEnable()
         {
@@ -241,9 +247,9 @@ namespace GossipSDK.Components
 #if UNITY_ANDROID && !UNITY_EDITOR
             bool ovrPresent = OVRManager.boundary != null;
             bool ovrConfigured = ovrPresent && OVRManager.boundary.GetConfigured();
-            Debug.Log($"[BoundaryPressure] ovr={ovrPresent} configured={ovrConfigured} medido={_measured} hadPressure={_hadPressure} enviado={valor} polyNull={_poly == null}");
+            Debug.Log($"[BoundaryPressure] ovr={ovrPresent} configured={ovrConfigured} medido={_measured} hadPressure={_hadPressure} enviado={valor} polyNull={_poly == null} diag={_diagPoly}");
 #else
-            Debug.Log($"[BoundaryPressure] ovr=false configured=false medido={_measured} hadPressure={_hadPressure} enviado={valor} polyNull={_poly == null}");
+            Debug.Log($"[BoundaryPressure] ovr=false configured=false medido={_measured} hadPressure={_hadPressure} enviado={valor} polyNull={_poly == null} diag={_diagPoly}");
 #endif
             tracker.CapSession(data);
             _yaEmitido = true;
@@ -274,10 +280,13 @@ namespace GossipSDK.Components
             {
                 var subsystems = new List<XRInputSubsystem>();
                 SubsystemManager.GetInstances(subsystems);
+                _diagPoly = "subs=" + subsystems.Count;
                 for (int i = 0; i < subsystems.Count; i++)
                 {
                     var pts = new List<Vector3>();
-                    if (subsystems[i].TryGetBoundaryPoints(pts) && pts.Count >= 3)
+                    bool leido = subsystems[i].TryGetBoundaryPoints(pts);
+                    _diagPoly += " [" + i + " ok=" + leido + " n=" + pts.Count + "]";
+                    if (leido && pts.Count >= 3)
                     {
                         var poly = new Vector2[pts.Count];
                         for (int j = 0; j < pts.Count; j++)
@@ -286,7 +295,10 @@ namespace GossipSDK.Components
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _diagPoly = "excepcion=" + ex.GetType().Name;
+            }
             return null;
         }
     }

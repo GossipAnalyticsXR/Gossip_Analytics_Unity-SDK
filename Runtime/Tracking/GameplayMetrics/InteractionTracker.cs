@@ -20,6 +20,14 @@ namespace GossipSDK.Tracking.GameplayMetrics
             [field: SerializeField] public int SequenceIndex { get; set; }
             [field: SerializeField] public string Action { get; set; }
             [field: SerializeField] public string ObjectName { get; set; }
+
+            /// <summary>
+            /// Ruta del objeto en la jerarquia de la escena. El nombre no identifica:
+            /// dos objetos pueden llamarse igual dentro de una escena, y el inventario
+            /// de escena ya manda esta misma ruta como ObjectPath. Vacia si el llamador
+            /// no la pasa, porque el campo es opcional en todo el camino.
+            /// </summary>
+            [field: SerializeField] public string ObjectPath { get; set; }
             [field: SerializeField] public string ObjectTag { get; set; }
             [field: SerializeField] public string InteractionType { get; set; }
             [field: SerializeField] public string InputType { get; set; }
@@ -78,7 +86,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
             }
         }
 
-        public void CapInteractionStart(string interactionId, string objectName, string objectTag, string inputType, string interactionType, Vector3 worldPos, string sceneName, string timestampUtc)
+        public void CapInteractionStart(string interactionId, string objectName, string objectTag, string inputType, string interactionType, Vector3 worldPos, string sceneName, string timestampUtc, string objectPath = null)
         {
             try
             {
@@ -90,6 +98,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     SequenceIndex = seq,
                     Action = "start",
                     ObjectName = objectName ?? string.Empty,
+                    ObjectPath = objectPath ?? string.Empty,
                     ObjectTag = objectTag ?? string.Empty,
                     InputType = inputType ?? string.Empty,
                     InteractionType = interactionType ?? string.Empty,
@@ -111,7 +120,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
             }
         }
 
-        public void CapInteractionEnd(string interactionId, string objectName, string objectTag, string inputType, string interactionType, Vector3 worldPos, string sceneName, double startRealtime, double endRealtime, double durationSeconds, string endTimestampUtc)
+        public void CapInteractionEnd(string interactionId, string objectName, string objectTag, string inputType, string interactionType, Vector3 worldPos, string sceneName, double startRealtime, double endRealtime, double durationSeconds, string endTimestampUtc, string objectPath = null)
         {
             try
             {
@@ -127,6 +136,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     SequenceIndex = seq,
                     Action = "end",
                     ObjectName = objectName ?? string.Empty,
+                    ObjectPath = objectPath ?? string.Empty,
                     ObjectTag = objectTag ?? string.Empty,
                     InputType = inputType ?? string.Empty,
                     InteractionType = interactionType ?? string.Empty,
@@ -150,7 +160,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
             }
         }
 
-        public void CapInteractionCancelled(string objectName, string objectTag, string interactionType, string inputType, float x, float y, float z, string sceneName, string interactionId)
+        public void CapInteractionCancelled(string objectName, string objectTag, string interactionType, string inputType, float x, float y, float z, string sceneName, string interactionId, string objectPath = null)
         {
             try
             {
@@ -166,6 +176,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     SequenceIndex = seq,
                     Action = "cancelled",
                     ObjectName = objectName ?? string.Empty,
+                    ObjectPath = objectPath ?? string.Empty,
                     ObjectTag = objectTag ?? string.Empty,
                     InputType = inputType ?? string.Empty,
                     InteractionType = interactionType ?? string.Empty,
@@ -189,7 +200,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
             }
         }
 
-        public void CapInteractionInstant(string objectName, string objectTag, string inputType, string interactionType, Vector3 worldPos, string sceneName, string timestampUtc)
+        public void CapInteractionInstant(string objectName, string objectTag, string inputType, string interactionType, Vector3 worldPos, string sceneName, string timestampUtc, string objectPath = null)
         {
             try
             {
@@ -202,6 +213,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     SequenceIndex = seq,
                     Action = "instant",
                     ObjectName = objectName ?? string.Empty,
+                    ObjectPath = objectPath ?? string.Empty,
                     ObjectTag = objectTag ?? string.Empty,
                     InputType = inputType ?? string.Empty,
                     InteractionType = interactionType ?? string.Empty,

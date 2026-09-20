@@ -3,6 +3,7 @@ using System.Collections;
 using UnityEngine;
 using GossipSDK.Core;
 using GossipSDK.Tracking.GameplayMetrics;
+using GossipSDK.Utilities;
 
 namespace GossipSDK.Components
 {
@@ -26,13 +27,37 @@ namespace GossipSDK.Components
 
         private string resolvedAdId;
 
+        /// <summary>
+        /// La identidad del anuncio se resuelve UNA vez, no en cada OnEnable.
+        ///
+        /// Antes, un adId vacio se sustituia por un Guid NUEVO cada vez que el objeto
+        /// se encendia. Medido en gafas el 20/09/2026: dos ciclos encender/apagar
+        /// dieron dos Guid distintos, y por tanto dos filas nuevas en el informe que
+        /// no se pueden agregar entre si ni comparar entre rangos, porque un Guid no
+        /// se repite jamas. Un anuncio que en el juego es UNO salia como N.
+        ///
+        /// Ahora, sin adId, la identidad es la ruta del objeto en la jerarquia. No se
+        /// inventa nada: se observa donde esta el objeto, y eso es lo mismo en cada
+        /// encendido, en cada sesion y en cada build.
+        /// </summary>
+        private void Awake()
+        {
+            if (!string.IsNullOrEmpty(adId))
+            {
+                resolvedAdId = adId;
+                return;
+            }
+
+            resolvedAdId = Jerarquia.RutaDe(transform);
+            Debug.LogWarning(
+                "[AdComponent] " + resolvedAdId
+                    + ": adId esta vacio, uso la ruta del objeto como identidad."
+                    + " Ponle un adId para que el informe hable de tu anuncio y no"
+                    + " de tu jerarquia.");
+        }
+
         private void OnEnable()
         {
-            if (string.IsNullOrEmpty(adId))
-                resolvedAdId = Guid.NewGuid().ToString();
-            else
-                resolvedAdId = adId;
-
             if (autoStartOnEnable) StartCoroutine(WaitAndStart());
         }
 

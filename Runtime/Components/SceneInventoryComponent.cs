@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Text;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using GossipSDK.Core;
@@ -81,7 +80,7 @@ namespace GossipSDK.Components
 
                 tracker.CapSceneObject(
                     go.name,
-                    RutaDe(go.transform),
+                    Jerarquia.RutaDe(go.transform),
                     go.tag,
                     "Interactable",
                     nombreEscena,
@@ -100,23 +99,6 @@ namespace GossipSDK.Components
             {
                 Debug.Log("[SceneInventory] " + enviados + " instrumented objects reported for scene " + nombreEscena);
             }
-        }
-
-        /// <summary>
-        /// Ruta en la jerarquia. Es lo unico que distingue dos objetos que se llaman
-        /// igual, y el 19/09/2026 habia dos asi en Hospital Zone.
-        /// </summary>
-        private static string RutaDe(Transform t)
-        {
-            var ruta = new StringBuilder(t.name);
-            var padre = t.parent;
-            while (padre != null)
-            {
-                ruta.Insert(0, padre.name + "/");
-                padre = padre.parent;
-            }
-
-            return ruta.ToString();
         }
     }
 }

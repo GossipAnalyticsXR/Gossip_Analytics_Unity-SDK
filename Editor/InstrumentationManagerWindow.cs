@@ -674,18 +674,27 @@ namespace GossipSDK.Editor
                 }
             }
             EditorGUILayout.LabelField(obj.objectName, GUILayout.ExpandWidth(true));
+            // Las dos ramas de abajo imprimian EL MISMO texto, "New Tracked", asi que el unico
+            // dato real era el color: verde lo que ya estaba guardado, azul lo recien detectado.
+            // Y el texto mentia en las dos direcciones, llamando New a un objeto instrumentado
+            // desde hace semanas. Medido el 19-09-2026 en Hospital Zone: 24 filas y las 24 decian
+            // "New Tracked".
+            //
+            // Ojo con lo que significa New, porque no es obvio: dura UN escaneo.
+            // CollectInteractableObjectsForScan escribe la ruta en el asset nada mas verla, asi
+            // que en el siguiente Refresh esa misma fila ya sale como Tracked.
             if (obj.hasInteractable && !obj.isNew)
             {
                 var prevC = GUI.color;
                 GUI.color = new Color(0.4f, 0.9f, 0.4f);
-                GUILayout.Label("New Tracked", GUILayout.Width(80));
+                GUILayout.Label("Tracked", GUILayout.Width(80));
                 GUI.color = prevC;
             }
             else if (obj.isNew)
             {
                 var prevC = GUI.color;
                 GUI.color = new Color(0.4f, 0.6f, 1.0f);
-                GUILayout.Label("New Tracked", GUILayout.Width(80));
+                GUILayout.Label("New", GUILayout.Width(80));
                 GUI.color = prevC;
             }
             EditorGUILayout.EndHorizontal();
