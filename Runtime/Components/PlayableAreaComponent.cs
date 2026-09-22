@@ -90,24 +90,10 @@ namespace GossipSDK.Components
                 // fondo, en vez de inventarlos con GetBounds().
                 Vector3[] poligonoLimite = null;
 
-#if UNITY_ANDROID && !UNITY_EDITOR
-                // Path (a): Meta OVR guardian boundary
-                try
-                {
-                    var boundary = OVRManager.boundary;
-                    if (boundary != null && boundary.GetConfigured())
-                    {
-                        Vector3[] points = boundary.GetGeometry(OVRBoundary.BoundaryType.PlayArea);
-                        if (points != null && points.Length >= 3)
-                        {
-                            poligonoLimite = points;
-                            area = CalculatePolygonArea(poligonoLimite);
-                            resolvedAreaType = "guardian";
-                        }
-                    }
-                }
-                catch { /* OVRManager not available */ }
-#endif
+                // El camino del guardian de Meta se retiro el 21-09-2026: de las 364
+                // filas de septiembre solo 3 traian lectura -el 0,8 %- y las tres
+                // devolvian el 2x2 por defecto de OpenXR, no el limite real. Ademas
+                // ataba el Runtime al paquete de Meta. Queda el camino generico.
 
                 // Path (b): Unity XR subsystem generic (all subsystems)
                 if (string.IsNullOrEmpty(resolvedAreaType))

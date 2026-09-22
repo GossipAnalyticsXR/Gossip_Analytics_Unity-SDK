@@ -16,7 +16,7 @@ public class AvatarTrackerComponent : MonoBehaviour
     [SerializeField] private Color color = Color.white;
 
     [Header("Payment")]
-    [SerializeField] private PaymentType paymentType = PaymentType.Card;
+    [SerializeField] private PaymentType paymentType = PaymentType.NotDeclared;
 
     [Header("Settings")]
     [SerializeField] private bool autoReportOnStart = false;
@@ -39,7 +39,10 @@ public class AvatarTrackerComponent : MonoBehaviour
         try
         {
             string aId = string.IsNullOrEmpty(id) ? avatarId : id;
-            string aP = (typePay ?? paymentType).ToString();
+            // NotDeclared se manda como ausente, no como la cadena "NotDeclared":
+            // un valor inventado vuelve a ser un valor. Ver PaymentType.cs.
+            PaymentType resuelto = typePay ?? paymentType;
+            string aP = resuelto == PaymentType.NotDeclared ? null : resuelto.ToString();
             string aName = string.IsNullOrEmpty(name) ? avatarName : name;
             string varr = string.IsNullOrEmpty(variantVal) ? variant : variantVal;
             string Brnd = string.IsNullOrEmpty(brnd) ? brand : brnd;

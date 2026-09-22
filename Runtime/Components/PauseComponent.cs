@@ -1,6 +1,7 @@
 using System;
 using GossipSDK.Components;
 using UnityEngine;
+using UnityEngine.XR;
 using GossipSDK.Core;
 using GossipSDK.Tracking.GameplayMetrics;
 
@@ -22,19 +23,8 @@ public class PauseComponent : MonoBehaviour
 
     private void OnEnable()
     {
-    #if UNITY_ANDROID && !UNITY_EDITOR
-        OVRManager.HMDUnmounted += OnHMDUnmountedHandler;
-        OVRManager.HMDMounted   += OnHMDMountedHandler;
-    #endif
+        _presenciaConocida = false;
         _sessionManager = FindObjectOfType<SessionManager>();
-    }
-
-    private void OnDisable()
-    {
-    #if UNITY_ANDROID && !UNITY_EDITOR
-        OVRManager.HMDUnmounted -= OnHMDUnmountedHandler;
-        OVRManager.HMDMounted   -= OnHMDMountedHandler;
-    #endif
     }
 
     public void OnPause()
@@ -100,10 +90,41 @@ public class PauseComponent : MonoBehaviour
         catch (Exception ex) { Debug.LogException(ex); }
     }
 
-    #if UNITY_ANDROID && !UNITY_EDITOR
-    private void OnHMDUnmountedHandler() => OnPause();
-    private void OnHMDMountedHandler()   => OnResume();
-    #endif
+    // Deteccion de visor puesto o quitado SIN depender de Meta. userPresence es
+    // una feature estandar de OpenXR -la publican Quest, PICO y Vive-, mientras
+    // que OVRManager solo existe si el proyecto tiene el paquete de Meta. Hasta
+    // ahora esto solo funcionaba en Quest, y solo en build de Android.
+    //
+    // Se sondea cada medio segundo y no cada frame: quitarse el visor no es un
+    // gesto que pida precision de milisegundos, y asi no se paga por fotograma.
+    private const float INTERVALO_PRESENCIA_S = 0.5f;
+    private float _proximaSonda;
+    private bool _presenciaConocida;
+    private bool _teniaPresencia;
+
+    private void Update()
+    {
+        if (Time.unscaledTime < _proximaSonda) return;
+        _proximaSonda = Time.unscaledTime + INTERVALO_PRESENCIA_S;
+
+        var visor = InputDevices.GetDeviceAtXRNode(XRNode.Head);
+        if (!visor.isValid) return;
+        if (!visor.TryGetFeatureValue(CommonUsages.userPresence, out bool presente))
+            return;
+
+        // La primera lectura solo fija el punto de partida, no es un cambio.
+        if (!_presenciaConocida)
+        {
+            _presenciaConocida = true;
+            _teniaPresencia = presente;
+            return;
+        }
+
+        if (presente == _teniaPresencia) return;
+        _teniaPresencia = presente;
+
+        if (presente) OnResume(); else OnPause();
+    }
 
     private void OnApplicationPause(bool paused)
     {

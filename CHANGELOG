@@ -1,3 +1,69 @@
+## [2.0.29] - 2026-09
+
+### Added
+- `PaymentType.NotDeclared`, y va EL ULTIMO del enum. Unity serializa los enum por su valor
+  entero, asi que insertarlo antes habria convertido en silencio cada `Card` ya guardado en
+  `Cryptocurrency`. Es el valor por defecto de los componentes NUEVOS -los ya colocados en una
+  escena conservan el suyo, no se reescribe el proyecto de nadie- y cuando el componente
+  resuelve a el, NO manda el campo. Medido en gafas el 21-09: una compra con precio 4.00 y el
+  bloque Payment del Inspector sin tocar salia en el dashboard como "Real money", con la misma
+  seguridad que un pago con tarjeta de verdad; `Card` era ademas el valor 0, asi que un
+  componente recien anadido y uno donde alguien eligio Card a mano se guardaban identicos.
+- El `PackageChecker` avisa de `com.meta.xr.sdk.core` cuando el target es Android, sin
+  instalarlo. Cubria cuatro dependencias de cinco: un cliente sin Meta no recibia ni el aviso
+  y se encontraba el CS0246 de frente. La version minima -67.0.0- ya estaba declarada en el
+  `versionDefines` del asmdef, asi que no se inventa. Al cliente de PICO o Vive no se le
+  ofrece nada.
+
+### Changed
+- Quitarse el visor se detecta en CUALQUIER visor OpenXR, no solo en Quest.
+  `PauseComponent` pasa de `OVRManager.HMDMounted`/`HMDUnmounted` a
+  `CommonUsages.userPresence` sondeado cada 0,5 s. 119 -> 140 lineas, y no queda ni un
+  `UNITY_ANDROID` ni un tipo OVR en el fichero. Esto no aisla: amplia la cobertura a PICO y
+  Vive, donde antes la pausa no se detectaba nunca.
+- `VRPermissionsHandler` llega a `OVRPlugin` por reflexion. Era el unico uso de un tipo de
+  Meta XR SIN ninguna guarda en todo el SDK -`VRPermissionsHandler.cs:113`,
+  `OVRPlugin.eyeTrackingSupported`, fuera de cualquier `#if`-: para un cliente sin Meta XR
+  Core era un CS0246 al ABRIR el proyecto, en cualquier plataforma, y se caia
+  `GossipSDK.Runtime` entera. 139 -> 159 lineas; las dos apariciones que quedan de
+  `OVRPlugin` son un comentario y un literal de cadena.
+- Boundary Pressure sale del SDK. Se borran `BoundaryPressureComponent`,
+  `BoundaryPressureHelper` y `BoundaryPressureSummaryTracker` con sus `.meta`, el singleton
+  deja de exponer el tracker y `GossipManager` deja de instanciar el componente. Medido: 0 de
+  75 filas con poligono, contra 3 de 318 del componente hermano que llama a la MISMA API
+  generica cinco veces por segundo. No se retira una funcion que fallaba a veces: se retira
+  una que no produjo ni un dato.
+- El nombre de usuario deja de ser el nombre del casco. `GeneralUserName` salia de
+  `SystemInfo.deviceName`. Medido el 21-09 sobre la base: 92 usuarios, 66 con valor -71,7 %-
+  y solo 3 valores distintos, uno de ellos el nombre de una persona. El jugador se identifica
+  por su ID.
+- Los dos componentes y los dos trackers de compras dejan de fabricar el metodo de pago.
+  `AvatarTracker` y `AccessoriesTracker` hacian `?? ""` sobre `typePay`, asi que "la app no
+  lo dijo" y "la app dijo que nada" llegaban identicos. `AdTracker` ya lo hacia bien
+  (`TypePay = typePay`, sin coalesce): estos dos eran los unicos que inventaban.
+
+### Fixed
+- Sin calibrar no se adivina la postura. Mientras `_standingHeadY < 1,0 m` la sesion no ha
+  calibrado, y `InferPostureFromHeadY` devuelve null en vez de etiquetar con los umbrales
+  absolutos 0,9 / 1,2. La muestra sigue saliendo, con su `HeadY`, sin estado. Medido: 27 de
+  150 sesiones nunca calibran -3.133 muestras- y de ahi salia el 54 % del Crouching.
+  312 -> 324 lineas.
+- Una muestra implausible tampoco se clasifica. El rango [0,8 - 2,2] m ya existia pero solo
+  protegia la calibracion, no la clasificacion, y la basura de coordenadas de mundo vive
+  DENTRO de las sesiones que si calibran. Medido: 1.188 muestras implausibles dentro de
+  tramos calibrados, el 4,28 % de las calibradas -663 etiquetadas Sitting hasta -5.987,29 m y
+  525 etiquetadas Standing hasta 2,89 m-, que contaminaban el 12,25 % del Sitting y el 2,63 %
+  del Standing. Insercion pura: 31 lineas anadidas, 0 borradas. Se anade ademas un aviso
+  propio, porque esas sesiones calibran y por eso no saltaba el aviso de arranque en frio.
+  Y un apunte de honestidad que va en el codigo: el informe previo decia "24,8 % del Sitting"
+  y esa cifra era una COTA, no la medida; la buena es 12,25 %.
+- Playable Area deja de usar el camino del guardian, que devolvia el rectangulo 2x2 por
+  defecto de OpenXR. Medido: 3 filas `guardian` de 318, las tres exactamente 4,0 m2. La card
+  prefiere no decir nada a decir 4,0 m2 de una sala que nadie midio.
+- El Instrumentation Manager: la ficha solo avisa cuando hay algo que hacer, y la etiqueta
+  `New` se puede leer. Continuacion del arreglo de la 2.0.28, donde las dos ramas de la
+  etiqueta imprimian el mismo texto y el unico dato real era el color.
+
 ## [2.0.28] - 2026-09
 
 ### Fixed

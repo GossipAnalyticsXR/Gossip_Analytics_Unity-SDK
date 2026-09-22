@@ -80,7 +80,6 @@ namespace GossipSDK.Core
         public EyeTrackingTracker EyeTrackingTracker { get; private set; }
         public AudioReactionTracker AudioReactionTracker { get; private set; }
         public HandControllerTracker HandControllerTracker { get; private set; }
-        public BoundaryPressureSummaryTracker BoundaryPressureSummaryTracker { get; private set; }
         public MicPermissionTracker MicPermissionTracker { get; private set; }
         public A11yTracker A11yTracker { get; private set; }
 
@@ -169,7 +168,6 @@ namespace GossipSDK.Core
             if (UserBalanceTracker == null) UserBalanceTracker = new UserBalanceTracker();
             if (PeripheralTracker == null) PeripheralTracker = new PeripheralTracker();
             if (HandControllerTracker == null) HandControllerTracker = new HandControllerTracker();
-            if (BoundaryPressureSummaryTracker == null) BoundaryPressureSummaryTracker = new BoundaryPressureSummaryTracker();
             if (MicPermissionTracker == null) MicPermissionTracker = new MicPermissionTracker();
 
             EnsureTransport();
@@ -332,7 +330,6 @@ namespace GossipSDK.Core
                     A11yTracker,
                     EyeTrackingTracker,
                     InputUsageTracker,
-                BoundaryPressureSummaryTracker,
                 // Estos cuatro estaban SOLO en el barrido de 5 s de GossipManager, que no arranca
                 // hasta que terminan los permisos (~31 s medidos el 8-sep). Sin red de 30 s, lo
                 // capturado antes se quedaba en LiteDB hasta la sesion siguiente y se entregaba con

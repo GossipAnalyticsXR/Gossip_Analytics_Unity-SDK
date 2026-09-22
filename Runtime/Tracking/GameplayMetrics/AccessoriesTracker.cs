@@ -60,7 +60,8 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     AccessoryName = accessoryName ?? string.Empty,
                     AccessoryPrice = accessoryPrice ?? string.Empty,
                     AccessoryBrand = accessoryBrand ?? string.Empty,
-                    AccessoryTypePay = accessoryTypePay ?? string.Empty,
+                    // Sin `?? string.Empty`: ver el comentario gemelo en AvatarTracker.
+                AccessoryTypePay = accessoryTypePay,
                     Meta = meta ?? new Dictionary<string, string>()
                 };
 

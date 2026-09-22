@@ -16,10 +16,10 @@ namespace GossipSDK.Components
         [Tooltip("Optional head transform (VR head). If null, uses this.transform")]
         public Transform headTransform;
 
-        [Tooltip("If head Y relative to origin <= sitThreshold => Sitting")]
+        [Tooltip("No longer classifies: kept for prefab compatibility. See InferPostureFromHeadY")]
         public float sitThreshold = 0.9f;
 
-        [Tooltip("If head Y relative to origin <= crouchThreshold => Crouching (should be > sitThreshold)")]
+        [Tooltip("No longer classifies: kept for prefab compatibility. See InferPostureFromHeadY")]
         public float crouchThreshold = 1.2f;
 
         //private bool registerHeatmapHit = false;
@@ -50,6 +50,7 @@ namespace GossipSDK.Components
         // El aviso de arranque en frio se emite UNA vez por sesion: el muestreo
         // es continuo y un log por muestra son miles de lineas.
         private bool _avisoArranqueEnFrioEmitido = false;
+        private bool _avisoMuestraImplausibleEmitido = false;
 
         // Los tres unicos estados que el backend sabe leer. Antes del PR #308
         // cualquier otro se contaba como de pie; hoy se cuenta aparte, pero
@@ -162,10 +163,53 @@ namespace GossipSDK.Components
 
         string InferPostureFromHeadY(float headWorldY)
         {
-            // Cold-start guard: use absolute thresholds until _standingHeadY
-            // is calibrated to at least _minStandingHeadY (1.0 m).
-            // A standing adult always exceeds 1.0 m; below that the running max
-            // has not yet seen a full-standing sample, so fall back to absolute thresholds.
+            // Una muestra que no puede ser la cabeza de una persona tampoco se
+            // clasifica. El rango [0,8 - 2,2] ya existia, pero solo protegia la
+            // actualizacion de _standingHeadY (linea 136), no esta decision.
+            //
+            // Medido el 21-09-2026 sobre las 27.777 muestras de tramos ya
+            // calibrados: 1.188 de ellas, el 4,28 %, caian fuera del rango y se
+            // clasificaban igual. Con un maximo de 1,65 m una muestra de
+            // -5.987,29 m da r = -3.629, menor que 0,65 x max, asi que salia
+            // etiquetada Sitting con total confianza.
+            //
+            //   663 muestras en 21 sesiones, hasta -5.987,29 m -> Sitting
+            //   525 muestras en  9 sesiones, hasta      2,89 m -> Standing
+            //
+            // Son el 12,25 % de todo el Sitting y el 2,63 % de todo el Standing.
+            //
+            // Las de arriba no son coordenada de mundo: 2,89 m es casi
+            // plausible, y sale de un visor en la mano o de un origen de
+            // tracking desplazado. El primer informe de este PR decia 24,8 %
+            // del Sitting: era una cota por tramos de ratio, no la medida, y
+            // ademas se dejaba fuera esa mitad de arriba.
+            //
+            // Es el mismo defecto que cerro el PR #153, en el otro eje: alli no
+            // se adivinaba sin calibrar, aqui no se adivina sin muestra.
+            if (headWorldY < _minPlausibleHeadY || headWorldY > _maxPlausibleHeadY)
+            {
+                if (!_avisoMuestraImplausibleEmitido)
+                {
+                    _avisoMuestraImplausibleEmitido = true;
+                    Debug.LogWarning(
+                        "[Gossip] Altura de cabeza fuera del rango de una persona: " +
+                        headWorldY.ToString("F2") + " m, fuera de " +
+                        _minPlausibleHeadY.ToString("F2") + " - " +
+                        _maxPlausibleHeadY.ToString("F2") + " m. Esa muestra sale SIN " +
+                        "estado de postura. Suele ser que se lee posicion de mundo " +
+                        "en vez de la pose de la cabeza en espacio de tracking."
+                    );
+                }
+
+                return null;
+            }
+
+            // Cold-start guard: while _standingHeadY has not reached
+            // _minStandingHeadY (1.0 m) the session is NOT calibrated and this
+            // method returns null: the sample still travels, with its HeadY, but
+            // WITHOUT a posture. A standing adult always exceeds 1.0 m; below
+            // that the running max has not yet seen a full-standing sample, so
+            // there is nothing to classify against.
             if (_standingHeadY < _minStandingHeadY)
             {
                 // Medido el 12-09-2026: si el transform que se lee no es la cabeza,
@@ -181,15 +225,25 @@ namespace GossipSDK.Components
                     Debug.LogWarning(
                         "[Gossip] Postura sin calibrar: la altura maxima de cabeza vista " +
                         "es " + _standingHeadY.ToString("F2") + " m, por debajo del minimo " +
-                        "de " + _minStandingHeadY.ToString("F2") + " m. Se estan usando umbrales " +
-                        "absolutos, no la calibracion por usuario. Comprueba que headTransform " +
+                        "de " + _minStandingHeadY.ToString("F2") + " m. Las muestras salen SIN " +
+                        "estado de postura hasta que calibre. Comprueba que headTransform " +
                         "apunta a la camara XR."
                     );
                 }
 
-                if (headWorldY <= sitThreshold) return PostureSitting;
-                if (headWorldY <= crouchThreshold) return PostureCrouching;
-                return PostureStanding;
+                // Sin calibrar no se adivina. Medido el 21-09-2026 sobre 31.527
+                // muestras reales: esta rama se comia 3.750 de ellas, el 11,89 %,
+                // y de ahi salian 2.832 Crouching y 917 Sitting contra UN solo
+                // Standing. Es una puerta de un solo sentido, y tiene que serlo:
+                // cualquier Y plausible por encima de crouchThreshold habria
+                // calibrado _standingHeadY en SampleAndSend antes de llegar aqui.
+                // Esos 2.832 eran el 54,1 % de TODO el Crouching del producto.
+                //
+                // Devolver null manda la muestra con su HeadY y sin estado. El
+                // backend ya lo espera: _state hace ifNull a cadena vacia y la
+                // rama default del switch lo cuenta como unknown, sin sumar al
+                // reparto y sin contarlo como transicion.
+                return null;
             }
 
             // Relative classification against the session running-max head height.

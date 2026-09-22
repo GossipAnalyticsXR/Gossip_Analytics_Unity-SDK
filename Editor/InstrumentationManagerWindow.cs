@@ -838,12 +838,17 @@ namespace GossipSDK.Editor
                     hasInteractable = hadInteractable,
                     isNew = isNew
                 });
-                if (isNew && _data != null)
-                {
-                    var entry = GetOrCreateSceneEntry(sceneName);
-                    if (!entry.instrumentedPaths.Contains(path)) entry.instrumentedPaths.Add(path);
-                    EditorUtility.SetDirty(_data);
-                }
+                // El escaneo ya NO marca la ruta como instrumentada.
+                //
+                // Lo hacia aqui mismo, justo despues de calcular isNew, y eso volvia la
+                // etiqueta New invisible: abrir la ventana desde el menu llama a ScanNow() dos
+                // veces -una en Open() y otra en OnEnable()-, asi que el primer escaneo guardaba
+                // la ruta y el segundo ya la encontraba guardada. La UI solo enseña el ultimo, o
+                // sea que un objeto recien anadido salia Tracked la primera vez que lo mirabas.
+                // Medido el 22-09-2026 en Hospital Zone con dos objetos nuevos: los 21 en verde.
+                //
+                // Guardar que esta instrumentado es trabajo de Apply, que ya lo hace en
+                // ApplyInstrumentation. Asi New significa lo que dice: detectado y sin confirmar.
             }
             foreach (Transform child in go.transform)
                 CollectInteractableObjectsForScan(child.gameObject, sceneName, scannedPaths, storedPaths, sceneList);
@@ -1380,7 +1385,12 @@ namespace GossipSDK.Editor
                     MessageType hintBType = needsAutoAssign ? MessageType.Warning : MessageType.Info;
                     bool showAutoAssignBtn = needsAutoAssign;
                     EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.HelpBox(hintB, hintBType);
+                    // El aviso, solo cuando queda algo por hacer. Con el transform ya asignado el
+                    // texto no pedia nada y salia igual en todas las fichas ya instaladas.
+                    if (needsAutoAssign)
+                    {
+                        EditorGUILayout.HelpBox(hintB, hintBType);
+                    }
                     // El boton de abrir el Inspector se retiro el 14-sep-2026. El cliente instala,
                     // no mide: entrar a las tripas del tracker le deja cambiar valores que SON el
                     // dato. El caso medido es Passthrough, donde exposure y qualityMetric se
@@ -1395,10 +1405,10 @@ namespace GossipSDK.Editor
                     }
                     EditorGUILayout.EndHorizontal();
                 }
-                if (isPresent && !info.requiresConfiguration && !string.IsNullOrEmpty(info.postAddHint))
-                {
-                    EditorGUILayout.HelpBox(info.postAddHint, MessageType.Info);
-                }
+                // Aqui se pintaba el postAddHint de los trackers que NO requieren configuracion.
+                // Eran 9 de los 13 que traen texto, y ninguno pedia nada que hacer: el chip ya
+                // dice si el cliente tiene que decidir algo y la descripcion ya dice que mide.
+                // Retirado el 22-09-2026: la ficha instalada es chip + nombre + descripcion.
                 EditorGUILayout.EndVertical();
             }
         }

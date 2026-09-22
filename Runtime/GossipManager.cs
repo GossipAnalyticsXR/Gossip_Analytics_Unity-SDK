@@ -158,7 +158,6 @@ private bool panoramaCreated;
                 Gossip.PeripheralTracker, Gossip.RealityModeTracker, Gossip.PlayableAreaTracker,
                 Gossip.UserPostureTracker, Gossip.UserEventTracker, Gossip.UserBalanceTracker,
                 Gossip.HandControllerTracker,
-                Gossip.BoundaryPressureSummaryTracker,
                 Gossip.MicPermissionTracker,
 
                 // Los eventos de ciclo de vida de sesion viajaban SOLO en el reenvio de
@@ -354,7 +353,6 @@ go.AddComponent<GossipSDK.Heatmaps.HeatmapPanoramaAutoCapture>();
             Ensure(typeof(CrashReporterComponent),              autoTrackersHost);
             Ensure(typeof(AdComponent),                         autoTrackersHost);
             Ensure(typeof(PassthroughComponent),                autoTrackersHost);
-            Ensure(typeof(BoundaryPressureComponent), autoTrackersHost);
             Ensure(typeof(MicPermissionComponent), autoTrackersHost);
             Ensure(typeof(SceneInventoryComponent),             autoTrackersHost);
 

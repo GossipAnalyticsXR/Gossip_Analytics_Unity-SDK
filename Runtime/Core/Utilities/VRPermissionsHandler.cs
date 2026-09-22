@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.Android;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
+using GossipSDK.Core.Utilities;
 
 public class VRPermissionsHandler : MonoBehaviour
 {
@@ -108,9 +110,27 @@ public class VRPermissionsHandler : MonoBehaviour
         return true;
     }
 
+    // OVRPlugin solo existe si el proyecto tiene el paquete de Meta instalado.
+    // Se resuelve por reflexion -el mismo patron que RealityModeMonitor y que
+    // HeatmapBoundsResolver- para que el SDK compile en un proyecto de PICO, de
+    // Vive o de cualquier OpenXR. Sin Meta no hay permiso de seguimiento ocular
+    // de Meta que pedir, asi que devuelve false y el llamador se sale.
+    private static bool MetaSoportaSeguimientoOcular()
+    {
+        var tipo = ReflectionUtil.FindType("OVRPlugin");
+        if (tipo == null) return false;
+
+        var prop = tipo.GetProperty(
+            "eyeTrackingSupported", BindingFlags.Public | BindingFlags.Static);
+        if (prop == null) return false;
+
+        try { return (bool)prop.GetValue(null); }
+        catch { return false; }
+    }
+
     public static IEnumerator RequestEyeTrackingPermission()
     {
-        if (!OVRPlugin.eyeTrackingSupported)
+        if (!MetaSoportaSeguimientoOcular())
             yield break;
 
         const string eyePermission = "com.oculus.permission.EYE_TRACKING";

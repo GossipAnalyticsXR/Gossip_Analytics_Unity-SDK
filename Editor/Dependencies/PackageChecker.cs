@@ -25,6 +25,8 @@ namespace GossipAnalytics.Editor.Dependencies
         const string PkgUniTask  = "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask#2.5.10";
         const string PkgXRManagement = "com.unity.xr.management";
         const string PkgInputSystem  = "com.unity.inputsystem";
+        const string PkgMetaXRCore   = "com.meta.xr.sdk.core";
+        const string VerMetaXRCore   = "67.0.0";
 
         static AddRequest _socketIORequest;
         static AddRequest _uniTaskRequest;
@@ -64,9 +66,27 @@ namespace GossipAnalytics.Editor.Dependencies
             bool hasOculusXR = System.Type.GetType("Unity.XR.Oculus.OculusLoader, Unity.XR.Oculus") != null;
             bool missingXRProvider = !hasOpenXR && !hasOculusXR;
 
+            // Meta XR Core: solo se AVISA, nunca se instala. Quien apunta a PICO, a Vive
+            // o a cualquier otro OpenXR no lo necesita y el SDK funciona sin el, asi que
+            // obligarlo seria dejar de ser neutral. Solo se pregunta cuando el target es
+            // Android, que es donde vive Quest.
+            bool missingMeta =
+                System.Type.GetType("OVRPlugin, Oculus.VR") == null &&
+                EditorUserBuildSettings.activeBuildTarget == BuildTarget.Android;
+
             // Set defines for packages that are already present
             if (!missingSocketIO) EnsureDefine(DefineSocketIO);
             if (!missingUniTask)  EnsureDefine(DefineUniTask);
+
+            // Este aviso va por consola y NO abre dialogo: es opcional. Si abriera modal,
+            // un proyecto de PICO al que no le falta nada mas se veria interrumpido por una
+            // dependencia que no quiere. Quien busque por que no mide eye tracking o
+            // passthrough en Quest encuentra aqui la razon.
+            if (missingMeta)
+                Debug.LogWarning(
+                    "GossipSDK: Meta XR Core (" + PkgMetaXRCore + " >= " + VerMetaXRCore +
+                    ") is not installed. The SDK works without it, but Quest-specific " +
+                    "features (eye tracking, passthrough) will not report data.");
 
             // If nothing is missing, return early
             if (!missingSocketIO && !missingUniTask && !missingXRMgmt && !missingInputSys && !missingXRProvider)
@@ -79,6 +99,7 @@ namespace GossipAnalytics.Editor.Dependencies
             if (missingXRMgmt)     missingList.Add("• XR Plugin Management (auto-install available)");
             if (missingInputSys)   missingList.Add("• Input System (auto-install available)");
             if (missingXRProvider) missingList.Add("• XR Provider: install OpenXR OR Oculus XR manually in Package Manager → choose based on your target device");
+            if (missingMeta) missingList.Add("• Meta XR Core (optional - install manually only for Quest eye tracking / passthrough)");
 
             string dialogMessage =
                 "Gossip Analytics SDK is missing required dependencies:\n\n" +
@@ -108,6 +129,7 @@ namespace GossipAnalytics.Editor.Dependencies
                 if (missingXRMgmt)     sb.AppendLine("\t- com.unity.xr.management");
                 if (missingInputSys)   sb.AppendLine("\t- com.unity.inputsystem");
                 if (missingXRProvider) sb.AppendLine("\t- com.unity.xr.openxr OR com.unity.xr.oculus");
+            if (missingMeta) sb.AppendLine("\t- com.meta.xr.sdk.core (optional, Quest only)");
                 Debug.LogWarning(sb.ToString());
             }
         }

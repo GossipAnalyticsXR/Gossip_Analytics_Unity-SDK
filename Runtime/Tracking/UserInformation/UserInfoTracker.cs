@@ -26,7 +26,20 @@ namespace GossipSDK.Tracking.UserInformation
             {
                 DeviceLanguage = Application.systemLanguage.ToString(),
                 Language = Application.systemLanguage.ToString(),
-                UserName = SystemInfo.deviceName,
+                // GeneralUserName se deja SIN INFORMAR, y es a proposito.
+                //
+                // Hasta la 2.0.28 aqui iba SystemInfo.deviceName, que en un visor
+                // autonomo devuelve el MODELO: la columna User del dashboard decia
+                // "Quest 3" en las siete filas de la tabla de avatares. Nunca fue
+                // una persona, asi que no era un cruce roto sino el origen.
+                //
+                // Por confidencialidad el producto identifica al jugador por su ID
+                // y no guarda su nombre, asi que no hay nada con que rellenarlo. El
+                // backend solo escribe el campo si llega -ponerSiLlega descarta
+                // undefined, null y cadena vacia-, y la lectura de avatares cae
+                // entonces al playerID, que es justo lo que se quiere mostrar.
+                //
+                // El modelo del aparato sigue viajando aparte, en DeviceModel.
                 UserAge = string.Empty,
                 CountryCode = GetCountryCode(),
                 DeviceBrand = GetDeviceBrand(),

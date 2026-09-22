@@ -36,7 +36,11 @@ namespace GossipSDK.Tracking.GameplayMetrics
             var e = new EntityData
             {
                 AvatarId = avatarId ?? "",
-                TypePay = typePay ?? "",
+                // Sin `?? ""`: si la app no declaro metodo, el campo va ausente y no
+                // vacio. Los dos acababan en el mismo cubo del dashboard, asi que
+                // "no lo dijo" y "dijo que nada" eran indistinguibles en el dato.
+                // AdTracker ya lo hacia asi; estos dos eran los que inventaban.
+                TypePay = typePay,
                 AvatarName = avatarName ?? "",
                 Variant = variant ?? "",
                 ColorHex = colorHex ?? "",

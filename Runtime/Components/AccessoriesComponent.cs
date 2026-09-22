@@ -13,7 +13,7 @@ public class AccessoriesComponent : MonoBehaviour
     [SerializeField] private string totalPurchased = "0.00";
 
     [Header("Payment")]
-    [SerializeField] private PaymentType paymentType = PaymentType.Card;
+    [SerializeField] private PaymentType paymentType = PaymentType.NotDeclared;
 
     [Header("Settings")]
     [SerializeField] private bool sendImmediately = false;
@@ -38,7 +38,9 @@ public class AccessoriesComponent : MonoBehaviour
         string n = string.IsNullOrEmpty(name) ? accessoryName : name;
         string p = string.IsNullOrEmpty(price) ? accessoryPrice : price;
         string b = string.IsNullOrEmpty(brand) ? accessoryBrand : brand;
-        string tp = (typePay ?? paymentType).ToString();
+        // NotDeclared se manda como ausente, no como la cadena "NotDeclared".
+        PaymentType resuelto = typePay ?? paymentType;
+        string tp = resuelto == PaymentType.NotDeclared ? null : resuelto.ToString();
         string t = string.IsNullOrEmpty(total) ? totalPurchased : total;
 
         tracker.CapAccessory(n, p, b, tp, t);
