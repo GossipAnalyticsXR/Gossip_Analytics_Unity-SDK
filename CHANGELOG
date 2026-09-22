@@ -1,3 +1,18 @@
+## [2.0.30] - 2026-09
+
+### Changed
+- `XRInteractionInputResolver` pregunta si la mano SE SIGUE, no si al mando le falta el
+  trigger. Hasta aqui leia UN dispositivo por nodo con `GetDeviceAtXRNode(XRNode.LeftHand /
+  RightHand)` y decidia que era una mano si ese dispositivo no reportaba `trigger`. Cual de
+  los dos aparatos ocupa el nodo cuando hay mandos emparejados y manos seguidas a la vez no
+  lo decide este codigo: con los Touch encendidos sobre la mesa la respuesta podia ser
+  Controller mientras la persona interactuaba con las manos, y la pestana Hand del dashboard
+  se quedaba vacia. Ahora enumera los dispositivos con la caracteristica `HandTracking` y
+  pregunta `isTracked` -existir no es estar en uso-, y solo despues pregunta lo mismo por
+  `Controller | HeldInHand`. Es el mismo cambio que el PR #150 hizo un piso mas arriba, en
+  `InputUsageTrackerComponent`. Sin verificar en gafas todavia: la prueba de tres tramos
+  -solo mandos, solo manos, y manos con los mandos encendidos en la mesa- esta pendiente.
+
 ## [2.0.29] - 2026-09
 
 ### Added
