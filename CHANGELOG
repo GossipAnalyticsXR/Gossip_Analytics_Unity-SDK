@@ -1,3 +1,56 @@
+## [2.0.31] - 2026-09
+
+### Removed
+- `PlatformTracker.EntityData` pierde `HandStatus` y `ControllerStatus`. Nadie los escribia y
+  nadie los leia: barridos del 23-sep-2026 con 0 fallos sobre CoreSDK `main` 161/161 y
+  `dev` 160/160, Backend-SDK 190/190, Backend-Front 429/429 y Front 1662/1662. Las unicas
+  apariciones eran su propia declaracion. La prueba de que ninguna card los consumia estaba
+  a la vista: `ControllerStatus` tampoco se escribia nunca y la card de Users > Hardware
+  marcaba 100 %, porque lee `ControllerUsagePercent` de `inputusagetrackings`, no este campo.
+- `HandControllerTracker.EntityData` pierde `Yaw` y `Roll`, y el componente deja de
+  calcularlos. Su unico consumidor en los tres repos de servidor era
+  `buildHandPositionAggExpr` (immersive.service.ts:792), al que no llama nadie: el nombre
+  aparece una sola vez en las 3.162 lineas del fichero, y dos lineas mas arriba el propio
+  comentario ya decia «handPosition: 0..1 (por ahora siempre 0)». `Pitch` y
+  `HandElevation` SE QUEDAN: `HandElevation` sostiene la card de confort y la incidencia
+  Hand Reach Strain, y `Pitch` se conserva a proposito una temporada para poder revisar el
+  arreglo de esa incidencia (Backend-SDK #133) con el dato delante.
+
+  Nada de esto desconecta ninguna vista. El heatmap de Hand & Controller se dibuja con
+  `interactionimages` (`heatmap.service.ts:299`), otra coleccion. En el Backend-SDK los cuatro
+  campos son `@IsOptional()`, asi que dejar de mandarlos no invalida el evento, y el processor
+  mapea ausente a `null`. El esquema, el DTO y el processor se quedan como estan: si algun dia
+  hace falta el dato, se vuelve a emitir en una linea.
+
+### Fixed
+- `InputUsageTrackerComponent` pregunta por las manos ANTES que por los mandos, y pregunta
+  si el dispositivo SE SIGUE, no si existe. Hasta aqui `IsUsingController` recorria
+  `InputSystem.devices` buscando un `XRController`: con los Touch encendidos sobre la mesa
+  ese bucle acertaba siempre, asi que la rama de manos no llegaba a evaluarse nunca y
+  `HandUsagePercent` se quedaba a 0 en `inputusagetrackings`. De ahi sale el 100 por ciento
+  de Controller y el 0 de Hand en la card Users > Hardware, que lee ese campo y no
+  `handStatus`. Ahora enumera con `GetDevicesWithCharacteristics` y pregunta `isTracked` en
+  los dos casos, manos primero. Es el cambio que el PR #150 hizo en `dev` y que nunca llego
+  a `main`; es el companero del que 2.0.30 hizo un piso mas abajo, en
+  `XRInteractionInputResolver`.
+- La rama de manos vivia detras de `#if UNITY_XR_HANDS`, un define que el SDK no declara ni
+  en `GossipSDK.Runtime.asmdef` ni en `package.json`, asi que se compilaba fuera siempre. Ya
+  no queda ningun `#if` en el fichero.
+- `PeripheralAutoDetector.ClassifyXrDevice` pregunta por `HandTracking` antes que por
+  `Controller`. Un aparato de hand tracking que ademas traiga la caracteristica Controller
+  salia etiquetado `xr-controller`, porque la cadena preguntaba primero por el mando. Es el
+  mismo orden invertido que 2.0.30 arreglo en `XRInteractionInputResolver` y que el punto de
+  arriba arregla en `InputUsageTrackerComponent`; quedo fuera de los dos a proposito, para no
+  mezclar. El visor no se toca: `HeadMounted` no convive con estas dos caracteristicas.
+
+  Cambia el NOMBRE del periferico, no el recuento de Presence: el backend acepta las dos
+  etiquetas -`PRESENCE_INTERACTION_TYPES` lleva `xr-controller`, `hand-tracking` y
+  `controller`-, asi que ese numero no se mueve.
+
+Sin bump de version, por decision de Daniel: esto entra en `main` sin tag, asi que el paquete
+publicado `com.gossip.core@2.0.30` todavia NO lo lleva. Viajara con el 2.0.31, cuando haya mas
+acumulado.
+
 ## [2.0.30] - 2026-09
 
 ### Changed

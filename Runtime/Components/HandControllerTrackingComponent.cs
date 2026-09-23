@@ -66,7 +66,12 @@ public class HandControllerTrackingComponent : MonoBehaviour
         Gossip.Instance?.HandControllerTracker?.CapSession(
             new HandControllerTracker.EntityData
             {
-                Hand = hand, Pitch = rot.eulerAngles.x, Yaw = rot.eulerAngles.y, Roll = rot.eulerAngles.z,
+                // T-24, 23-sep-2026: Yaw y Roll salen del EntityData. Medido en los cuatro
+                // repos -Front 1662/1662, Backend-Front 429/429, Backend-SDK 190/190,
+                // CoreSDK main 161/161 y dev 160/160, 0 fallos-: su unico consumidor era
+                // buildHandPositionAggExpr, que no llama nadie. El heatmap de Hand & Controller
+                // usa otra coleccion (interactionimages), asi que esto no lo roza.
+                Hand = hand, Pitch = rot.eulerAngles.x,
                 HandElevation = elevation,
                 TimestampUtc = System.DateTime.UtcNow.ToString("o")
             });

@@ -27,14 +27,6 @@ namespace GossipSDK.Tracking.GameplayMetrics
             {
                 get; set;
             }
-            public float Yaw
-            {
-                get; set;
-            }
-            public float Roll
-            {
-                get; set;
-            }
             public float HandElevation
             {
                 get; set;
@@ -79,8 +71,6 @@ namespace GossipSDK.Tracking.GameplayMetrics
             {
                 Hand = hand,
                 Pitch = NormalizeAngle(euler.x),
-                Yaw = NormalizeAngle(euler.y),
-                Roll = NormalizeAngle(euler.z),
 
                 SceneName = sceneName
                     ?? UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,

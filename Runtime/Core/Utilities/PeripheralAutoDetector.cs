@@ -125,11 +125,23 @@ namespace GossipSDK.Utilities
             if ((characteristics & InputDeviceCharacteristics.HeadMounted) != 0)
                 return "hmd";
 
-            if ((characteristics & InputDeviceCharacteristics.Controller) != 0)
-                return "xr-controller";
-
+            // T-42: las MANOS antes que el mando. Un aparato de hand tracking que ademas
+            // traiga la caracteristica Controller salia etiquetado xr-controller, porque
+            // esta cadena preguntaba primero por el mando. Es el mismo orden invertido que
+            // la 2.0.30 arreglo un piso mas abajo en XRInteractionInputResolver y el PR #161
+            // en InputUsageTrackerComponent; quedo fuera de aquellos a proposito para no
+            // mezclar.
+            //
+            // El visor se queda el primero y no se toca: HeadMounted no convive con estas dos.
+            //
+            // Esto cambia el NOMBRE del periferico, no el recuento de Presence: el backend
+            // acepta las dos etiquetas -PRESENCE_INTERACTION_TYPES en immersive.service.ts:57
+            // lleva xr-controller, hand-tracking y controller-, asi que ese numero no se mueve.
             if ((characteristics & InputDeviceCharacteristics.HandTracking) != 0)
                 return "hand-tracking";
+
+            if ((characteristics & InputDeviceCharacteristics.Controller) != 0)
+                return "xr-controller";
 
             if ((characteristics & InputDeviceCharacteristics.EyeTracking) != 0)
                 return "eye-tracking";
