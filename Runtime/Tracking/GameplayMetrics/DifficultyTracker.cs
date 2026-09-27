@@ -12,8 +12,6 @@ namespace GossipSDK.Tracking.GameplayMetrics
     {
         protected override string EventName { get; } = "TRACKING_DIFFICULTY_CHANGE";
 
-        public string EventTypeForEndpoint => "TRACKING_DIFFICULTY_CHANGE";
-
         [Serializable]
         public class EntityData : Data
         {

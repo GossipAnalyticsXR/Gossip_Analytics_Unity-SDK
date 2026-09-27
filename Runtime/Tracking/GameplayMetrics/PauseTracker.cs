@@ -13,8 +13,6 @@ namespace GossipSDK.Tracking.GameplayMetrics
     {
         protected override string EventName { get; } = "TrackingPause";
 
-        public string EventTypeForEndpoint => "TRACKING_SESSION_PAUSE";
-
         [Serializable]
         public class EntityData : Data
         {

@@ -42,7 +42,8 @@ namespace GossipSDK.Editor
         private static bool _spatialExpanded = true;
         private static bool _deviceExpanded  = true;
         private static bool _xrExpanded      = true;
-        private readonly string[] _tabLabels = new string[] { "Interactables", "Trackers", "Permissions" };
+        private static bool _a11yExpanded    = true;
+        private readonly string[] _tabLabels = new string[] { "1 · Select objects", "2 · Add trackers", "3 · Set permissions" };
         private GameObject _playerObject = null;
         private Camera _mainCamera = null;
 
@@ -179,8 +180,8 @@ namespace GossipSDK.Editor
                 category = "XR",
                 target = TrackerTarget.Camera,
                 requiresConfiguration = true,
-                preAddHint = "The SDK will auto-assign the tracked transform to the main camera. Set worldMinXZ and worldMaxXZ to your scene bounds. Ensure Microphone permission is enabled in the Permissions tab. On Android, also add RECORD_AUDIO to your AndroidManifest.xml.",
-                postAddHint = "Tracked Transform: auto-assigned ✔  |  Set worldMinXZ and worldMaxXZ (in metres) to your scene bounds. Microphone permission must be enabled in the Permissions tab."
+                preAddHint = "The SDK will auto-assign the tracked transform to the main camera. Set worldMinXZ and worldMaxXZ to your scene bounds. Ensure Microphone permission is enabled in the 3 · Set permissions tab. On Android, also add RECORD_AUDIO to your AndroidManifest.xml.",
+                postAddHint = "Tracked Transform: auto-assigned ✔  |  Set worldMinXZ and worldMaxXZ (in metres) to your scene bounds. Microphone permission must be enabled in the 3 · Set permissions tab."
             },
             new TrackerInfo {
                 componentTypeName = "PlayableAreaComponent",
@@ -280,6 +281,25 @@ namespace GossipSDK.Editor
                 requiresConfiguration = false,
                 preAddHint           = "Set adId, adNetwork and placementId in Inspector. Enable autoStartOnEnable if the ad starts immediately. Call OnAdOpened()/OnAdClosed() from your ad SDK callbacks.",
                 postAddHint          = "Call RecordImpression(), RecordInteraction() or RecordReward() from your ad network SDK callbacks. OnAdOpened() and OnAdClosed() handle session timing automatically."
+            },
+
+            // ACCESSIBILITY
+            // Categoria anadida el 24-sep-2026. Hasta ese dia el subsistema de
+            // accesibilidad viajaba entero en el paquete y ninguna de sus piezas
+            // estaba enganchada: cinco de sus seis ficheros tenian cero referencias
+            // en las 144 fuentes del Runtime, y un barrido de "a11y|narration|
+            // accessib" sobre los nueve ficheros de Editor/ daba cero. El componente
+            // media, y solo podia anadirlo quien leyera el codigo fuente del paquete.
+            new TrackerInfo {
+                componentTypeName    = "TextNarrationCoverageTracker",
+                displayName          = "Text narration coverage",
+                description          = "Counts the on-screen text that is labelled for narration, once per scene load. Text with no label counts as not covered.",
+                category             = "Accessibility",
+                target               = TrackerTarget.AnyObject,
+                requiresConfiguration = false,
+                clientAdjustable     = true,
+                preAddHint           = "Measures the text your users can actually see. Hidden UI stays out of the count.",
+                postAddHint          = "Add a GossipA11yLabel component to each text you narrate, and tick decorative on the text that needs no narration."
             },
         };
 
@@ -1048,10 +1068,17 @@ namespace GossipSDK.Editor
         // --- Auto-add trackers on open ---
         private void AutoAddTrackers()
         {
+            // ACC-63: el catalogo tambien respeta el interruptor. Hasta hoy
+            // EnsureTrackers() consultaba GossipSettings antes de anadir nada y
+            // este bucle no, asi que apagar un tracker duraba hasta la siguiente
+            // vez que alguien abria la ventana - y la ventana se abre sola:
+            // AutoAddTrackers() corre en Open() y en OnEnable().
+            var ajustes = FindGossipSettings();
             foreach (var info in _recommendedTrackers)
             {
                 var trackerType = GetTrackerType(info.componentTypeName);
                 if (trackerType == null) continue;
+                if (ajustes != null && ajustes.IsTrackerDisabled(info.componentTypeName)) continue;
                 bool isPresent = (Object.FindObjectOfType(trackerType) as Component) != null;
                 if (isPresent) continue;
                 Component addedComp = null;
@@ -1248,6 +1275,7 @@ namespace GossipSDK.Editor
             int spatialActive = 0, spatialTotal = 0;
             int deviceActive  = 0, deviceTotal  = 0;
             int xrActive      = 0, xrTotal      = 0;
+            int a11yActive    = 0, a11yTotal    = 0;
             foreach (var _ci in _recommendedTrackers)
             {
                 bool _isActive = _trackerComponentCache.TryGetValue(_ci.componentTypeName, out var _cmp)
@@ -1255,6 +1283,7 @@ namespace GossipSDK.Editor
                 if      (_ci.category == "Spatial") { spatialTotal++; if (_isActive) spatialActive++; }
                 else if (_ci.category == "Device")  { deviceTotal++;  if (_isActive) deviceActive++;  }
                 else if (_ci.category == "XR")      { xrTotal++;      if (_isActive) xrActive++;      }
+                else if (_ci.category == "Accessibility") { a11yTotal++; if (_isActive) a11yActive++; }
             }
 
             string currentCategory = null;
@@ -1266,22 +1295,25 @@ namespace GossipSDK.Editor
                     _chipReviewStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(1.0f, 0.75f, 0.0f) }, fontStyle = FontStyle.Bold };
                     _chipCodeStyle   = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = new Color(0.35f, 0.65f, 1.0f) }, fontStyle = FontStyle.Bold };
                 }
-            foreach (var info in _recommendedTrackers.OrderBy(t => t.category == "Spatial" ? 0 : t.category == "Device" ? 1 : 2))
+            foreach (var info in _recommendedTrackers.OrderBy(t => t.category == "Spatial" ? 0 : t.category == "Device" ? 1 : t.category == "XR" ? 2 : 3))
             {
                 if (info.category != currentCategory)
                 {
                     currentCategory = info.category;
                     bool expanded = currentCategory == "Spatial" ? _spatialExpanded
                                   : currentCategory == "Device"  ? _deviceExpanded
-                                  : _xrExpanded;
+                                  : currentCategory == "XR"      ? _xrExpanded
+                                  : _a11yExpanded;
                     EditorGUILayout.Space(4);
                     string catLabel = currentCategory == "Spatial" ? string.Format("Spatial  ({0} of {1})", spatialActive, spatialTotal)
                                     : currentCategory == "Device"  ? string.Format("Device  ({0} of {1})", deviceActive, deviceTotal)
-                                    :                                string.Format("XR  ({0} of {1})", xrActive, xrTotal);
+                                    : currentCategory == "XR"      ? string.Format("XR  ({0} of {1})", xrActive, xrTotal)
+                                    :                                string.Format("Accessibility  ({0} of {1})", a11yActive, a11yTotal);
                     expanded = EditorGUILayout.Foldout(expanded, catLabel, true, EditorStyles.foldoutHeader);
                     if (currentCategory == "Spatial") _spatialExpanded = expanded;
                     else if (currentCategory == "Device") _deviceExpanded = expanded;
-                    else _xrExpanded = expanded;
+                    else if (currentCategory == "XR") _xrExpanded = expanded;
+                    else _a11yExpanded = expanded;
                     _currentCategoryExpanded = expanded;
                 }
                 if (!_currentCategoryExpanded) continue;
@@ -1641,7 +1673,7 @@ namespace GossipSDK.Editor
                     if (permHandler != null && !permHandler.enableMicrophone)
                     {
                         _cachedHealthWarnings.Add(
-                    "⚠ Audio Reaction tracker is present but Microphone permission is disabled in the Permissions tab. " +
+                    "⚠ Audio Reaction tracker is present but Microphone permission is disabled in the 3 · Set permissions tab. " +
                             "No audio reactions will be captured. Enable Microphone (and add RECORD_AUDIO to AndroidManifest.xml).");
                     }
                 }

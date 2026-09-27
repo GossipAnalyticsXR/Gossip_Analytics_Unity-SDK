@@ -21,8 +21,6 @@ namespace GossipSDK.Tracking.GameplayMetrics
     {
         protected override string EventName { get; } = "TrackingSceneInventory";
 
-        public string EventTypeForEndpoint => "TrackingSceneInventory";
-
         [Serializable]
         public class EntityData : Data
         {

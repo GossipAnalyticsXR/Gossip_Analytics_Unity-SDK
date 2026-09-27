@@ -49,6 +49,11 @@ namespace GossipSDK.Components
         private Quaternion lastCamRot;
         private float lastImageTime;
 
+        // Bufer fijo para el raycast de mirada: RaycastNonAlloc no reserva memoria y
+        // esto corre en cada Update dentro del visor. 16 impactos a lo largo de 20 m
+        // es de sobra; si alguna vez se llenara, se toma el mas cercano de esos 16.
+        private readonly RaycastHit[] gazeHits = new RaycastHit[16];
+
         private const string SOURCE_EYE = "eye";
         private const string SOURCE_HEAD = "head";
 
@@ -106,7 +111,7 @@ namespace GossipSDK.Components
                 return;
             }
 
-            if (!Physics.Raycast(gazeRay, out RaycastHit hit, maxDistance, raycastLayers))
+            if (!RaycastIgnoringSelf(gazeRay, out RaycastHit hit))
             {
                 TryEmitFixation();
                 currentObject = null;
@@ -212,6 +217,49 @@ namespace GossipSDK.Components
             if (heatmap == null) return;
             Gossip.Instance?.HeatmapTracker?
                 .CapFromHeatmap(heatmap, "eye_gaze", true);
+        }
+
+        // El rayo de mirada podia chocar con el propio rig del jugador. Medido el
+        // 26-09-2026 en Hospital Zone sobre 2.067 fijaciones: 155 de ellas y 206,64 s
+        // (el 4,28 % del tiempo de mirada) quedaron atribuidas a "XR Origin (XR Rig)".
+        // Nadie mira su propio rig: es un oclusor, no un objeto mirado, y ademas tapa
+        // lo que hay detras. Se descartan esos impactos y se sigue con el mas cercano
+        // que no cuelgue de la raiz de la camara.
+        //
+        // NO se toca raycastLayers. Excluir el suelo aqui apagaria tambien el
+        // heatmap de mirada: sin impacto no hay RegisterHit, y el suelo es el 81,33 %
+        // de las fijaciones. Que capas entran es una decision de escena, no de codigo.
+        private bool RaycastIgnoringSelf(Ray ray, out RaycastHit hit)
+        {
+            hit = default(RaycastHit);
+
+            Transform selfRoot = cam != null ? cam.root : null;
+
+            int count = Physics.RaycastNonAlloc(ray, gazeHits, maxDistance, raycastLayers);
+            if (count <= 0)
+                return false;
+
+            float bestDistance = float.MaxValue;
+            bool found = false;
+
+            for (int i = 0; i < count; i++)
+            {
+                Collider candidate = gazeHits[i].collider;
+                if ((UnityEngine.Object)candidate == null)
+                    continue;
+
+                if (selfRoot != null && candidate.transform.IsChildOf(selfRoot))
+                    continue;
+
+                if (gazeHits[i].distance < bestDistance)
+                {
+                    bestDistance = gazeHits[i].distance;
+                    hit = gazeHits[i];
+                    found = true;
+                }
+            }
+
+            return found;
         }
 
         private void OnDisable()

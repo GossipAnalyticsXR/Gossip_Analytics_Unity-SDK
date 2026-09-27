@@ -13,7 +13,6 @@ namespace GossipSDK.Tracking.GameplayMetrics
     public class UserPostureTracker : GenericSocketConnection<UserPostureTracker.EntityData, UserPostureTracker.TrackerMessage>
     {
         protected override string EventName { get; } = "TrackingUserPosture";
-        public string EventTypeForEndpoint => "TRACKING_DATA_USER_POSTURE";
 
         [Serializable]
         public class EntityData : Data

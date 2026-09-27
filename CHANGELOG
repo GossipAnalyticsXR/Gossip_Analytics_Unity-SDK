@@ -1,3 +1,64 @@
+## [2.0.32] - 2026-09
+
+### Added
+- `A11yTracker` sabe emitir SENALES, no solo checks. Dos constantes nuevas, `KindCheck` y
+  `KindSignal`, y un `CapSignal(...)` que las usa: el reparto del 25-09-2026 de la seccion de
+  accesibilidad es **7 checks y 9 senales**, y hasta hoy **nueve de las dieciseis metricas no tenian
+  forma de salir del SDK**.
+- La categoria **Accessibility** aparece en el catalogo del Instrumentation Manager, con
+  `TextNarrationCoverageTracker`. Hasta el 24-09-2026 el subsistema de accesibilidad viajaba entero
+  en el paquete y sin enganchar: **cinco de sus seis ficheros tenian cero referencias** en las 144
+  fuentes del `Runtime`, y un barrido de `a11y|narration|accessib` sobre los nueve ficheros de
+  `Editor/` daba **cero**. El componente ya media, pero solo podia anadirlo quien leyera el codigo
+  fuente del paquete.
+
+### Fixed
+- La mirada deja de chocar con el propio rig del jugador. `EyeTrackingComponent` lanzaba su
+  raycast con `raycastLayers = ~0`, asi que los colliders del XR Origin entraban en el
+  sorteo y tapaban lo que habia detras. Medido el 26-09-2026 en Hospital Zone con el
+  endpoint nuevo `heatmap/eye-gaze/fixations`, sobre 2.067 fijaciones y 119 sesiones:
+  **155 fijaciones y 206,64 s -el 4,28 % del tiempo de mirada- quedaban atribuidas a
+  `XR Origin (XR Rig)`**, el rig del propio usuario. Ahora el raycast usa
+  `Physics.RaycastNonAlloc` con un bufer fijo de 16 y se queda con el impacto mas cercano
+  que NO cuelgue de `cam.root`. El criterio de verificacion esta escrito antes de medir:
+  en la proxima sesion de Hospital Zone, `XR Origin (XR Rig)` tiene que salir del ranking
+  y su tiempo repartirse entre lo que quedaba detras.
+- El cuerpo del evento de accesibilidad llegaba VACIO. `A11yCheckData` declaraba campos planos y el
+  bufer local es LiteDB, cuyo `BsonMapper` **solo mapea propiedades**: la fila se guardaba vacia, se
+  releia con los valores por defecto y el evento salia con `MetricKey` a null y `Numerator` a 0.
+  Medido en gafas el 24-09-2026: el sobre llegaba correcto y el cuerpo vacio. Era el **unico**
+  `EntityData` de los 39 del SDK declarado con campos.
+- El repo publico deja de publicar PUNTEROS de Git LFS. El checkout de `sync-public.yml` no pedia
+  LFS, asi que el `rsync` copiaba el puntero y no el fichero. Medido el 27-09-2026 en el espejo:
+  **16 de 16 binarios eran punteros de 128 a 132 bytes**, entre ellos `LiteDB.dll` (510.464 bytes
+  reales), `R3.dll` (594.944), las cuatro imagenes del sample y los dos mp3. Con `lfs: true` en el
+  checkout privado el espejo recibe los ficheros de verdad.
+
+### Changed
+- El raycast de mirada ya no reserva memoria por frame: `RaycastNonAlloc` sobre un bufer
+  fijo en vez de `Physics.Raycast`. Corre en cada `Update` dentro del visor.
+- Las tres pestanas del Instrumentation Manager se leen como pasos numerados: *1 Select objects*,
+  *2 Add trackers* y *3 Set permissions*, con un punto medio de separador, y los avisos de los
+  trackers citan el paso por su numero en vez de por su nombre.
+- ACC-63: el catalogo tambien respeta el interruptor de tracker desactivado. `EnsureTrackers()` ya
+  consultaba `GossipSettings` antes de anadir y el bucle del catalogo no, asi que apagar un tracker
+  duraba hasta la siguiente vez que alguien abria la ventana. Y la ventana se abre sola:
+  `AutoAddTrackers()` corre en `Open()` y en `OnEnable()`.
+
+### Removed
+- `Complies` sale de `A11yCheckData`. `complies = numerator > 0` no es el umbral de ninguna metrica:
+  con esa regla un texto etiquetado de cada mil hace que P1 cumpla, y el propio comentario del
+  metodo decia que el umbral se evalua en el backend, o sea que el valor nacia para ser
+  sobrescrito. El emisor manda numerador, denominador y tipo; el veredicto lo pone quien tiene el
+  umbral. Nadie se rompe: el evento `a11y_check` sigue sin darse de alta en la ingesta.
+### Nota deliberada
+- **`raycastLayers` NO se toca, y es a proposito.** Excluir el suelo de la mascara apagaria
+  tambien el heatmap de mirada: `heatmap.RegisterHit(hit.point)` solo corre cuando hay
+  impacto, y el suelo es el **81,33 %** de las fijaciones de Hospital Zone. Que capas entran
+  es una decision de escena, no de codigo del SDK. El hallazgo que si queda anotado: suelo,
+  sockets y rig suman el **93,18 %** del tiempo de mirada y los cuatro organos de la escena
+  el **4,99 %**.
+
 ## [2.0.31] - 2026-09
 
 ### Removed

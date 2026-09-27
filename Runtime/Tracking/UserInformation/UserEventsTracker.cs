@@ -93,6 +93,25 @@ namespace GossipSDK.Tracking.GameplayMetrics
             public const string EventName = "Level";
             public const string CompletedCategory = "CompleteLevel";
         }
+        /// <summary>
+        /// El vocabulario de los cursos: las dos categorias que leen las cards
+        /// Approved y Suspended del panel.
+        ///
+        /// El valor de aprobado lleva una sola p. Es una errata, pero es la que
+        /// esta escrita en la base y en las consultas del backend, asi que se
+        /// conserva a proposito: cambiarla aqui partiria el vocabulario en dos y
+        /// dejaria fuera todo lo ya guardado. La constante existe justo para que
+        /// nadie tenga que acordarse de la errata.
+        ///
+        /// El backend agrupa solo por Category; EventName no lo mira hoy, pero se
+        /// manda igual para que el evento se pueda leer en la tabla.
+        /// </summary>
+        public static class TrainingEvents
+        {
+            public const string EventName = "Training";
+            public const string ApprovedCategory = "Aproved";
+            public const string SuspendedCategory = "Suspended";
+        }
 
         /// <summary>
         /// Marca la escena activa como completada por este usuario.
@@ -123,6 +142,30 @@ namespace GossipSDK.Tracking.GameplayMetrics
                 : levelName;
 
             CaptureEventEnEscena(nombre, LevelEvents.EventName, LevelEvents.CompletedCategory, label, null, properties);
+        }
+        /// <summary>
+        /// Da por aprobado el curso a este usuario.
+        ///
+        /// Usar esto y no CaptureEvent con el literal a mano: la categoria lleva
+        /// una errata historica y del contrato responde el compilador.
+        ///
+        /// El panel cuenta EVENTOS, no personas: dos llamadas para el mismo
+        /// jugador suman dos. Llamarlo una vez por aprobacion real.
+        /// </summary>
+        public void CaptureTrainingApproved(string label = null, Dictionary<string, object> properties = null)
+        {
+            CaptureEvent(TrainingEvents.EventName, TrainingEvents.ApprovedCategory, label, null, properties);
+        }
+
+        /// <summary>
+        /// Da por suspendido el intento de este usuario.
+        ///
+        /// Mismo aviso que arriba: se cuentan eventos, asi que dos intentos
+        /// fallidos del mismo jugador suman dos.
+        /// </summary>
+        public void CaptureTrainingSuspended(string label = null, Dictionary<string, object> properties = null)
+        {
+            CaptureEvent(TrainingEvents.EventName, TrainingEvents.SuspendedCategory, label, null, properties);
         }
 
         public int GetPendingCountSafe()
