@@ -1,3 +1,90 @@
+## [2.0.34] - 2026-10
+
+### Fixed
+- 360 panorama stitching: GossipEquirect.SampleCube read every cube face mirrored. The capture
+  camera is oriented with Quaternion.LookRotation(basis.forward, basis.up), so basis.right grows
+  towards larger x in the rendered image, but the sampler used s = (1f - rightComp) * 0.5f.
+  Mirroring a face about its own centre meridian is continuous at the centre and cuts at the
+  edges, so every panorama carried a hard discontinuity on its four vertical face boundaries.
+  Measured on 115 of the 116 panoramas stored since 2026-08-11 (one 70-byte file could not be
+  decoded): the column jump at the face boundaries was 20x to 44x the band average, in every
+  scene and every app version, with the face centres at 1.5x to 5x. Re-measured in the editor on
+  Hospital Zone with the same six faces and only this line changed: 27.9/18.1/27.2/18.1x became
+  0.27/1.98/2.03/0.12x. The equirect longitude convention is unchanged, so the dashboard reader
+  is unaffected. Panoramas already stored keep the old geometry; only new captures are correct.
+
+## [2.0.33] - 2026-09
+
+### Added
+- El inventario de escena manda la CAJA de cada objeto instrumentado: `CenterX/Y/Z` y `SizeX/Y/Z`
+  en coordenadas de mundo, uniendo los `Renderer` de sus hijos y, si no tiene ninguno, sus
+  `Collider`. Son **nulos** cuando el objeto no tiene ni una cosa ni la otra: un cero diria que
+  esta en el origen y que no mide nada, que no es lo mismo que no saberlo. Sin esto, el dashboard
+  solo sabe el NOMBRE de lo que se miro, y un nombre no dice si el objeto es un cartel de 30 cm o
+  un suelo de 36 x 41 m, que es justo lo que hacia ilegible la vista Eye.
+- Nueva pasada de accesibilidad geometrica, `A11yGeometryPassTracker`: una vez por carga de escena
+  mide dos cosas con las cifras que publican sus documentos, y el umbral se CALCULA de ellas en vez
+  de teclearse. **O1, tamano de diana**: la guia de Meta pide 3 grados de FOV a 0,42 m, que son 22,0
+  mm. Decide el lado corto de la cara mayor y no el lado mas pequeno, porque el mas pequeno de un
+  boton es su grosor y por ahi suspenderia cualquier elemento plano. **P4, legibilidad del texto**:
+  Daydream UX-D1 pide 1,5 grados de FOV **y** una distancia de al menos 0,5 m, que son dos
+  condiciones y no una -- un texto enorme a 20 cm sigue sin cumplir. El alto de linea sale del tamano
+  preferido del texto y no del rect que lo contiene, que puede ser mucho mas alto. El texto se lee
+  con `A11yTextReader`, por reflexion, para que el paquete no pase a depender de TextMeshPro.
+- La pasada **declara lo que no pudo medir** en vez de dejarlo caer: `target_box_coverage` y
+  `text_measurable_coverage` viajan como senal con las dianas sin caja y con los textos cuya
+  geometria no se pudo leer. Sin eso, un elemento que el medidor no entiende desaparece del
+  denominador y el porcentaje de arriba sale mas limpio de lo que es.
+- Nueva pasada de contraste, `A11yContrastPassTracker`, con **P3** (`text_contrast_coverage`) y
+  **P6** (`nontext_contrast_coverage`). La formula es la de WCAG 2.x, con sus cifras: 4,5:1 para
+  texto, 3:1 para texto grande -18 pt, o 14 en negrita- y 3:1 para los componentes de interfaz.
+  El gris 767676 sobre blanco da 4,5422 en esta implementacion, que es el 4,54 que publica la
+  propia norma como frontera de AA.
+- **El fondo se resuelve de forma estricta, y lo que no se puede resolver se declara.** Solo
+  cuenta como fondo un `Image` o `RawImage` opaco -alfa >= 0,95- que sea ancestro del texto o
+  hermano suyo dibujado por detras; una capa translucida por el camino corta la busqueda, porque
+  lo que el ojo recibe ahi es una mezcla y no el color de la capa de abajo. La alternativa era
+  lanzar un rayo desde la camara y quedarse con el color del primer `Renderer`, que da mucha mas
+  cobertura a cambio de asumir que ese `Renderer` es el fondo visual y que su color medio
+  representa el pixel. No se asume.
+- **ACC-49 ya no es una pregunta sin numero.** La pasada publica las dos mitades por separado:
+  `text_background_coverage` dice cuantos textos tienen un fondo opaco detras, y
+  `text_background_solid_coverage` cuantos de esos tienen ademas un color CONOCIDO -un `Image`
+  sin sprite-. Separarlas importa porque la respuesta es distinta: lo primero se arregla con un
+  rayo, lo segundo no se arregla, porque el color de una textura no se lee sin bajar a la GPU.
+  Con esos dos numeros medidos sobre una app real se decide si P3 puntua o solo informa.
+- **O5** (`target_spacing_coverage`) en la pasada geometrica, reutilizando las cajas que ya
+  calcula O1. Sale como SENAL y no como check: WCAG 2.2 2.5.8 es normativa, pero su circulo de
+  24 px CSS no tiene equivalente publicado en un visor, asi que se reparte con los mismos 22,0
+  mm de O1 -el circulo de separacion de la norma mide lo mismo que su minimo de diana, que si es
+  una propiedad comprobable del texto- y la sustitucion de la cifra queda declarada como
+  suposicion. Una diana sin vecina no entra al denominador: no puede incumplir una separacion.
+- **U1** (`caption_composition_coverage`) y su marcador `GossipA11yCaption`. El marcador existe
+  porque sin el no hay poblacion: el barrido del 2-oct-2026 sobre los 164 ficheros del SDK dio
+  **cero** apariciones de caption o subtitle. Se comprueba el presupuesto de Meta -dos filas como
+  mucho, 32 caracteres por fila- sobre el presupuesto total y no fila a fila, porque el texto de
+  cada linea solo se puede sacar de la estructura interna de TextMeshPro y este ensamblado no la
+  referencia.
+
+### Fixed
+- **`A11yTextReader` no leia una sola fila en TextMeshPro.** Buscaba sus datos con
+  `Type.GetProperty`, y `TMP_TextInfo.lineCount` es un CAMPO publico, no una propiedad: el
+  resultado era que `HasLineCount` no se ponia nunca en TMP, que es lo que usa casi todo el
+  mundo. P4 dejaba fuera del denominador todo texto de TMP y la U1 que entra en esta misma
+  version habria emitido 0/0 para siempre. El lector mira ahora propiedades Y campos, en ese
+  orden y por nivel de herencia. Reproducido cambiando el doble de la prueba a campo -la
+  medicion pasaba de 2/3 subtitulos legibles a 0/3-, y el doble se queda asi, que es la forma
+  real: un guardia que no se ha visto fallar no es un guardia.
+- La duracion de una fijacion media el tamano del objeto, no la atencion. `EyeTrackingComponent`
+  cerraba la fijacion solo al cambiar de GameObject, asi que un suelo que es UN objeto de 36 x 41 m
+  acumulaba sin reiniciar el cronometro. Medido el 28-09-2026 sobre 20.454 mensajes: en Hospital
+  Zone el suelo se llevaba 3.925 s contra 903 s de TODOS los objetos juntos -4,3 veces mas-, con
+  fijaciones de hasta 51,11 s, y 188 de mas de 5 s -el 15 % del numero- se comian el 56 % de los
+  segundos. En SampleScene, con objetos pequenos, la mediana era 0,26 s: misma definicion,
+  resultado opuesto, solo cambia el tamano de la geometria. Ahora la fijacion tambien se corta
+  cuando el punto de impacto se aleja mas de `fixationMaxDriftMeters` -0,5 m- o la direccion de
+  mirada gira mas de `fixationMaxDriftDegrees` -10 grados-.
+
 ## [2.0.32] - 2026-09
 
 ### Added

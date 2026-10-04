@@ -13,6 +13,16 @@ namespace GossipSDK.Components
     {
         [Header("Fixation")]
         [SerializeField] private float fixationThreshold = 0.25f;
+        // Una fijacion es mirar AL MISMO SITIO, no estar sobre el mismo GameObject. Medido el
+        // 28-09-2026 sobre 20.454 mensajes: el suelo de Hospital Zone es UN solo objeto de
+        // 36 x 41 m, asi que el cronometro no se reiniciaba mientras el rayo siguiera cayendo
+        // en el, y salian fijaciones de hasta 51 s. El suelo se llevaba 3.925 s contra 903 s de
+        // TODOS los objetos juntos. En SampleScene, con objetos pequenos, la mediana es 0,26 s:
+        // misma definicion, resultado opuesto, solo cambia el tamano de la geometria.
+        // Se corta por las dos vias, porque fallan en casos distintos: girar la cabeza sobre un
+        // objeto grande mueve el ANGULO, y andar mirando al suelo mueve los METROS.
+        [SerializeField] private float fixationMaxDriftMeters = 0.5f;
+        [SerializeField] private float fixationMaxDriftDegrees = 10f;
         [SerializeField] private float maxDistance = 20f;
         [SerializeField] private LayerMask raycastLayers = ~0;
 
@@ -37,6 +47,8 @@ namespace GossipSDK.Components
 
         private HeatmapManager heatmap;
         private float fixationTimer;
+        private Vector3 fixationAnchorPoint;
+        private Vector3 fixationAnchorDir;
         private float heatmapTimer;
 
         private GameObject currentObject;
@@ -121,11 +133,18 @@ namespace GossipSDK.Components
 
             heatmap.RegisterHit(hit.point);
 
-            if (hit.collider.gameObject != currentObject)
+            var golpeaOtro = hit.collider.gameObject != currentObject;
+            var seFueDelSitio = !golpeaOtro && currentObject != null &&
+                (Vector3.Distance(hit.point, fixationAnchorPoint) > fixationMaxDriftMeters ||
+                 Vector3.Angle(gazeRay.direction, fixationAnchorDir) > fixationMaxDriftDegrees);
+
+            if (golpeaOtro || seFueDelSitio)
             {
                 TryEmitFixation();
                 currentObject = hit.collider.gameObject;
                 fixationTimer = 0f;
+                fixationAnchorPoint = hit.point;
+                fixationAnchorDir = gazeRay.direction;
             }
 
             fixationTimer += Time.deltaTime;

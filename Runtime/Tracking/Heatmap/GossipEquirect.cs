@@ -84,7 +84,15 @@ if (forwardComp <= 0.0001f) forwardComp = 0.0001f;
 float rightComp = Vector3.Dot(dir, basis.right) / forwardComp;
 float upComp = Vector3.Dot(dir, basis.up) / forwardComp;
 
-float s = Mathf.Clamp01((1f - rightComp) * 0.5f);
+// The face image comes from a camera oriented with Quaternion.LookRotation(basis.forward,
+// basis.up), so the camera transform.right IS basis.right and +right grows towards larger x
+// in the image. Reading it as (1f - rightComp) mirrored every face about its own centre
+// meridian: continuous at the centre, a hard cut at the four face boundaries. Measured in
+// the editor on Hospital Zone, same six faces, only this line changed: the column jump at
+// the boundaries went from 27.9/18.1/27.2/18.1x of the band average to 0.27/1.98/2.03/0.12x.
+// The equirect longitude convention in BuildEquirect is unchanged, so the dashboard reader
+// (SKY_FRAGMENT, u = 0.5 - lon / 2PI) keeps working as is.
+float s = Mathf.Clamp01((rightComp + 1f) * 0.5f);
 float t = Mathf.Clamp01((upComp + 1f) * 0.5f);
 
 var face = faceColors[bestFace];

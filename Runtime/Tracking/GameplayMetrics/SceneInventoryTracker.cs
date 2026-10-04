@@ -46,6 +46,23 @@ namespace GossipSDK.Tracking.GameplayMetrics
             /// </summary>
             public string AppVersion { get; set; }
 
+            /// <summary>
+            /// Caja del objeto en coordenadas de MUNDO: centro y tamano, seis numeros.
+            /// Nulos cuando el objeto no tiene Renderer ni Collider. Un cero diria que
+            /// esta en el origen y que no mide nada, que no es lo mismo que no saberlo.
+            /// </summary>
+            public float? CenterX { get; set; }
+
+            public float? CenterY { get; set; }
+
+            public float? CenterZ { get; set; }
+
+            public float? SizeX { get; set; }
+
+            public float? SizeY { get; set; }
+
+            public float? SizeZ { get; set; }
+
             public string TimestampUtc { get; set; }
 
             [JsonConstructor] public EntityData() { }
@@ -64,7 +81,13 @@ namespace GossipSDK.Tracking.GameplayMetrics
             string objectTag,
             string kind,
             string sceneName,
-            string appVersion)
+            string appVersion,
+            float? centerX,
+            float? centerY,
+            float? centerZ,
+            float? sizeX,
+            float? sizeY,
+            float? sizeZ)
         {
             var data = new EntityData
             {
@@ -74,6 +97,12 @@ namespace GossipSDK.Tracking.GameplayMetrics
                 Kind = kind ?? "",
                 SceneName = sceneName ?? "",
                 AppVersion = appVersion ?? "",
+                CenterX = centerX,
+                CenterY = centerY,
+                CenterZ = centerZ,
+                SizeX = sizeX,
+                SizeY = sizeY,
+                SizeZ = sizeZ,
                 TimestampUtc = DateTime.UtcNow.ToString("o")
             };
 

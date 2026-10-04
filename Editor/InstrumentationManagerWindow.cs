@@ -301,6 +301,35 @@ namespace GossipSDK.Editor
                 preAddHint           = "Measures the text your users can actually see. Hidden UI stays out of the count.",
                 postAddHint          = "Add a GossipA11yLabel component to each text you narrate, and tick decorative on the text that needs no narration."
             },
+
+            // La pasada geometrica, anadida el 3-oct-2026. Va aqui por la misma
+            // razon que la de narracion: un medidor que no sale en esta ventana
+            // solo lo puede anadir quien lea el codigo fuente del paquete, y eso
+            // es lo que dejo a P1 sin una sola fila durante dos semanas.
+            new TrackerInfo {
+                componentTypeName    = "A11yGeometryPassTracker",
+                displayName          = "Accessibility geometry pass",
+                description          = "Measures hit target size and text legibility once per scene load, with the figures their documents publish: 3 degrees of FOV at 0.42 m for targets (Meta), and 1.5 degrees at 0.5 m or more for text (Daydream UX-D1).",
+                category             = "Accessibility",
+                target               = TrackerTarget.AnyObject,
+                requiresConfiguration = false,
+                clientAdjustable     = true,
+                preAddHint           = "Reads what the user can see: inactive objects and hidden UI stay out of the count.",
+                postAddHint          = "Nothing to configure. Targets are the objects that already carry InteractableComponent. What the pass cannot measure travels as its own coverage signal instead of disappearing from the denominator."
+            },
+            // La pasada de contraste va aparte de la geometrica a proposito: son
+            // dos recorridos distintos y un cliente puede querer uno sin el otro.
+            new TrackerInfo {
+                componentTypeName    = "A11yContrastPassTracker",
+                displayName          = "Accessibility contrast pass",
+                description          = "Measures text and non-text contrast once per scene load, against a background resolved strictly: only an opaque Image or RawImage that is an ancestor, or a sibling drawn behind, counts. WCAG 2.2: 4.5:1 for text, 3:1 for large text and for user interface components.",
+                category             = "Accessibility",
+                target               = TrackerTarget.AnyObject,
+                requiresConfiguration = false,
+                clientAdjustable     = true,
+                preAddHint           = "Needs no setup, but it only measures where the background is knowable: a text over passthrough, video or a textured sprite has no colour this pass can read.",
+                postAddHint          = "Nothing to configure. How much of the scene it could measure travels as its own coverage signals, so a low number shows up as coverage and never as a failing grade."
+            },
         };
 
         // ---------------------------------------------------------------------------

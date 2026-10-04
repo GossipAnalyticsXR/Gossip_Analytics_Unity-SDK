@@ -78,13 +78,21 @@ namespace GossipSDK.Components
                 var go = instrumentado.gameObject;
                 if (go.scene.IsValid() && go.scene.name != nombreEscena) continue;
 
+                var hayCaja = TryCalcularCaja(go, out var centro, out var tamano);
+
                 tracker.CapSceneObject(
                     go.name,
                     Jerarquia.RutaDe(go.transform),
                     go.tag,
                     "Interactable",
                     nombreEscena,
-                    version);
+                    version,
+                    hayCaja ? centro.x : (float?)null,
+                    hayCaja ? centro.y : (float?)null,
+                    hayCaja ? centro.z : (float?)null,
+                    hayCaja ? tamano.x : (float?)null,
+                    hayCaja ? tamano.y : (float?)null,
+                    hayCaja ? tamano.z : (float?)null);
 
                 enviados++;
             }
@@ -99,6 +107,46 @@ namespace GossipSDK.Components
             {
                 Debug.Log("[SceneInventory] " + enviados + " instrumented objects reported for scene " + nombreEscena);
             }
+        }
+
+        /// <summary>
+        /// Caja del objeto en coordenadas de MUNDO, uniendo la de todos sus Renderer;
+        /// si no tiene ninguno, la de sus Collider. Devuelve false cuando no hay ni una
+        /// cosa ni la otra: ese objeto NO tiene caja, y eso se manda como nulo, no como
+        /// cero.
+        /// Se incluyen los desactivados a proposito: un objeto que arranca oculto sigue
+        /// ocupando su sitio en la escena.
+        /// </summary>
+        private static bool TryCalcularCaja(GameObject go, out Vector3 centro, out Vector3 tamano)
+        {
+            centro = Vector3.zero;
+            tamano = Vector3.zero;
+            if ((Object)go == null) return false;
+
+            var caja = new Bounds();
+            var hay = false;
+
+            foreach (var r in go.GetComponentsInChildren<Renderer>(true))
+            {
+                if ((Object)r == null) continue;
+                if (!hay) { caja = r.bounds; hay = true; }
+                else caja.Encapsulate(r.bounds);
+            }
+
+            if (!hay)
+            {
+                foreach (var c in go.GetComponentsInChildren<Collider>(true))
+                {
+                    if ((Object)c == null) continue;
+                    if (!hay) { caja = c.bounds; hay = true; }
+                    else caja.Encapsulate(c.bounds);
+                }
+            }
+
+            if (!hay) return false;
+            centro = caja.center;
+            tamano = caja.size;
+            return true;
         }
     }
 }
