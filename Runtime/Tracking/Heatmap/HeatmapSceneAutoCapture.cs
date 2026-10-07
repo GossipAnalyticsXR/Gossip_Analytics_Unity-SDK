@@ -8,7 +8,6 @@ namespace GossipSDK.Heatmaps
     public class HeatmapSceneAutoCapture : MonoBehaviour
     {
         [SerializeField] private int textureSize = 2048;
-        [SerializeField] private float padding = 2f;
         [SerializeField] private float captureDelay = 0.5f;
         [SerializeField] private float cameraHeight = 100f;
 
@@ -48,7 +47,12 @@ namespace GossipSDK.Heatmaps
 
         private IEnumerator CaptureAndUpload(HeatmapSceneSpec spec)
         {
-            Bounds bounds = HeatmapSceneBoundsUtility.CalculateSceneBounds();
+            // La camara encuadra EXACTAMENTE la caja que el spec declara: una sola
+            // cuenta para la imagen y para el dato. Antes se calculaba dos veces y no
+            // coincidian, porque aqui se sumaba padding y el spec no lo escribia.
+            float ladoX = spec.MaxX - spec.MinX;
+            float ladoZ = spec.MaxZ - spec.MinZ;
+            Vector3 centro = new Vector3((spec.MinX + spec.MaxX) * 0.5f, 0f, (spec.MinZ + spec.MaxZ) * 0.5f);
 
             GameObject camObj = new GameObject("HeatmapCaptureCamera");
             Camera cam = camObj.AddComponent<Camera>();
@@ -57,10 +61,9 @@ namespace GossipSDK.Heatmaps
             cam.backgroundColor = Color.black;
             cam.enabled = false;
 
-            float size = Mathf.Max(bounds.extents.x, bounds.extents.z) + padding;
-            cam.orthographicSize = size;
+            cam.orthographicSize = Mathf.Max(ladoX, ladoZ) * 0.5f;
 
-            cam.transform.position = bounds.center + Vector3.up * cameraHeight;
+            cam.transform.position = centro + Vector3.up * cameraHeight;
             cam.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
 
             RenderTexture rt = new RenderTexture(textureSize, textureSize, 24);

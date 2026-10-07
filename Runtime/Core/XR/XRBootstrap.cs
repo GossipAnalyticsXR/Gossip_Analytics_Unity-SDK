@@ -53,8 +53,13 @@ namespace GossipSDK.XR
             }
 
             Debug.Log($"[XRBootstrap] Providers initialized");
-            Debug.Log($"[XRBootstrap] EyeGaze: {XRProviders.EyeGaze?.GetType().Name}");
-            Debug.Log($"[XRBootstrap] HeadPose: {XRProviders.HeadPose?.GetType().Name}");
+            // Se leen los estaticos de ESTA clase, que son los que Awake acaba de asignar.
+            // Antes leian XRProviders.EyeGaze y XRProviders.HeadPose, que no los asigna
+            // nadie: barrido de los 171 .cs del repo el 04-10-2026, 0 fallos, y la unica
+            // aparicion de cada uno era esta linea. Las dos salian en blanco, justo cuando
+            // hacian falta para saber que proveedor de mirada quedo activo.
+            Debug.Log($"[XRBootstrap] EyeGaze: {EyeGaze?.GetType().Name}");
+            Debug.Log($"[XRBootstrap] HeadPose: {HeadPose?.GetType().Name}");
             Debug.Log("[XRBootstrap] HandController provider ready");
             Debug.Log($"[XRBootstrap] Session: {XRProviders.Session?.State}");
         }

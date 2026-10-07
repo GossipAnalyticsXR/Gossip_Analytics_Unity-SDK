@@ -297,7 +297,7 @@ namespace GossipSDK.Editor
                 category             = "Accessibility",
                 target               = TrackerTarget.AnyObject,
                 requiresConfiguration = false,
-                clientAdjustable     = true,
+                clientAdjustable     = false,   // 4-oct-2026: bloqueado para el cliente; ver AutoAddTrackers.
                 preAddHint           = "Measures the text your users can actually see. Hidden UI stays out of the count.",
                 postAddHint          = "Add a GossipA11yLabel component to each text you narrate, and tick decorative on the text that needs no narration."
             },
@@ -313,7 +313,7 @@ namespace GossipSDK.Editor
                 category             = "Accessibility",
                 target               = TrackerTarget.AnyObject,
                 requiresConfiguration = false,
-                clientAdjustable     = true,
+                clientAdjustable     = false,   // 4-oct-2026: bloqueado para el cliente; ver AutoAddTrackers.
                 preAddHint           = "Reads what the user can see: inactive objects and hidden UI stay out of the count.",
                 postAddHint          = "Nothing to configure. Targets are the objects that already carry InteractableComponent. What the pass cannot measure travels as its own coverage signal instead of disappearing from the denominator."
             },
@@ -326,7 +326,7 @@ namespace GossipSDK.Editor
                 category             = "Accessibility",
                 target               = TrackerTarget.AnyObject,
                 requiresConfiguration = false,
-                clientAdjustable     = true,
+                clientAdjustable     = false,   // 4-oct-2026: bloqueado para el cliente; ver AutoAddTrackers.
                 preAddHint           = "Needs no setup, but it only measures where the background is knowable: a text over passthrough, video or a textured sprite has no colour this pass can read.",
                 postAddHint          = "Nothing to configure. How much of the scene it could measure travels as its own coverage signals, so a low number shows up as coverage and never as a failing grade."
             },
@@ -1107,7 +1107,10 @@ namespace GossipSDK.Editor
             {
                 var trackerType = GetTrackerType(info.componentTypeName);
                 if (trackerType == null) continue;
-                if (ajustes != null && ajustes.IsTrackerDisabled(info.componentTypeName)) continue;
+                // Los trackers que no son ajustables ignoran el interruptor: su checkbox
+                // esta bloqueado, asi que un apagado guardado antes de bloquearlos los
+                // dejaria apagados para siempre y sin forma de recuperarlos desde aqui.
+                if (info.clientAdjustable && ajustes != null && ajustes.IsTrackerDisabled(info.componentTypeName)) continue;
                 bool isPresent = (Object.FindObjectOfType(trackerType) as Component) != null;
                 if (isPresent) continue;
                 Component addedComp = null;

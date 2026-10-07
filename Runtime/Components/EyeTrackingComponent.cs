@@ -133,24 +133,41 @@ namespace GossipSDK.Components
 
             heatmap.RegisterHit(hit.point);
 
-            var golpeaOtro = hit.collider.gameObject != currentObject;
-            var seFueDelSitio = !golpeaOtro && currentObject != null &&
-                (Vector3.Distance(hit.point, fixationAnchorPoint) > fixationMaxDriftMeters ||
-                 Vector3.Angle(gazeRay.direction, fixationAnchorDir) > fixationMaxDriftDegrees);
-
-            if (golpeaOtro || seFueDelSitio)
+            // 5-oct-2026: el impacto alimenta el mapa SIEMPRE, pero solo cuenta como objeto mirado
+            // lo que la escena instrumenta, o sea lo que lleva InteractableComponent, que es la misma
+            // fuente que usan SceneInventoryComponent y el marco de escena del #184.
+            // Medido sobre los 20.518 mensajes de fijacion del historico: Ground 16.078 -78,4 %-,
+            // Socket 1.727 -8,4 %- y XR Origin (XR Rig) 858 -4,2 %- no estan en el inventario de 36
+            // objetos de Hospital Zone; los que si estan suman 1.847, el 9,0 %. Mismo patron que el
+            // #174 con el rig, pero DESPUES de RegisterHit en vez de antes: el suelo se pinta en el
+            // mapa y no se cuenta como objeto mirado.
+            if (hit.collider.GetComponentInParent<InteractableComponent>() == null)
             {
                 TryEmitFixation();
-                currentObject = hit.collider.gameObject;
+                currentObject = null;
                 fixationTimer = 0f;
-                fixationAnchorPoint = hit.point;
-                fixationAnchorDir = gazeRay.direction;
             }
+            else
+            {
+                var golpeaOtro = hit.collider.gameObject != currentObject;
+                var seFueDelSitio = !golpeaOtro && currentObject != null &&
+                    (Vector3.Distance(hit.point, fixationAnchorPoint) > fixationMaxDriftMeters ||
+                     Vector3.Angle(gazeRay.direction, fixationAnchorDir) > fixationMaxDriftDegrees);
 
-            fixationTimer += Time.deltaTime;
-            pendingHit = hit;
-            pendingGazeRay = gazeRay;
-            pendingSource = source;
+                if (golpeaOtro || seFueDelSitio)
+                {
+                    TryEmitFixation();
+                    currentObject = hit.collider.gameObject;
+                    fixationTimer = 0f;
+                    fixationAnchorPoint = hit.point;
+                    fixationAnchorDir = gazeRay.direction;
+                }
+
+                fixationTimer += Time.deltaTime;
+                pendingHit = hit;
+                pendingGazeRay = gazeRay;
+                pendingSource = source;
+            }
 
             if (heatmapTimer >= heatmapFlushInterval)
             {

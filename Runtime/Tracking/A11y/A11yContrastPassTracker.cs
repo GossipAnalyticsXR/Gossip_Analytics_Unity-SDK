@@ -222,10 +222,29 @@ namespace GossipSDK.Tracking.A11y
 
         // ---------- P3 ----------
 
+        /// <summary>
+        /// P3 mide la interfaz DECLARADA, no la que estuvo en pantalla, y por eso
+        /// este es el unico recorrido de las dos pasadas que pide Include.
+        ///
+        /// El contraste de un rotulo es una propiedad del rotulo: 2:1 sigue siendo
+        /// 2:1 lo vea alguien o no, y WCAG-EM evalua el contenido y no la visita.
+        /// Lo decidio una medicion: el 4-oct-2026, en Hospital Zone, los siete
+        /// TextMeshPro de la escena eran rotulos que aparecen al interactuar y
+        /// estaban desactivados en el frame de la carga, asi que P3 emitio 0/0 y la
+        /// sonda de ACC-49 se quedo sin denominador que leer.
+        ///
+        /// MedirNoTexto -- P6 -- se queda con Exclude unas lineas mas abajo, y no es
+        /// una incoherencia: ahi la poblacion son los controles que habia, y un
+        /// control desactivado no es un control que el usuario pudiera usar.
+        ///
+        /// Lo que esto le cuesta a la lectura: un texto que nunca se dibujo puede no
+        /// tener layout resuelto. A P3 le da igual -- solo lee colores y jerarquia --,
+        /// pero por eso mismo U1, R5 y R6, que necesitan medidas, NO se cambian.
+        /// </summary>
         private void MedirTexto()
         {
             var graficos = FindObjectsByType<Graphic>(
-                FindObjectsInactive.Exclude,
+                FindObjectsInactive.Include,
                 FindObjectsSortMode.None
             );
 

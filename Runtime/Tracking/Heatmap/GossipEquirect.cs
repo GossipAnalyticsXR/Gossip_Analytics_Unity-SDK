@@ -53,7 +53,13 @@ int destRowOffset = destRow * width;
 for (int px = 0; px < width; px++)
 {
 float u = (px + 0.5f) / width;
-float lon = (0.5f - u) * 2f * Mathf.PI;
+// 5-oct-2026: el signo iba al reves y la panoramica salia espejada. Con
+// (0.5 - u) el barrido de izquierda a derecha daba -Z, +X, +Z, -X: lo que
+// esta a tu derecha caia en la mitad izquierda de la imagen. Medido sobre
+// las dos capturas del 4-oct, la de 2048x1024 y la de 4096x2048: el texto
+// del JPG guardado se lee al reves. La convencion vertical ya se habia
+// alineado con el dashboard -ver el comentario de arriba-; la horizontal no.
+float lon = (u - 0.5f) * 2f * Mathf.PI;
 
 Vector3 dir = new Vector3(Mathf.Sin(lon) * cosLat, sinLat, Mathf.Cos(lon) * cosLat);
 

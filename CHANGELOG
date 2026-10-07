@@ -1,3 +1,112 @@
+## [2.0.35] - 2026-10
+
+### Changed
+- **El marco de la imagen de escena deja de ser el objeto mas grande de la escena.**
+  `HeatmapSceneBoundsUtility` gana `CalculateFrame`, que parte de la **union de las cajas de los
+  objetos instrumentados** -misma regla que `SceneInventoryComponent`: los Renderer de los hijos,
+  incluidos los desactivados, y si no hay ninguno los Collider-, la amplia un 50 %, la deja
+  cuadrada y le pone un lado minimo de 10 m. Si la escena no instrumenta nada, respaldo declarado:
+  la union de todos los renderers, como antes.
+  Por que: `CalculateSceneBounds` encapsulaba TODOS los renderers, asi que el marco lo fijaba el
+  mas grande, que es el suelo. Medido el 04-10-2026 sobre las **60 de 60** imagenes de escena
+  guardadas, las tres escenas declaraban **100,0 x 100,0 m identicos al decimal**: el plano
+  `Ground` a escala 10, que son 100 m exactos. El contenido real de Hospital Zone cabe en
+  **6,5 x 7,8 m** -2.072 interacciones medidas-, y los centros de los 19 renderers que no son el
+  suelo en 5,4 x 5,4 m: dos medidas independientes del mismo sitio. Con la regla nueva el marco
+  pasa a ~12 m de lado, el contenido ocupa el **65 %** del lado en vez del **7 %**, y el cubo de
+  agrupacion del dashboard -una fraccion del marco- pasa de **2,0 m a 23 cm**.
+- **El marco viaja sellado en el dato.** `HeatmapSceneSpec` manda `BoundsRule` con la regla que lo
+  calculo. Sin eso nadie puede saber si un `MinX/MaxX` guardado es de los 100 m de antes o del
+  marco nuevo, y las dos convenciones van a convivir en la misma coleccion.
+- `HeatmapSceneAutoCapture` pierde su campo `padding` del Inspector: el margen lo pone ahora la
+  regla del marco, en un solo sitio.
+- **P1 y P3 pasan a medir la interfaz DECLARADA, no solo la que se dibujo.** Su recorrido
+  cambia de `FindObjectsInactive.Exclude` a `Include`. El motivo no es de codigo: un rotulo sin
+  etiqueta de narracion esta sin etiquetar, y uno a 2:1 de contraste falla, **lo vea alguien o
+  no**. WCAG-EM evalua el contenido, no la visita. Lo decidio una medicion: el 4-oct-2026, en
+  Hospital Zone con el SDK 2.0.34, las dos emitieron **0/0** porque los siete TextMeshPro de la
+  escena son rotulos que aparecen al interactuar y estaban desactivados en el frame de la carga.
+  Con la regla vieja, P1 y P3 no pueden medir nada en una app cuya interfaz nace bajo demanda,
+  que son casi todas en un visor.
+- **P4 y P6 conservan `Exclude`, y no es una incoherencia.** Sus criterios SI son de la sesion:
+  el angulo al que se vio un texto y los controles que se pudieron usar. U1, R5 y R6 tampoco se
+  tocan, por un motivo distinto: necesitan tamano preferido y numero de filas, y un objeto que
+  nunca se dibujo no tiene el layout resuelto.
+- Consecuencia que las cards de P1 y P3 tienen que declarar: **su denominador pasa a ser la
+  interfaz declarada**. Sin eso, el rotulo diria una cosa y la consulta mediria otra.
+- **Los tres trackers de accesibilidad se anaden solos, sin abrir el Instrumentation Manager.**
+  `GossipManager` llama a `Ensure` para `TextNarrationCoverageTracker`,
+  `A11yGeometryPassTracker` y `A11yContrastPassTracker` sobre el host de trackers automaticos.
+  Por que: hasta ahora los tres solo existian si alguien los marcaba en la ventana del editor,
+  asi que una app integrada sin pasar por ella no media accesibilidad y la seccion salia vacia
+  sin que nada lo dijera, indistinguible de -no hubo nada que medir-.
+- **Los trackers que el cliente no debe poder apagar quedan fijos en la ventana.**
+  Tres entradas del Instrumentation Manager pasan a `clientAdjustable = false`, y la ventana
+  anade una guarda para que un tracker no ajustable ignore un -apagado- guardado antes.
+  Por que: sin la guarda, un proyecto que ya tenia la casilla desmarcada seguia sin medir
+  despues de fijarla.
+
+### Fixed
+- **ACC-92: P1 perdia el texto de mundo, y cualquier clase derivada.** Su puerta era
+  `graphic is Text || graphic.GetType().Name == "TextMeshProUGUI"`, y esa comparacion por
+  nombre EXACTO dejaba fuera `TextMeshPro` -el texto 3D-, que hereda de `TMP_Text` igual que
+  `TextMeshProUGUI` y sale en el mismo barrido de `Graphic`. Un rotulo flotando en la escena
+  no entraba ni al numerador ni al denominador: no contaba como cubierto ni como sin cubrir,
+  simplemente no existia. Y era asimetrico, porque `graphic is Text` SI acepta las clases
+  derivadas de `Text`. Pasa a usar `A11yTextReader.IsTextComponent`, que sube por la cadena de
+  herencia comparando el nombre COMPLETO del tipo y es la misma puerta de P3, P4 y U1.
+  Consecuencia util: desde aqui P1 y P3 recorren la misma poblacion con la misma exclusion de
+  decorativos, asi que sus denominadores tienen que coincidir. Si algun dia no coinciden, una
+  de las dos se ha desviado.
+- **La camara y el dato declaraban rectangulos distintos.** `CaptureAndUpload` calculaba los
+  bounds por su cuenta y le sumaba `padding` -2 m-, mientras `HeatmapSceneSpec` escribia los
+  bounds crudos: con el marco de 100 m la imagen cubria 104 m y la caja declarada decia 100, un
+  **4 % de error de escala** entre lo que se ve y lo que se mide, y en una escena no cuadrada
+  tambien de forma. Ahora la camara encuadra exactamente la caja del spec: una sola cuenta.
+
+- **El setup automatico del perfil Eye Gaze de OpenXR no existia para Unity.**
+  `Editor/GossipOpenXREyeGazeSetup.cs` entro sin su `.cs.meta`, y un `.cs` sin `.meta` Unity lo
+  ignora entero: ni compila ni falla, simplemente no esta. Y el arreglo no era solo el `.meta`:
+  `GossipSDK.Editor.asmdef` no referenciaba `Unity.XR.OpenXR.Editor`, asi que anadir el `.meta`
+  a secas habria dado CS0234 sobre `UnityEditor.XR.OpenXR.Features` y habria tirado el ensamblado
+  del editor completo, con el Instrumentation Manager y el Quick Setup dentro. Van las dos piezas
+  juntas: el `.meta` con su GUID propio y la referencia.
+  Medido el 05-10-2026: de las cuatro referencias del asmdef, resueltas una por una contra el
+  PackageCache del proyecto de pruebas, **ninguna era `Unity.XR.OpenXR.Editor`** -guid
+  `96aa6ba065960476598f8f643e7252b6`-; y la casilla `EyeGazeInteraction Android` seguia en
+  `m_enabled: 0`, que es por que las dos sesiones del 04-10 dieron **47 de 47 fijaciones con
+  fuente `head`** y ni una con fuente `eye`.
+  Y la 2.0.35 habia anadido antes el `versionDefine` de `com.unity.xr.openxr` (expresion
+  `1.16.1`, simbolo `OPENXR_PRESENT`) en ese mismo asmdef: el simbolo sin la referencia es
+  exactamente lo que deja el `#if OPENXR_PRESENT` del fichero compilando contra tipos que el
+  ensamblado no puede ver.
+
+- **La sonda de XRBootstrap registraba dos lineas en blanco.**
+  El log de arranque leia `XRProviders.EyeGaze` y `XRProviders.HeadPose`, y a esos dos campos
+  no los asigna nadie: la linea salia siempre vacia y parecia que el dispositivo no traia
+  proveedor. Ahora lee los campos locales ya resueltos (`EyeGaze`, `HeadPose`), que son los
+  que el propio metodo acaba de calcular.
+
+- **La panoramica equirectangular salia espejada en horizontal.**
+  `GossipEquirect` mapeaba `lon = (0.5f - u) * 2PI` con `dir = (sin(lon), sinLat, cos(lon))`:
+  barriendo la imagen de izquierda a derecha la direccion iba -Z, +X, +Z, -X, asi que lo que
+  esta a la derecha del observador caia en la mitad izquierda de la imagen. Ahora
+  `lon = (u - 0.5f) * 2PI`; el centro sigue siendo +Z, de modo que `YawOffsetDeg` no cambia
+  de significado.
+  Medido el 05-10-2026 abriendo el JPG guardado sin pasar por el visor: las dos capturas del
+  04-10, la de 2048x1024 y la de 4096x2048, traen el texto del mundo al reves. Corrige las
+  capturas nuevas; las 123 ya guardadas se quedan espejadas.
+
+- **El suelo se pinta en el mapa pero deja de contar como objeto mirado.**
+  `EyeTrackingComponent` sigue llamando a `RegisterHit` con cada impacto -el heatmap no pierde
+  densidad-, pero solo abre fijacion sobre lo que la escena instrumenta, o sea lo que lleva
+  `InteractableComponent`, la misma fuente que usan `SceneInventoryComponent` y el marco de
+  escena. Mismo patron que el del rig, pero DESPUES de `RegisterHit` en vez de antes.
+  Medido el 05-10-2026 sobre los 20.518 mensajes de fijacion del historico: `Ground` 16.078
+  -78,4 %-, `Socket` 1.727 -8,4 %- y `XR Origin (XR Rig)` 858 -4,2 %- no estan en el inventario
+  de 36 objetos de Hospital Zone; los que si estan suman 1.847, el 9,0 %. Los organos pasan de
+  4,4 / 1,8 / 1,4 / 1,0 % del total a 48,7 / 20,0 / 15,5 / 11,3 % de lo que de verdad se mira.
+
 ## [2.0.34] - 2026-10
 
 ### Fixed

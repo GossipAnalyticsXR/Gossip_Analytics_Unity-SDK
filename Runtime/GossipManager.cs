@@ -9,6 +9,7 @@ using GossipSDK.Core.Configuration;
 using GossipSDK.Components;
 using GossipSDK.XR;
 using GossipSDK.Tracking.GameplayMetrics;
+using GossipSDK.Tracking.A11y;
 using Cysharp.Threading.Tasks;
 using UnityEngine.Android;
 
@@ -353,6 +354,15 @@ go.AddComponent<GossipSDK.Heatmaps.HeatmapPanoramaAutoCapture>();
             Ensure(typeof(CrashReporterComponent),              autoTrackersHost);
             Ensure(typeof(AdComponent),                         autoTrackersHost);
             Ensure(typeof(PassthroughComponent),                autoTrackersHost);
+
+            // Los tres medidores de accesibilidad. Hasta hoy solo los anadia
+            // AutoAddTrackers(), que corre al abrir el Instrumentation Manager: un
+            // proyecto que nunca abriera esa ventana se llevaba la build sin ellos.
+            // Desde el 4-oct-2026 su checkbox esta bloqueado, asi que el cliente ya no
+            // puede anadirlos a mano y tienen que existir por aqui.
+            Ensure(typeof(TextNarrationCoverageTracker),        autoTrackersHost);
+            Ensure(typeof(A11yGeometryPassTracker),             autoTrackersHost);
+            Ensure(typeof(A11yContrastPassTracker),             autoTrackersHost);
             Ensure(typeof(MicPermissionComponent), autoTrackersHost);
             Ensure(typeof(SceneInventoryComponent),             autoTrackersHost);
 
