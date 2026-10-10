@@ -1,3 +1,19 @@
+## [2.0.36] - 2026-10
+
+### Fixed
+- **`Window > Gossip Analytics` no aparecia en ningun proyecto con OpenXR.**
+  `GossipSDK.Editor.asmdef` gana la referencia al ensamblado de **runtime** `Unity.XR.OpenXR`.
+  `FeatureHelpers.GetFeatureWithIdForBuildTarget` devuelve `OpenXRFeature`, que vive ahi y no en
+  `Unity.XR.OpenXR.Editor`, que es lo unico que la 2.0.35 referencio al anadir
+  `GossipOpenXREyeGazeSetup.cs`.
+  Medido el 07-10-2026 en VR-Anatomy-Lab: `GossipOpenXREyeGazeSetup.cs(49,31): error CS0012`,
+  `GossipSDK.Editor.dll` sin generar, y los **tres** MenuItem del SDK sin registrar -Quick Setup,
+  Instrumentation Manager y Uninstall SDK viven todos en ese ensamblado, y `PackageChecker` no
+  tiene ninguno, asi que no quedaba puerta manual.
+  Alcance: cualquier proyecto con `com.unity.xr.openxr` >= 1.16.1, que es cuando el versionDefine
+  enciende `OPENXR_PRESENT` y el fichero entra a compilar. El chequeo Roslyn del CI daba verde
+  porque la sintaxis era correcta: lo que faltaba era una referencia de ensamblado.
+
 ## [2.0.35] - 2026-10
 
 ### Changed
