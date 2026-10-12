@@ -1,3 +1,17 @@
+## [2.0.37] - 2026-10
+
+### Fixed
+- **El heatmap enviaba un documento por flush aunque no hubiera ni una celda.**
+  `HeatmapTracker.CapSparse` construia la lista y llamaba a `CapSession` sin mirar si tenia
+  algo, y `InteractableComponent.FlushHeatmap` solo guardaba contra `heatmap == null`, asi que
+  una sesion que no tocaba nada seguia escribiendo un sobre vacio cada `flushIntervalSeconds`.
+  Medido el 10-10-2026 en produccion: de los 338 documentos de interaccion de Hospital Zone
+  1.1.4, **273 (81 %) iban vacios**, y **29 de sus 43 sesiones no mandaron otra cosa**; en la
+  1.1.3, 120 de 936. Las fuentes continuas no se ven afectadas: `eye_gaze` y `player_movement`
+  tenian **0 sobres vacios** sobre 9.070 documentos, porque mirar y andar siempre producen celda.
+  No se pierde dato: la matriz de `HeatmapManager` acumula y no se vacia al capturar, asi que lo
+  registrado viaja en el primer flush que si trae celdas.
+
 ## [2.0.36] - 2026-10
 
 ### Fixed

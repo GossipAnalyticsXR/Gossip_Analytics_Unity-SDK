@@ -4,6 +4,8 @@ using GossipSDK.Core;
 using GossipSDK.Tracking;
 using GossipSDK.Heatmaps;
 using System;
+using System.Collections.Generic;
+using GossipSDK.Tracking.GameplayMetrics;
 
 namespace GossipSDK.Components
 {
@@ -23,6 +25,22 @@ namespace GossipSDK.Components
         private HeatmapManager heatmapManager;
         private float sampleTimer;
         private float flushTimer;
+
+        // La ruta temporal, aparte del histograma. El histograma suma y no guarda ni el
+        // orden ni el instante de cada muestra; Behavior view necesita las dos cosas, asi
+        // que la muestra cruda se lleva en paralelo y se vuelca con el mismo sobre.
+        private struct MuestraDeRuta
+        {
+            public float X;
+            public float Z;
+            public double T;
+        }
+
+        private readonly List<MuestraDeRuta> rutaBuffer = new List<MuestraDeRuta>();
+
+        // Tope de seguridad: a 4 Hz son mas de 8 minutos sin volcar. Si se alcanza se deja
+        // de anadir en lugar de crecer sin limite, y el histograma no se entera.
+        private const int MaxMuestrasDeRuta = 2000;
 
         private void Start()
         {
@@ -76,7 +94,17 @@ namespace GossipSDK.Components
             if (heatmapManager == null) return;
 
             Vector3 pos = transform.position;
-            heatmapManager.RegisterHit(pos);
+
+            // RegisterHit devuelve false cuando la posicion cae fuera de la rejilla y la
+            // descarta (HeatmapManager.HitsDiscarded). La ruta tiene que descartarla tambien:
+            // si no, el camino lleva puntos que el histograma rechazo por estar fuera del
+            // marco, y en el payload no hay forma de distinguirlos.
+            if (!heatmapManager.RegisterHit(pos)) return;
+
+            if (rutaBuffer.Count < MaxMuestrasDeRuta)
+            {
+                rutaBuffer.Add(new MuestraDeRuta { X = pos.x, Z = pos.z, T = Time.realtimeSinceStartupAsDouble });
+            }
         }
 
         private void FlushHeatmap()
@@ -84,16 +112,54 @@ namespace GossipSDK.Components
             var tracker = Gossip.Instance?.HeatmapTracker;
             if (tracker == null || heatmapManager == null) return;
 
+            var ruta = ConstruirRuta();
+
             tracker.CapFromHeatmap(
                 heatmapManager,
                 heatmapSource: "player_movement",
-                sparse: true
+                sparse: true,
+                path: ruta
             );
+
+            // Se limpia pase lo que pase: si CapSparse descarto la captura por no traer
+            // celdas es que no se registro ningun hit en la rejilla, asi que lo que hubiera
+            // en el buffer cae fuera del marco. Guardarlo solo acumularia basura.
+            rutaBuffer.Clear();
 
             Debug.Log($"[GossipDiag] movement hits registered={heatmapManager.HitsRegistered} discarded={heatmapManager.HitsDiscarded}");
 
             if (Gossip.Instance?.Settings?.EnableDebug == true)
                 Debug.Log("[Heatmap] Player movement heatmap flushed");
+        }
+
+        // T viaja como milisegundos ANTES del TimestampUtc que HeatmapTracker pone al
+        // construir el sobre, asi que el instante absoluto de cada punto es
+        // TimestampUtc - T. Devuelve null cuando no hay nada: con NullValueHandling.Ignore
+        // el campo no se serializa y el JSON queda igual que antes.
+        //
+        // El reloj es realtimeSinceStartupAsDouble y NO timeAsDouble: este ultimo avanza
+        // escalado por Time.timeScale, mientras que el TimestampUtc del sobre es reloj de
+        // pared. Con una pausa o una camara lenta, TimestampUtc - T daria el instante
+        // absoluto equivocado a todos los puntos del volcado.
+        private List<HeatmapTracker.PathPoint> ConstruirRuta()
+        {
+            if (rutaBuffer.Count == 0) return null;
+
+            double ahora = Time.realtimeSinceStartupAsDouble;
+            var ruta = new List<HeatmapTracker.PathPoint>(rutaBuffer.Count);
+
+            for (int i = 0; i < rutaBuffer.Count; i++)
+            {
+                MuestraDeRuta m = rutaBuffer[i];
+                ruta.Add(new HeatmapTracker.PathPoint
+                {
+                    X = m.X,
+                    Z = m.Z,
+                    T = (int)Math.Round((ahora - m.T) * 1000.0)
+                });
+            }
+
+            return ruta;
         }
 
         private void OnDisable()

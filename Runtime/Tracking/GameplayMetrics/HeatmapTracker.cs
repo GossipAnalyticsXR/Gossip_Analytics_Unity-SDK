@@ -26,6 +26,21 @@ namespace GossipSDK.Tracking.GameplayMetrics
             [JsonProperty("CenterZ")] public float CenterZ { get; set; }
         }
 
+        // Una muestra cruda de la ruta, con su instante. El histograma de celdas no
+        // guarda ni el orden ni el tiempo: suma. Behavior view necesita las dos cosas,
+        // asi que viajan aparte y SIN tocar nada de lo que ya se enviaba.
+        //
+        // T son los milisegundos ANTES del TimestampUtc del sobre, asi que el instante
+        // absoluto de cada punto es TimestampUtc - T. Se eligio asi para no depender de
+        // cuando empezo la sesion ni de la cadencia del flush.
+        [Serializable]
+        public class PathPoint
+        {
+            [JsonProperty("X")] public float X { get; set; }
+            [JsonProperty("Z")] public float Z { get; set; }
+            [JsonProperty("T")] public int T { get; set; }
+        }
+
         [Serializable]
         public class EntityData : Data
         {
@@ -45,6 +60,15 @@ namespace GossipSDK.Tracking.GameplayMetrics
             [JsonProperty("SparseCells", NullValueHandling = NullValueHandling.Ignore)]
             public List<SparseCell> SparseCells { get; set; }
 
+            // Opcional a proposito: con NullValueHandling.Ignore, un tracker que no la
+            // asigne manda exactamente el mismo JSON que antes. Hoy solo la rellena
+            // PlayerMovementHeatmapComponent; eye, interactable y audio no se tocan.
+            //
+            // Viaja solo por la rama sparse (CapSparse). CapDense no la lleva porque el
+            // movimiento captura con sparse: true.
+            [JsonProperty("Path", NullValueHandling = NullValueHandling.Ignore)]
+            public List<PathPoint> Path { get; set; }
+
             [JsonProperty("TimestampUtc")] public string TimestampUtc { get; set; }
         }
 
@@ -55,7 +79,8 @@ namespace GossipSDK.Tracking.GameplayMetrics
             Tracking.HeatmapManager hm,
             string heatmapSource,
             bool sparse = true,
-            bool rowMajor = true)
+            bool rowMajor = true,
+            List<PathPoint> path = null)
         {
             if (Gossip.Instance?.Settings?.EnableHeatmaps == false)
             {
@@ -75,7 +100,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
 
                 if (sparse)
                 {
-                    CapSparse(hm, heatmapSource, cols, rows, cellSize, origin, matrix);
+                    CapSparse(hm, heatmapSource, cols, rows, cellSize, origin, matrix, path);
                 }
                 else
                 {
@@ -96,7 +121,8 @@ namespace GossipSDK.Tracking.GameplayMetrics
             int rows,
             float cellSize,
             Vector2 origin,
-            int[,] matrix)
+            int[,] matrix,
+            List<PathPoint> path = null)
         {
             var sparseCells = new List<SparseCell>();
 
@@ -118,6 +144,23 @@ namespace GossipSDK.Tracking.GameplayMetrics
                 }
             }
 
+            // Un sobre sin celdas no es un dato, es ruido. La matriz acumula y no
+            // se vacia al capturar -HeatmapManager no tiene Clear ni Reset-, asi que
+            // todo lo registrado viaja en el siguiente flush que si traiga celdas:
+            // esta guarda no puede perder nada, solo deja de enviar el vacio.
+            // Medido el 10-10-2026 en produccion: de los 338 documentos de
+            // interaccion de Hospital Zone 1.1.4, 273 (81 %) iban vacios, y 29 de
+            // sus 43 sesiones no mandaron otra cosa.
+            if (sparseCells.Count == 0)
+            {
+                if (Gossip.Instance?.Settings?.EnableDebug == true)
+                {
+                    Debug.Log($"[HeatmapTracker] Skipped empty capture ({source})");
+                }
+
+                return;
+            }
+
             CapSession(new EntityData
             {
                 SceneName = hm.SceneName,
@@ -129,6 +172,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
                 OriginX = origin.x,
                 OriginZ = origin.y,
                 SparseCells = sparseCells,
+                Path = (path != null && path.Count > 0) ? path : null,
                 TimestampUtc = DateTime.UtcNow.ToString("o")
             });
         }
