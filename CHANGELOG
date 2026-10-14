@@ -1,3 +1,21 @@
+## [2.0.38] - 2026-10
+
+### Changed
+- **Las panoramicas de dwell se capturan a 4096x2048 en vez de 2048x1024.**
+  `HeatmapDwellPanoramaCapture` usaba `faceSize` 1024 y equirect 2048x1024, que son 5,69
+  pixeles por grado. El visor del dashboard pide 20,23 px/grado -- lienzo WebGL de 1416 px de
+  alto con DPR 2 y fov vertical de 70 --, asi que la imagen se ampliaba 3,56x, y hasta 8,9x
+  con el zoom al maximo: el cartel del quiz de Hospital Zone no se podia leer. Medido el
+  14-10-2026 sobre lo que sirve el dashboard: de 53 panoramicas de Hospital Zone 1.1.4, 44
+  (el 83 %) eran de dwell a 2048x1024. A 4096x2048 la ampliacion baja a 1,78x.
+  No es un pico de memoria nuevo: `HeatmapPanoramaAutoCapture` ya captura a esa misma
+  especificacion una vez por sesion, y reparte sus 6 caras una por fotograma mientras el
+  dwell las separa 0,5 s. Coste de subida medido en los ficheros reales: 145 KB -> 408 KB por
+  captura; las 53 panoramicas de esa escena en tres semanas pasan de ~10,0 MB a ~21,6 MB.
+  `maxZonesPerSession` se deja en 10: es el corte duro de la linea 79, no un regulador, y
+  bajarlo solo quitaria el 16 % de las capturas sesgando la galeria hacia el principio de la
+  sesion (mediana real medida: 2 capturas de dwell por sesion, con 3 de 19 por encima de 4).
+
 ## [2.0.37] - 2026-10
 
 ### Fixed

@@ -27,9 +27,24 @@ namespace GossipSDK.Heatmaps
         [SerializeField] private int maxZonesPerSession = 10;
 
         [Header("Capture quality (dwell captures; the setup baseline uses its own settings)")]
-        [SerializeField] private int faceSize = 1024;
-        [SerializeField] private int equirectW = 2048;
-        [SerializeField] private int equirectH = 1024;
+        // Medido el 14-10-2026 contra lo que sirve el dashboard: de 53 panoramicas de
+        // Hospital Zone 1.1.4, 44 (el 83 %) son de dwell a 2048x1024, o sea 5,69 pixeles
+        // por grado. El visor del dashboard pide 20,23 px/grado -- lienzo WebGL de 1416 px
+        // de alto con DPR 2 y fov vertical de 70 --, asi que la imagen se ampliaba 3,56x, y
+        // hasta 8,9x con el zoom al maximo. A 4096x2048 son 11,38 px/grado: 1,78x.
+        //
+        // No es un pico de memoria nuevo: HeatmapPanoramaAutoCapture ya captura a
+        // faceSize 2048 y 4096x2048 una vez por sesion, y lo hace mas agresivo todavia
+        // (sus 6 caras van una por fotograma, mientras estas van con faceInterval 0,5 s).
+        //
+        // Coste de guardado medido sobre los ficheros reales: 145 KB -> 408 KB por captura.
+        // Las 53 panoramicas de esa escena en tres semanas pasan de ~10,0 MB a ~21,6 MB.
+        // maxZonesPerSession se queda en 10 a proposito: no es un regulador, es el corte
+        // duro de la linea 79, y bajarlo solo quitaria el 16 % de las capturas sesgando la
+        // galeria hacia el principio de la sesion (mediana real: 2 dwell por sesion).
+        [SerializeField] private int faceSize = 2048;
+        [SerializeField] private int equirectW = 4096;
+        [SerializeField] private int equirectH = 2048;
         [SerializeField] private int jpgQuality = 85;
 
         // Hands/controllers/body always sit right next to the head (the capture point), so

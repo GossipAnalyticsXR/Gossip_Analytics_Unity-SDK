@@ -163,7 +163,14 @@ namespace GossipSDK.Core.Connection
             throw new Exception($"Could not open LiteDB after {maxAttempts} attempts", lastEx);
         }
 
-        public void CapSession(T1 entityData)
+        // Devuelve si la fila quedo guardada. Antes era void y tragaba la excepcion, asi
+        // que quien llamaba no podia distinguir exito de fallo: el heatmap se recupera solo
+        // porque su matriz es acumulativa, pero la ruta temporal no, y se perdia entera.
+        //
+        // Pasar de void a bool es compatible en codigo fuente: las 47 llamadas que ignoran
+        // el retorno siguen compilando, y la de SessionManager.cs:474 es por reflexion
+        // -GetMethod sigue encontrandola e Invoke descarta el resultado-.
+        public bool CapSession(T1 entityData)
         {
             if (string.IsNullOrEmpty(localDBPath))
                 Initialize();
@@ -183,10 +190,13 @@ namespace GossipSDK.Core.Connection
                     doc["__sessionID"] = gossipCap?.CurrentSessionId ?? string.Empty;
                     db.GetCollection(DataBaseName).Insert(doc);
                 }
+
+                return true;
             }
             catch (Exception ex)
             {
                 Debug.LogException(new Exception($"CapSession failed for {DataBaseName}: {ex.Message}", ex));
+                return false;
             }
         }
 

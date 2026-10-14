@@ -75,7 +75,10 @@ namespace GossipSDK.Tracking.GameplayMetrics
         [Serializable]
         public class TrackerMessage : Message<EntityData> { }
 
-        public void CapFromHeatmap(
+        // Devuelve si la captura quedo guardada, para que quien tenga un bufer propio -la
+        // ruta de PlayerMovementHeatmapComponent- sepa si puede vaciarlo. La matriz de
+        // celdas no lo necesita: es acumulativa y se recupera sola en el siguiente volcado.
+        public bool CapFromHeatmap(
             Tracking.HeatmapManager hm,
             string heatmapSource,
             bool sparse = true,
@@ -88,10 +91,10 @@ namespace GossipSDK.Tracking.GameplayMetrics
                 {
                     Debug.Log("[HeatmapTracker] Heatmaps disabled by settings");
                 }
-                return;
+                return false;
             }
 
-            if (hm == null) return;
+            if (hm == null) return false;
 
             try
             {
@@ -100,21 +103,20 @@ namespace GossipSDK.Tracking.GameplayMetrics
 
                 if (sparse)
                 {
-                    CapSparse(hm, heatmapSource, cols, rows, cellSize, origin, matrix, path);
+                    return CapSparse(hm, heatmapSource, cols, rows, cellSize, origin, matrix, path);
                 }
-                else
-                {
-                    CapDense(hm, heatmapSource, cols, rows, cellSize, origin, matrix, rowMajor);
-                }
+
+                return CapDense(hm, heatmapSource, cols, rows, cellSize, origin, matrix, rowMajor);
             }
             catch (Exception ex)
             {
                 Debug.LogException(new Exception(
                     $"[HeatmapTracker] Capture failed ({heatmapSource})", ex));
+                return false;
             }
         }
 
-        private void CapSparse(
+        private bool CapSparse(
             Tracking.HeatmapManager hm,
             string source,
             int cols,
@@ -158,10 +160,10 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     Debug.Log($"[HeatmapTracker] Skipped empty capture ({source})");
                 }
 
-                return;
+                return false;
             }
 
-            CapSession(new EntityData
+            return CapSession(new EntityData
             {
                 SceneName = hm.SceneName,
                 HeatmapSource = source,
@@ -177,7 +179,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
             });
         }
 
-        private void CapDense(
+        private bool CapDense(
             Tracking.HeatmapManager hm,
             string source,
             int cols,
@@ -202,7 +204,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
                         flat.Add(matrix[x, y]);
             }
 
-            CapSession(new EntityData
+            return CapSession(new EntityData
             {
                 SceneName = hm.SceneName,
                 HeatmapSource = source,

@@ -114,17 +114,23 @@ namespace GossipSDK.Components
 
             var ruta = ConstruirRuta();
 
-            tracker.CapFromHeatmap(
+            var guardado = tracker.CapFromHeatmap(
                 heatmapManager,
                 heatmapSource: "player_movement",
                 sparse: true,
                 path: ruta
             );
 
-            // Se limpia pase lo que pase: si CapSparse descarto la captura por no traer
-            // celdas es que no se registro ningun hit en la rejilla, asi que lo que hubiera
-            // en el buffer cae fuera del marco. Guardarlo solo acumularia basura.
-            rutaBuffer.Clear();
+            // Solo se limpia si la fila quedo guardada. Si no, los puntos se quedan y viajan
+            // en el siguiente volcado: la matriz de celdas se recupera sola porque es
+            // acumulativa, pero la ruta no, y limpiarla a ciegas la perdia entera.
+            //
+            // No hay riesgo de duplicar: si no se guardo, no hay fila con esos puntos. El
+            // tope de MaxMuestrasDeRuta es el que acota el buffer si el fallo se repite.
+            if (guardado)
+            {
+                rutaBuffer.Clear();
+            }
 
             Debug.Log($"[GossipDiag] movement hits registered={heatmapManager.HitsRegistered} discarded={heatmapManager.HitsDiscarded}");
 
