@@ -153,12 +153,30 @@ namespace GossipSDK.Editor
                                                     Debug.LogWarning("[Gossip Analytics] Could not find 'settings' property on GossipManager. Please assign the settings asset manually.");
                                 }
 
-                                // STEP 4 — Mark scene dirty and show completion dialog
-                                EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+                                // STEP 4 — Guardar la escena y mostrar el dialogo de cierre
+                                //
+                                // MarkSceneDirty solo pone el asterisco: el manager vive en memoria hasta que
+                                // alguien guarda. El asset de settings, en cambio, ya esta en disco por el
+                                // AssetDatabase.SaveAssets() de arriba, y el desinstalador SI guarda cada escena
+                                // que toca (GossipUninstaller.cs:88 y :108). Esa asimetria es la que muerde:
+                                // quien cierra Unity sin guardar se queda con los settings creados y SIN manager
+                                // en la escena, y concluye que el SDK no funciona. Medido el 14-10-2026 en un
+                                // proyecto real: GossipAnalyticsSettings.asset escrito a las 17:17 y la escena
+                                // en disco a las 17:08, nueve minutos ANTES.
+                                var activeScene = SceneManager.GetActiveScene();
+                                EditorSceneManager.MarkSceneDirty(activeScene);
+
+                                // Una escena sin ruta no se ha guardado nunca: ahi SaveScene abriria un dialogo
+                                // de fichero, asi que no se fuerza y se avisa en el texto.
+                                bool sceneSaved = !string.IsNullOrEmpty(activeScene.path)
+                                                    && EditorSceneManager.SaveScene(activeScene);
 
                                 EditorUtility.DisplayDialog(
                                                     "Gossip Analytics — Setup Complete ✅",
-                                                    "GossipAnalyticsManager is ready in your scene.\n\nThe Inspector will show your GossipAnalyticsSettings. Get your 3 API Keys (Dev, Beta, Production) from the Gossip Analytics dashboard -> Company Overview section, enter them, then press Check Connection to verify.\n\nNext: open Window -> Gossip Analytics -> 2 -- Instrumentation Manager to select which objects to track interactions on.",
+                                                    (sceneSaved
+                                                                    ? "GossipAnalyticsManager is ready in your scene, and the scene has been saved.\n\n"
+                                                                    : "GossipAnalyticsManager is ready in your scene, but the scene is NOT saved yet. Save it now (File -> Save) or the manager will be gone when you close Unity.\n\n")
+                                                    + "The Inspector will show your GossipAnalyticsSettings. Get your 3 API Keys (Dev, Beta, Production) from the Gossip Analytics dashboard -> Company Overview section, enter them, then press Check Connection to verify.\n\nNext: open Window -> Gossip Analytics -> 2 -- Instrumentation Manager to select which objects to track interactions on.",
                                                     "OK");
 
                                 EditorApplication.delayCall += () => {

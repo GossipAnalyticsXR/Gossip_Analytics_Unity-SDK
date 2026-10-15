@@ -14,8 +14,21 @@ namespace GossipSDK.Heatmaps
         /// <summary>Lado minimo del marco, en metros, para la escena que instrumenta dos botones.</summary>
         public const float MinFrameSide = 10f;
 
+    /// <summary>
+    /// Tope del crecimiento que el marco toma de la caja de la escena. NO recorta
+    /// lo que pide el contenido instrumentado: solo limita cuanto puede estirarse
+    /// hacia el suelo de la escena.
+    ///
+    /// Medido el 14-10-2026 en Hospital Zone 1.1.4: el marco publicado eran
+    /// 10,25 x 10,25 m y la actividad real de 148 sesiones se extiende 69 x 73 m.
+    /// Solo el 63,04 % de las muestras caia dentro. Con 40 m entra el 99,76 %, y
+    /// de 40 a 50 m solo se ganan 0,17 puntos: ahi la curva deja de pagar.
+    /// </summary>
+    public const float MaxSceneGrowthSide = 40f;
+
         public const string RuleInstrumented = "instrumented-union-x1.5-min10";
         public const string RuleRenderers = "renderers-union-x1.5-min10";
+    public const string RuleInstrumentedScene = "instrumented-union-x1.5-min10-scene-max40";
 
         /// <summary>
         /// El marco que encuadra la escena: cuadrado, con margen y lado minimo.
@@ -44,6 +57,28 @@ namespace GossipSDK.Heatmaps
             }
 
             float side = Mathf.Max(baseBounds.size.x, baseBounds.size.z) * FrameMargin;
+
+            // El #21. La caja instrumentada dice donde estan los objetos, no por
+            // donde anda la gente, y son conjuntos distintos: por eso el marco solo
+            // podia quedarse corto. Aqui se le deja crecer hacia la caja de la
+            // escena, pero CON TOPE, que es lo que a la regla vieja de renderers le
+            // faltaba: aquella daba 100 x 100 m y todo salia diminuto (lo medido el
+            // 04-10-2026, arriba).
+            //
+            // Nunca encoge: se toma el MAYOR entre lo que pide lo instrumentado y
+            // lo que cabe hasta el tope, asi que ningun marco de hoy puede empeorar.
+            if (rule == RuleInstrumented)
+            {
+                Bounds escena = CalculateSceneBounds();
+                float ladoEscena = Mathf.Max(escena.size.x, escena.size.z) * FrameMargin;
+                float crecido = Mathf.Min(ladoEscena, MaxSceneGrowthSide);
+                if (crecido > side)
+                {
+                    side = crecido;
+                    rule = RuleInstrumentedScene;
+                }
+            }
+
             if (side < MinFrameSide) side = MinFrameSide;
 
             float alto = Mathf.Max(baseBounds.size.y, 0.01f);

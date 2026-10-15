@@ -34,13 +34,41 @@ namespace GossipAnalytics.Editor
                 aviso = sb.ToString();
             }
 
-            bool confirm = EditorUtility.DisplayDialog(
-                "Uninstall Gossip Analytics SDK",
-                "This will remove:\n\n- All Gossip Analytics components from your scenes (GossipAnalyticsManager, InteractableComponent, VRPermissionsHandler, and all tracker components)\n\n- GossipAnalyticsSettings asset\n\n- GossipInstrumentationData asset\n\n- Assets/Samples/Gossip Analytics SDK/ folder\n\n- The SDK package itself (com.gossip.core)\n\nThis will NOT remove:\n\n- Your own scripts or scenes\n\n- Dependency packages (LiteDB, R3, UniTask, XR packages)\n\n- README, CHANGELOG or LICENSE files (removed with the package automatically)" + aviso,
-                "Uninstall",
-                "Cancel");
+            // El detalle completo va a la Consola ANTES de preguntar, tambien si se cancela:
+            // DisplayDialog no tiene scroll ni se puede copiar, asi que un proyecto con 80
+            // escenas no cabe dentro. En el modal van dos numeros; los nombres, aqui.
+            var conteo = ContarEscenas();
+            LogearConteo(conteo);
 
-            if (!confirm) return;
+            int n = conteo.aLimpiar.Count;
+            string frase = n == 0
+                ? "The SDK is not in any of your scenes."
+                : ("The SDK comes out of " + n + (n == 1 ? " scene." : " scenes."));
+
+            int m = conteo.intactas.Count;
+            string intactas = m == 0
+                ? string.Empty
+                : (m == 1
+                    ? "\n\n1 other scene is not touched and will show errors when you open it. Details in the Console."
+                    : "\n\n" + m + " other scenes are not touched and will show errors when you open them. Details in the Console.");
+
+            // Boton por defecto = Keep SDK. En DisplayDialog el primer boton es el que
+            // responde a Enter, y quien viene de darle Enter a tres dialogos seguidos de
+            // Unity no deberia desinstalar por inercia.
+            bool keep = EditorUtility.DisplayDialog(
+                "Uninstall Gossip Analytics SDK",
+                frase + " Your scenes and your own objects stay."
+                + "\n\nYour API keys and tracking choices go too. Everything is backed up first, so you can put it back."
+                + intactas + aviso,
+                "Keep SDK",
+                "Uninstall");
+
+            if (keep) return;
+
+            // El respaldo va antes del paso 1, que es el que guarda las escenas.
+            string respaldo = RespaldarAntesDeBorrar(conteo.aLimpiar);
+            if (respaldo != null)
+                Debug.Log("[GossipUninstaller] Backup written to: " + respaldo);
 
             try
             {
@@ -67,6 +95,136 @@ namespace GossipAnalytics.Editor
         }
 
         // ---- Step 1: Remove SDK components from all build scenes ----
+
+        // ---- Pasada en seco: cuantas escenas se tocan y cuantas se quedan con el SDK ----
+
+        private sealed class ConteoEscenas
+        {
+            public List<string> aLimpiar = new List<string>();   // se tocan y se guardan
+            public List<string> intactas = new List<string>();   // llevan SDK y NO se tocan
+        }
+
+        private static ConteoEscenas ContarEscenas()
+        {
+            var r = new ConteoEscenas();
+            var destino = new HashSet<string>(StringComparer.Ordinal);
+
+            // 1) Escenas abiertas: se mira en memoria, que es exacto aunque no esten guardadas.
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                var sc = SceneManager.GetSceneAt(i);
+                if (!sc.isLoaded || string.IsNullOrEmpty(sc.path)) continue;
+                destino.Add(sc.path);
+                if (EscenaAbiertaTieneSdk(sc)) r.aLimpiar.Add(sc.path);
+            }
+
+            // 2) Escenas de Build Settings activadas que no estaban abiertas: por texto.
+            foreach (var sceneRef in EditorBuildSettings.scenes)
+            {
+                if (!sceneRef.enabled || destino.Contains(sceneRef.path)) continue;
+                destino.Add(sceneRef.path);
+                if (FicheroDeEscenaTieneSdk(sceneRef.path)) r.aLimpiar.Add(sceneRef.path);
+            }
+
+            // 3) El resto de escenas del proyecto no se tocan, pero si llevan SDK quedaran con
+            //    scripts perdidos cuando el paquete se vaya. Eso se dice ANTES de pulsar.
+            foreach (var guid in AssetDatabase.FindAssets("t:Scene", new[] { "Assets" }))
+            {
+                string ruta = AssetDatabase.GUIDToAssetPath(guid);
+                if (string.IsNullOrEmpty(ruta) || destino.Contains(ruta)) continue;
+                if (FicheroDeEscenaTieneSdk(ruta)) r.intactas.Add(ruta);
+            }
+
+            return r;
+        }
+
+        private static void LogearConteo(ConteoEscenas c)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append("[GossipUninstaller] Dry run - ").Append(c.aLimpiar.Count)
+              .Append(" scene(s) the SDK comes out of:");
+            if (c.aLimpiar.Count == 0) sb.Append(" none");
+            foreach (var p in c.aLimpiar) sb.Append("\n  ").Append(p);
+            sb.Append("\n[GossipUninstaller] ").Append(c.intactas.Count)
+              .Append(" scene(s) NOT touched (not open and not enabled in Build Settings) that still contain SDK objects:");
+            if (c.intactas.Count == 0) sb.Append(" none");
+            foreach (var p in c.intactas) sb.Append("\n  ").Append(p);
+            Debug.Log(sb.ToString());
+        }
+
+        private static bool EscenaAbiertaTieneSdk(Scene scene)
+        {
+            var tipos = GetGossipComponentTypes();
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                if (root == null) continue;
+                foreach (var comp in root.GetComponentsInChildren<Component>(true))
+                    if (comp != null && IsGossipComponent(comp.GetType(), tipos)) return true;
+            }
+            return false;
+        }
+
+        // No se abre la escena para contar: con 80 escenas, abrirlas una por una costaria mas
+        // que la propia desinstalacion, y abrir descarta lo que no este guardado. Los dos
+        // marcadores que el SDK deja en el .unity son el guid del prefab del manager y su
+        // nombre. Puede sobrar -nunca faltar- y para un aviso ese es el lado seguro.
+        private static bool FicheroDeEscenaTieneSdk(string rutaRelativa)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(rutaRelativa)) return false;
+                string absoluta = System.IO.Path.Combine(RaizDelProyecto(), rutaRelativa);
+                if (!System.IO.File.Exists(absoluta)) return false;
+                string texto = System.IO.File.ReadAllText(absoluta);
+                if (texto.IndexOf(ResolveManagerPrefabGuid(), StringComparison.Ordinal) >= 0) return true;
+                return texto.IndexOf("Gossip", StringComparison.Ordinal) >= 0;
+            }
+            catch { return false; }
+        }
+
+        // ---- Respaldo, antes de tocar nada ----
+
+        private static string RaizDelProyecto()
+        {
+            return System.IO.Directory.GetParent(Application.dataPath).FullName;
+        }
+
+        // El respaldo va FUERA de Assets/. Dentro, Unity lo importaria y el paso 2, que busca
+        // los assets por tipo con FindAssets, encontraria tambien las copias y borraria el
+        // propio respaldo.
+        private static string RespaldarAntesDeBorrar(List<string> escenas)
+        {
+            string raiz = RaizDelProyecto();
+            string carpeta = System.IO.Path.Combine(raiz, "GossipUninstallBackup",
+                DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+            try
+            {
+                System.IO.Directory.CreateDirectory(carpeta);
+                foreach (var ruta in escenas) CopiarAlRespaldo(raiz, ruta, carpeta);
+                foreach (var g in AssetDatabase.FindAssets("t:GossipAnalyticsSettings"))
+                    CopiarAlRespaldo(raiz, AssetDatabase.GUIDToAssetPath(g), carpeta);
+                foreach (var g in AssetDatabase.FindAssets("t:GossipInstrumentationData"))
+                    CopiarAlRespaldo(raiz, AssetDatabase.GUIDToAssetPath(g), carpeta);
+                return carpeta;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[GossipUninstaller] Backup failed: " + ex.Message);
+                return null;
+            }
+        }
+
+        private static void CopiarAlRespaldo(string raiz, string rutaRelativa, string carpeta)
+        {
+            if (string.IsNullOrEmpty(rutaRelativa)) return;
+            string origen = System.IO.Path.Combine(raiz, rutaRelativa);
+            if (!System.IO.File.Exists(origen)) return;
+            string destino = System.IO.Path.Combine(carpeta, rutaRelativa);
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(destino));
+            System.IO.File.Copy(origen, destino, true);
+            if (System.IO.File.Exists(origen + ".meta"))
+                System.IO.File.Copy(origen + ".meta", destino + ".meta", true);
+        }
 
 private static void RunStep1_RemoveSceneComponents()
         {

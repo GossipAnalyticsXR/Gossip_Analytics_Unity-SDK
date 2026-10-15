@@ -1,3 +1,53 @@
+## [2.0.39] - 2026-10
+
+### Changed
+- El marco de la captura de escena puede crecer hacia la caja de la escena, con un
+  tope de 40 m (MaxSceneGrowthSide). Antes salia solo de la union de los objetos
+  instrumentados por 1,5, y eso mide donde estan los objetos, no por donde anda la
+  gente: en Hospital Zone 1.1.4 el marco publicado eran 10,25 x 10,25 m mientras la
+  actividad real de 148 sesiones se extendia 69 x 73 m, y solo el 63,04 % de las
+  muestras caia dentro (medido el 14-10-2026 sobre 255.470 celdas en Mongo). Con el
+  tope de 40 m entra el 99,76 %; de 40 a 50 m solo se ganan 0,17 puntos.
+- El marco nunca encoge: se toma el mayor entre lo que pide el contenido
+  instrumentado y lo que cabe hasta el tope, asi que ninguna escena ya capturada
+  empeora. La regla vieja de renderers sin tope, retirada el 04-10-2026, daba
+  100 x 100 m y dejaba el contenido diminuto; el tope es lo que le faltaba.
+- `boundsRule` dice ahora `instrumented-union-x1.5-min10-scene-max40` cuando el marco
+  ha crecido por esta via, para poder distinguirlo del anterior sin aritmetica.
+
+### Nota
+- El marco se calcula una sola vez por escena y version (`WasUploaded`), asi que las
+  escenas ya capturadas conservan el suyo hasta que se recapturen.
+
+### Fixed
+- **El Quick Setup no guardaba la escena, asi que el manager se perdia al cerrar Unity.**
+  `GossipAnalyticsSetup` llamaba solo a `EditorSceneManager.MarkSceneDirty`, que pone el
+  asterisco pero no escribe nada; el asset de settings, en cambio, ya quedaba en disco por
+  su `AssetDatabase.SaveAssets()`, y el desinstalador **si** guarda cada escena que toca
+  (`GossipUninstaller.cs:88` y `:108`). Con esa asimetria, quien cerraba Unity sin guardar
+  se quedaba con la configuracion creada y **sin** `GossipAnalyticsManager` en la escena, y
+  el diagnostico natural es que el SDK no funciona. Medido el 14-10-2026 en un proyecto
+  real: `GossipAnalyticsSettings.asset` escrito a las 17:17 y la escena en disco a las
+  17:08, nueve minutos ANTES. Ahora el setup guarda la escena y lo dice en el dialogo; si
+  la escena no tiene ruta -nunca se guardo- no se fuerza ningun dialogo de fichero y el
+  texto pide guardarla a mano.
+
+- **El desinstalador no respaldaba nada, y guardaba cada escena que tocaba.**
+  Ahora copia, antes del primer borrado, cada escena que va a tocar y los assets
+  `GossipAnalyticsSettings` y `GossipInstrumentationData` a
+  `GossipUninstallBackup/<fecha-hora>/`, **fuera de `Assets/`** -dentro, Unity lo importaria
+  y el propio paso de borrado encontraria las copias con su `FindAssets` y se las llevaria
+  tambien. Medido antes del cambio: 0 apariciones de `.bak`, `File.Copy` o `CopyAsset` en las
+  450 lineas del desinstalador, mientras `SaveScene` aparecia dos veces.
+- **El dialogo de confirmacion decia que quitaba componentes «de tus escenas», sin decir de
+  cuales ni cuantas.** Ahora cuenta sin abrir ninguna escena -en memoria las abiertas, por
+  texto del `.unity` las demas- y dice dos numeros: de cuantas escenas sale el SDK y cuantas
+  se quedan sin tocar y acabaran con missing scripts al abrirlas. Nunca enumera: la altura del
+  dialogo es la misma con 2 escenas que con 2.000, y el detalle por escena se escribe en la
+  Consola antes de preguntar, tambien si se cancela.
+- **En ese dialogo, Enter desinstalaba.** `Keep SDK` pasa a ser el primer boton, que es el que
+  responde a Enter.
+
 ## [2.0.38] - 2026-10
 
 ### Changed
