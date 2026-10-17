@@ -136,6 +136,32 @@ namespace GossipSDK.Core.Configuration
                 return $"{ServerURL}{heatmapSceneUploadPath}";
             }
         }
+        // El nombre de una escena es el nombre de su fichero .unity: al renombrarlo
+        // cambian el nombre Y la ruta. El GUID del asset no cambia, pero solo se lee
+        // desde el editor, asi que GossipBuildPreprocessor lo hornea aqui en cada
+        // build y SceneIdentity lo busca por ruta en runtime. Oculto en el inspector:
+        // es dato generado, no una opcion que el cliente toque.
+        [System.Serializable]
+        public struct SceneGuidEntry
+        {
+            public string path;
+            public string guid;
+        }
+
+        [HideInInspector] [SerializeField] private SceneGuidEntry[] sceneGuids;
+
+        public string SceneGuidForPath(string scenePath)
+        {
+            if (string.IsNullOrEmpty(scenePath) || sceneGuids == null) return string.Empty;
+
+            for (int i = 0; i < sceneGuids.Length; i++)
+            {
+                if (sceneGuids[i].path == scenePath)
+                    return sceneGuids[i].guid ?? string.Empty;
+            }
+
+            return string.Empty;
+        }
 
         private void Reset()
         {

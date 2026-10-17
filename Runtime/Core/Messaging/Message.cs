@@ -38,5 +38,11 @@ namespace GossipSDK.Core.Messaging
         // cortar el dato por epoca se hacia comparando fechas a mano, que es fragil.
         [field: SerializeField]
         public string SdkVersion { get; set; }
+
+        // Identidad estable de la escena. SceneUser trae GetActiveScene().name, que
+        // cambia al renombrar el fichero .unity; el GUID del asset no. Mismo punto de
+        // inyeccion que IsEditor y SdkVersion, asi que lo llevan TODOS los eventos.
+        [field: SerializeField]
+        public string SceneGuid { get; set; }
     }
 }

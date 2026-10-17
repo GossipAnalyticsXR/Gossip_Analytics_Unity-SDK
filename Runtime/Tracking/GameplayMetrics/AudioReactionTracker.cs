@@ -49,6 +49,13 @@ namespace GossipSDK.Tracking.GameplayMetrics
                 get; set;
             }
 
+            // Identidad de la escena, congelada con el nombre. La subida del audio arma
+            // su propio sobre en EndpointConnection y no pasa por el punto de inyeccion.
+            public string SceneGuid
+            {
+                get; set;
+            }
+
             public string TimestampUtc
             {
                 get; set;

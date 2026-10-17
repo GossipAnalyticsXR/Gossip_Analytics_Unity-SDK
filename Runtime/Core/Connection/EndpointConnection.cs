@@ -53,6 +53,7 @@ namespace GossipSDK.Core.Connection
                         sceneUser = spec.SceneName,
                         TimestampUtc = DateTime.UtcNow.ToString("o"),
                         SceneName = spec.SceneName,
+                        SceneGuid = spec.SceneGuid,
                         SceneVersion = spec.Version,
                         Image = new { Format = "png", DataBase64 = imageBase64 },
                         messages = new[] { spec }
@@ -87,6 +88,7 @@ PlayerID = gossip.CurrentPlayerId,
 SessionID = gossip.CurrentSessionId,
 TimestampUtc = DateTime.UtcNow.ToString("o"),
 SceneName = spec.SceneName,
+SceneGuid = spec.SceneGuid,
 SceneVersion = spec.Version,
 Camera = new { Position = new { x = spec.PositionX, y = spec.PositionY, z = spec.PositionZ } },
 YawOffsetDeg = spec.YawOffsetDeg,
@@ -119,6 +121,7 @@ callback?.Invoke(false);
                 var camFov = cam.fieldOfView;
                 var camAspect = cam.aspect;
                 var sceneName = SceneManager.GetActiveScene().name;
+                var sceneGuid = GossipSDK.Core.Configuration.SceneIdentity.CurrentSceneGuid(gossip.Settings);
                 var objId = interactedObject.GetInstanceID().ToString();
                 var objName = interactedObject.name;
                 var appVersion = Application.version;
@@ -133,6 +136,7 @@ callback?.Invoke(false);
                         SessionID = gossip.CurrentSessionId,
                         TimestampUtc = DateTime.UtcNow.ToString("o"),
                         SceneName = sceneName,
+                        SceneGuid = sceneGuid,
                         SceneVersion = appVersion,
                         Interaction = new { ObjectId = objId, ObjectName = objName, InteractionType = interactionType },
                         Camera = new
@@ -165,6 +169,7 @@ public async UniTask UploadEyeGazeImage(Ray gazeRay, RaycastHit hit, float fixat
                 if (png == null || png.Length == 0 || !ValidateSession(gossip)) { callback?.Invoke(false); return; }
 
                 var sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+                var sceneGuid = GossipSDK.Core.Configuration.SceneIdentity.CurrentSceneGuid(gossip.Settings);
 
                 string hitName = hit.collider != null ? hit.collider.gameObject.name : null;
                 string hitTag = hit.collider != null ? hit.collider.gameObject.tag : null;
@@ -182,6 +187,7 @@ public async UniTask UploadEyeGazeImage(Ray gazeRay, RaycastHit hit, float fixat
                         SessionID = gossip.CurrentSessionId,
                         TimestampUtc = DateTime.UtcNow.ToString("o"),
                         SceneName = sceneName,
+                        SceneGuid = sceneGuid,
                         SceneVersion = appVersion,
                         Gaze = new
                         {
@@ -241,6 +247,7 @@ public async UniTask UploadEyeGazeImage(Ray gazeRay, RaycastHit hit, float fixat
                         PlayerID = gossip.CurrentPlayerId,
                         SessionID = gossip.CurrentSessionId,
                         SceneName = data.SceneName,
+                        SceneGuid = data.SceneGuid,
                         TimestampUtc = data.TimestampUtc,
 
                         // Que version del SDK produjo esta reaccion. Sin esto no se

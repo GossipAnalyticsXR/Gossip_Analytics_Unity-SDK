@@ -11,6 +11,10 @@ namespace GossipSDK.Heatmaps
         public string SessionID;
 
         public string SceneName;
+        // El nombre viene de GetActiveScene().name, que cambia al renombrar el fichero
+        // .unity. El GUID no. Se congela aqui, en el mismo instante que el nombre: la
+        // subida ocurre despues y en un hilo de fondo, donde no se puede resolver.
+        public string SceneGuid;
 
         public int ImageWidth;
         public int ImageHeight;
@@ -41,6 +45,7 @@ namespace GossipSDK.Heatmaps
             return new HeatmapSceneSpec
             {
                 SceneName = SceneManager.GetActiveScene().name,
+                SceneGuid = GossipSDK.Core.Configuration.SceneIdentity.CurrentSceneGuid(GossipSDK.Core.Gossip.Instance?.Settings),
                 ImageWidth = width,
                 ImageHeight = height,
 

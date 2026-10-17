@@ -633,6 +633,7 @@ if (Time.time < lastTriggerTime + cooldownSeconds)
                 EmotionalScore = score,
                 TriggerMode = signals == 3 ? "3_of_3" : "2_of_3",
                 SceneName = sceneName,
+                SceneGuid = GossipSDK.Core.Configuration.SceneIdentity.CurrentSceneGuid(Gossip.Instance?.Settings),
                 TimestampUtc = DateTime.UtcNow.ToString("o")
             };
 

@@ -424,6 +424,10 @@ namespace GossipSDK.Core.Connection
                     // envia. Con esta linea TODOS los tipos de evento la llevan en el sobre,
                     // no solo AudioReactionTracker, que era el unico que la mandaba.
                     Data.SdkVersion = Constants.SdkVersion;
+
+                    // Y lo mismo con la identidad de la escena: SceneUser trae el nombre,
+                    // que cambia al renombrar el .unity. El GUID del asset no cambia.
+                    Data.SceneGuid = GossipSDK.Core.Configuration.SceneIdentity.CurrentSceneGuid(gossip.Settings);
                 }
 
 

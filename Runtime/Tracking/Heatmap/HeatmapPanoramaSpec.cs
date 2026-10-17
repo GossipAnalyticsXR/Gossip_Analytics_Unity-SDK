@@ -10,6 +10,9 @@ public class HeatmapPanoramaSpec
 public string PlayerID;
 public string SessionID;
 public string SceneName;
+// El GUID se congela aqui, en el mismo instante que el nombre: la subida ocurre
+// despues y en un hilo de fondo, donde no se puede resolver.
+public string SceneGuid;
 public string Version;
 public string TimestampUtc;
 public float PositionX;
@@ -24,6 +27,7 @@ public static HeatmapPanoramaSpec CreateForCurrentScene(Vector3 pos, float yawOf
 return new HeatmapPanoramaSpec
 {
 SceneName = SceneManager.GetActiveScene().name,
+SceneGuid = GossipSDK.Core.Configuration.SceneIdentity.CurrentSceneGuid(GossipSDK.Core.Gossip.Instance?.Settings),
 Version = Application.version,
 TimestampUtc = DateTime.UtcNow.ToString("o"),
 PositionX = pos.x,

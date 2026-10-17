@@ -1,3 +1,32 @@
+## [2.0.40] - 2026-10
+
+### Added
+- Identidad estable de escena: el SDK manda ahora SceneGuid, el GUID del fichero .unity,
+  ademas del nombre. En Unity el nombre de una escena ES el nombre de su fichero, asi que
+  al renombrarla cambian el nombre y la ruta y el dashboard la ve como una escena nueva:
+  el historico se parte en dos. El GUID no cambia, porque el .meta viaja con el asset.
+  Medido el 17-10-2026 en un proyecto real: renombrar Hospital Zone.unity a Hospital.unity
+  dejo el .meta intacto (guid 99c9720ab356a0642a771bea13969a05, con fecha del 27-abr) y la
+  entrada de Build Settings en su sitio, porque esa lista se guarda por GUID.
+- SceneIdentity.CurrentSceneGuid() resuelve el GUID de la escena activa: en el editor en
+  vivo con AssetDatabase, y en un build desde el mapa ruta -> GUID que hornea
+  GossipBuildPreprocessor dentro de GossipSettings. Devuelve cadena vacia cuando no se
+  puede resolver (escena creada en runtime, cargada de un bundle, o ruta no horneada), y
+  entonces se agrupa por el nombre como hasta ahora.
+- El GUID viaja por cuatro caminos: el sobre de TODOS los eventos (GenericSocketConnection,
+  el mismo punto unico de inyeccion que IsEditor y SdkVersion), el mensaje de interaccion
+  (InteractionTracker), las cinco subidas de EndpointConnection (foto de escena, panoramica,
+  foto de interaccion, foto de mirada y reaccion de audio) y las dos fichas de captura
+  (HeatmapSceneSpec, HeatmapPanoramaSpec). En las subidas se congela en el mismo instante
+  que el nombre: la serializacion ocurre despues y en un hilo de fondo, donde ni SceneManager
+  ni AssetDatabase son validos.
+
+### Changed
+- GossipBuildPreprocessor hornea el mapa de escenas en TODOS los builds, tambien los de
+  desarrollo. El early return de las builds de desarrollo estaba antes de cargar los ajustes,
+  asi que un build de dev se habria quedado sin identidad de escena. Ese early return sigue
+  protegiendo lo unico que protegia: EnableDebug no se toca en builds de desarrollo.
+
 ## [2.0.39] - 2026-10
 
 ### Changed

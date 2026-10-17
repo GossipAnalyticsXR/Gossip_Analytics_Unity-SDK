@@ -38,6 +38,10 @@ namespace GossipSDK.Tracking.GameplayMetrics
             [field: SerializeField] public string StartTimestampUtc { get; set; }
             [field: SerializeField] public string EndTimestampUtc { get; set; }
             [field: SerializeField] public string SceneName { get; set; }
+            // Identidad estable de la escena DENTRO del mensaje, no solo en el sobre: la lista
+            // de escenas del dashboard agrupa por messages.SceneName, asi que el GUID tiene
+            // que viajar aqui para que un renombrado no parta la escena en dos.
+            [field: SerializeField] public string SceneGuid { get; set; }
             [field: SerializeField] public string TimestampUtc { get; set; }
 
             [JsonConstructor]
@@ -109,6 +113,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     StartTimestampUtc = timestampUtc,
                     EndTimestampUtc = null,
                     SceneName = sceneName ?? UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
+                    SceneGuid = GossipSDK.Core.Configuration.SceneIdentity.CurrentSceneGuid(GossipSDK.Core.Gossip.Instance?.Settings),
                     TimestampUtc = DateTime.UtcNow.ToString("o")
                 };
 
@@ -147,6 +152,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     StartTimestampUtc = DateTime.UtcNow.AddSeconds(-durationSeconds).ToString("o"),
                     EndTimestampUtc = endTimestampUtc ?? DateTime.UtcNow.ToString("o"),
                     SceneName = sceneName ?? UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
+                    SceneGuid = GossipSDK.Core.Configuration.SceneIdentity.CurrentSceneGuid(GossipSDK.Core.Gossip.Instance?.Settings),
                     TimestampUtc = DateTime.UtcNow.ToString("o")
                 };
 
@@ -187,6 +193,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     StartTimestampUtc = null,
                     EndTimestampUtc = DateTime.UtcNow.ToString("o"),
                     SceneName = sceneName ?? UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
+                    SceneGuid = GossipSDK.Core.Configuration.SceneIdentity.CurrentSceneGuid(GossipSDK.Core.Gossip.Instance?.Settings),
                     TimestampUtc = DateTime.UtcNow.ToString("o")
                 };
 
@@ -224,6 +231,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     StartTimestampUtc = timestampUtc,
                     EndTimestampUtc = timestampUtc,
                     SceneName = sceneName ?? UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
+                    SceneGuid = GossipSDK.Core.Configuration.SceneIdentity.CurrentSceneGuid(GossipSDK.Core.Gossip.Instance?.Settings),
                     TimestampUtc = DateTime.UtcNow.ToString("o")
                 };
 
