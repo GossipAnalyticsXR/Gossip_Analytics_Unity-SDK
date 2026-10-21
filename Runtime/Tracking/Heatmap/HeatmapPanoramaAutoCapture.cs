@@ -12,6 +12,8 @@ public class HeatmapPanoramaAutoCapture : MonoBehaviour
 [SerializeField] private int equirectW = 4096;
 [SerializeField] private int equirectH = 2048;
 [SerializeField] private int jpgQuality = 85;
+private System.DateTime captureStartedUtc;
+private System.DateTime captureEndedUtc;
 
 private static bool s_captured;
 
@@ -65,7 +67,9 @@ if (gossip.Settings.EnableDebug) Debug.Log("[HeatmapPanorama] capturing...");
 var faceColors = new Color32[6][];
 var bases = GossipEquirect.BuildFaceBases(0f);
 
+captureStartedUtc = System.DateTime.UtcNow;
 yield return CaptureFaces(capturePos, bases, faceColors);
+captureEndedUtc = System.DateTime.UtcNow;
 
 CaptureAndUploadAsync(capturePos, bases, faceColors, gossip).Forget();
 }
@@ -151,6 +155,12 @@ Object.Destroy(outTex);
 var spec = HeatmapPanoramaSpec.CreateForCurrentScene(capturePos, 0f, w, h);
 spec.PlayerID = gossip.CurrentPlayerId;
 spec.SessionID = gossip.CurrentSessionId;
+// Aqui las seis caras salen en el mismo fotograma, asi que inicio y fin
+// quedan practicamente iguales. Se sellan igual que en el dwell para que
+// la diferencia entre los dos captadores sea medible en el dato.
+spec.CaptureSource = "auto";
+spec.CaptureStartUtc = captureStartedUtc.ToString("o");
+spec.CaptureEndUtc = captureEndedUtc.ToString("o");
 
 Debug.Log("[HeatmapPanorama] captured position=" + capturePos.ToString("F4") + " yawOffsetDeg=0.00 width=" + w + " height=" + h);
 

@@ -74,6 +74,7 @@ namespace GossipSDK.Heatmaps
         private Color32[][] faceColors;
         private int nextFace;
         private float faceTimer;
+        private System.DateTime captureStartedUtc;
         private List<Renderer> hiddenRenderers;
 
         private void Update()
@@ -130,6 +131,7 @@ namespace GossipSDK.Heatmaps
         private void StartCapture(Vector3 anchor)
         {
             isCapturing = true;
+            captureStartedUtc = System.DateTime.UtcNow;
             hasDwellAnchor = false;
             captureAnchor = anchor;
             nextFace = 0;
@@ -265,6 +267,11 @@ private void FinishCapture()
             var spec = HeatmapPanoramaSpec.CreateForCurrentScene(capturedPos, 0f, equirectW, equirectH);
             spec.PlayerID = gossip.CurrentPlayerId;
             spec.SessionID = gossip.CurrentSessionId;
+            // La ventana real: seis caras a faceInterval, no un instante. Se sella aqui
+            // para que el dato diga cuanto duro y que componente la tomo.
+            spec.CaptureSource = "dwell";
+            spec.CaptureStartUtc = captureStartedUtc.ToString("o");
+            spec.CaptureEndUtc = System.DateTime.UtcNow.ToString("o");
 
             BuildAndUploadAsync(spec, bases, colors, gossip).Forget();
         }

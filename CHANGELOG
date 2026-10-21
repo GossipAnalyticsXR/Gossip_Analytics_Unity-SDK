@@ -1,3 +1,24 @@
+## [2.0.42] - 2026-10
+
+### Added
+- El sobre de la panoramica declara su procedencia y su ventana real de captura:
+  CaptureSource dice que componente la tomo, y CaptureStartUtc / CaptureEndUtc
+  cuanto duro. Hasta ahora viajaba un unico TimestampUtc para las seis caras.
+- HeatmapDwellPanoramaCapture sella la ventana de su captura por goteo: una cara
+  cada faceInterval -0,5 s por defecto-, seis caras, 3 segundos de escena en una
+  sola foto.
+- HeatmapPanoramaAutoCapture sella inicio y fin igual, y ahi coinciden porque sus
+  seis caras salen en el mismo fotograma. Esa diferencia es justo lo que hace
+  medible cual de los dos captadores produjo cada imagen.
+- Cero cambio de comportamiento: la captura se sigue tomando igual. Esto es la
+  instrumentacion que faltaba para poder atribuir el defecto antes de tocarlo.
+  Medido el 21-oct-2026 sobre las 159 panoramicas servidas, 0 fallos: 66 llevan
+  una discontinuidad vertical en cielo o suelo, donde no hay objetos que la
+  expliquen, y 54 de esas 66 son estructurales -la geometria no casa entre caras-.
+  El control es la panoramica 6ad2e9fd, la unica abierta entera: tiene el mismo
+  objeto dos veces y otro ausente. El lado de servidor ya acepta y guarda los tres
+  campos desde el PR #153 del Backend-SDK.
+
 ## [2.0.41] - 2026-10
 
 ### Added

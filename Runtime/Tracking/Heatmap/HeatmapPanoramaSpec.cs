@@ -22,6 +22,13 @@ public float YawOffsetDeg;
 public int ImageWidth;
 public int ImageHeight;
 
+// Procedencia y ventana real. TimestampUtc es una sola marca para las seis
+// caras; estos dos dicen cuanto duro de verdad la captura, y CaptureSource
+// que componente la tomo. ISO 8601, igual que TimestampUtc.
+public string CaptureSource;
+public string CaptureStartUtc;
+public string CaptureEndUtc;
+
 public static HeatmapPanoramaSpec CreateForCurrentScene(Vector3 pos, float yawOffsetDeg, int width, int height)
 {
 return new HeatmapPanoramaSpec
