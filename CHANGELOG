@@ -1,3 +1,30 @@
+## [2.0.43] - 2026-10
+
+### Added
+- Cobertura de alternativas de texto. La pasada de geometria que ya recorria los
+  objetos visibles publica ahora la clave `alt_text_coverage`: la parte de los
+  elementos no-texto informativos o interactivos que llevan descripcion. Es la
+  que alimenta P2 del dashboard, que hasta hoy no tenia emisor.
+- Sin tracker nuevo y sin barrido nuevo. La regla entra dentro del bucle que ya
+  existia, en la rama donde antes habia un `continue` seco, asi que
+  `FindObjectsByType<Graphic>` se sigue llamando una sola vez por pasada.
+- Lee el mismo `GossipA11yLabel` que ya leen P1, P4 y P3. `GossipA11yAltText`
+  sigue en el paquete sin un solo lector; queda registrado y no se toca aqui.
+- Test de contrato sobre las claves de metrica: son constantes publicas, casan
+  con el patron de minusculas y guion bajo, y no se repiten. Hasta ahora nada
+  impedia que dos trackers emitieran la misma clave y se pisaran en la base.
+
+### Changed
+- El tracker de geometria pasa de 445 a 487 lineas y emite 8 claves, las 8
+  distintas. Automatico: el cliente no anade nada a la escena, y lo que ya se
+  media no cambia -- lo unico nuevo es una clave mas en el mismo sobre.
+
+  Medido el 21-oct-2026 sobre dev con la 2.0.42 instalada: la card de P2 dice
+  `No data for this range.` mientras el resto de Perceptible mide 203 textos
+  (87 evaluables para contraste, 44 de 101 legibles, 0 de 203 con narracion).
+  El lado de servidor ya acepta la clave desde el PR 647 del Backend-Front, del
+  mismo dia, asi que esa card se llena en cuanto esta version se instale.
+
 ## [2.0.42] - 2026-10
 
 ### Added

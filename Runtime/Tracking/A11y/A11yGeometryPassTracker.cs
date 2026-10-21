@@ -68,6 +68,14 @@ namespace GossipSDK.Tracking.A11y
         public const string ClaveDeSubtitulosMedidos = "caption_measurable_coverage";
 
         /// <summary>
+        /// P2. Graficos NO textuales que llevan descripcion: el `label` de
+        /// GossipA11yLabel relleno, o `decorative` marcado. Un decorativo CUENTA
+        /// como resuelto -- WCAG no pide alternativa para lo que no aporta
+        /// informacion --, y un label en blanco o solo con espacios NO cuenta.
+        /// </summary>
+        public const string ClaveDeAlternativa = "alt_text_coverage";
+
+        /// <summary>
         /// La guia de subtitulos de Meta: dos filas como mucho, y unos 32
         /// caracteres por fila. Lo que se comprueba es el PRESUPUESTO -filas
         /// por caracteres- y no el reparto fila a fila, porque el texto de
@@ -273,10 +281,43 @@ namespace GossipSDK.Tracking.A11y
             int medibles = 0;
             int conformes = 0;
 
+            // P2. Contadores propios: el denominador de alternativas no es el de
+            // texto, son los graficos no textuales de la pantalla.
+            int noTextoVisibles = 0;
+            int noTextoDescritos = 0;
+
             foreach (var grafico in graficos)
             {
                 if ((Object)grafico == null) continue;
-                if (!A11yTextReader.IsTextComponent(grafico)) continue;
+                // P2 va por aqui: lo que NO es texto es justo lo que esta rama
+                // descartaba. Sin barrido nuevo -- este `graficos` ya esta recorrido --
+                // y sin componente nuevo: se lee el MISMO GossipA11yLabel que ya leen
+                // P1, P4 y P3, no el GossipA11yAltText que vive en el paquete sin un
+                // solo lector. Pedir dos componentes para decir lo mismo seria trabajo
+                // del cliente a cambio de nada.
+                //
+                // NO se filtra por tronco de vision, al reves que el texto de abajo y a
+                // proposito: una imagen necesita descripcion mire quien mire hacia donde
+                // mire. Atarlo a la mirada haria que P2 cambiase de valor segun donde
+                // estuviera la cabeza en ese frame.
+                if (!A11yTextReader.IsTextComponent(grafico))
+                {
+                    noTextoVisibles++;
+
+                    var descripcion = grafico.GetComponent<GossipA11yLabel>();
+                    if (
+                        (Object)descripcion != null
+                        && (
+                            descripcion.decorative
+                            || !string.IsNullOrWhiteSpace(descripcion.label)
+                        )
+                    )
+                    {
+                        noTextoDescritos++;
+                    }
+
+                    continue;
+                }
 
                 // Misma exclusion que P1: lo marcado como decorativo no se
                 // juzga, aqui tampoco.
@@ -320,6 +361,7 @@ namespace GossipSDK.Tracking.A11y
 
             Emitir(ClaveDeTexto, conformes, medibles, true);
             Emitir(ClaveDeTextosMedidos, medibles, enCamara, false);
+            Emitir(ClaveDeAlternativa, noTextoDescritos, noTextoVisibles, true);
         }
 
         // ---------- U1 ----------
