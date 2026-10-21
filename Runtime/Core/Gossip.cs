@@ -82,6 +82,7 @@ namespace GossipSDK.Core
         public HandControllerTracker HandControllerTracker { get; private set; }
         public MicPermissionTracker MicPermissionTracker { get; private set; }
         public A11yTracker A11yTracker { get; private set; }
+        public A11ySettingsTracker A11ySettingsTracker { get; private set; }
 
         public UserInfoTracker UserInfoTracker { get; private set; }
         public UserPostureTracker UserPostureTracker { get; private set; }
@@ -156,6 +157,14 @@ namespace GossipSDK.Core
             if (AudioReactionTracker == null) AudioReactionTracker = new AudioReactionTracker();
             if(A11yTracker == null) A11yTracker = new A11yTracker();
 
+            // ACC-31 F2. Las cuatro senales del sistema: lectura de apertura y alta a
+            // sus eventos de cambio. Mismo sitio y misma forma que UserInfoTracker,
+            // doce lineas mas abajo: automatico, el cliente no anade nada. Si dependiera
+            // de un componente en la escena, la cobertura de R1 y R2 seria decision del
+            // cliente y su denominador dejaria de significar lo que dice.
+            if (A11ySettingsTracker == null) A11ySettingsTracker = new A11ySettingsTracker();
+            A11ySettingsTracker.CaptureOnce();
+
             if (UserInfoTracker == null) UserInfoTracker = new UserInfoTracker();
             UserInfoTracker.CaptureOnce();
             if (!string.IsNullOrEmpty(Settings?.GetActiveServerUrl()))
@@ -216,6 +225,7 @@ namespace GossipSDK.Core
             NetworkUsageTracker = null;
             UserPostureTracker = null;
             StopResendWorker();
+            A11ySettingsTracker?.Unsubscribe();
         }
 
         public void SetCurrentIds(string playerId, string sessionId)
@@ -328,6 +338,7 @@ namespace GossipSDK.Core
                     AudioReactionTracker,
                     HandControllerTracker,
                     A11yTracker,
+                    A11ySettingsTracker,
                     EyeTrackingTracker,
                     InputUsageTracker,
                 // Estos cuatro estaban SOLO en el barrido de 5 s de GossipManager, que no arranca

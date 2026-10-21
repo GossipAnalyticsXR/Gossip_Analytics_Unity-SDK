@@ -20,6 +20,11 @@
             "name": "com.meta.xr.sdk.core",
             "expression": "67.0.0",
             "define": "META_CORE"
+        },
+        {
+            "name": "com.unity.modules.accessibility",
+            "expression": "1.0.0",
+            "define": "GOSSIP_A11Y_MODULE"
         }
     ],
     "noEngineReferences": false

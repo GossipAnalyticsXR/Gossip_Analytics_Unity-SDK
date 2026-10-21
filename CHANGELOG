@@ -1,3 +1,32 @@
+## [2.0.41] - 2026-10
+
+### Added
+- Ajustes de accesibilidad del sistema: el SDK lee lector de pantalla, escala
+  de letra, negrita y subtitulos, y los manda como evento `a11y_settings`.
+  Alimentan R1 y R2 del dashboard, que describen a quien usa la app y no
+  puntuan a la app. Automatico: el cliente no anade nada a la escena.
+- Una fila por LECTURA, no un valor por sesion. Las cuatro senales tienen
+  evento de cambio en la propia API de Unity, asi que se captura la lectura
+  de apertura y una mas por cada cambio del sistema. El backend ya guarda
+  ese historico desde el PR #152.
+- `null` no es `false`. Si el modulo no esta, o la plataforma no lo puebla,
+  la senal viaja `null` -no se pudo leer-, que no es lo mismo que `false`
+  -el sistema lo tiene apagado-. Una lectura sin ninguna de las cuatro no se
+  envia.
+
+### Changed
+- El bloque que usa el modulo de accesibilidad compila solo cuando el modulo
+  esta: `versionDefines` de `com.unity.modules.accessibility` -> simbolo
+  `GOSSIP_A11Y_MODULE`. El paquete declara Unity 2022.3 y el modulo existe
+  desde 2023.2, asi que sin esta guarda el paquete dejaria de compilar en el
+  minimo que el propio `package.json` promete. Verificado compilando el
+  fichero con el simbolo y sin el: las dos pasadas en verde.
+- El guardia de contrato `A11yPayloadContractTests` cubre tambien el cuerpo
+  del tracker nuevo. Estaba anclado a mano en `A11yTracker`, asi que un
+  tracker nuevo nacia sin cubrir y el fallo que ese test existe para evitar
+  -campos en vez de propiedades, fila vacia en LiteDB, medido en gafas el
+  24-sep-2026- podia repetirse en silencio.
+
 ## [2.0.40] - 2026-10
 
 ### Added
