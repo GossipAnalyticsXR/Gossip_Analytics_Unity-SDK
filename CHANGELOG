@@ -1,3 +1,21 @@
+## [2.0.44] - 2026-10
+
+### Fixed
+- El sobre de la panoramica no llevaba los tres campos que la 2.0.42 anadio al
+  spec. CaptureSource, CaptureStartUtc y CaptureEndUtc se rellenan en los dos
+  captadores y se perdian en EndpointConnection.UploadHeatmapPanorama, que
+  construye el envelope campo a campo y enumeraba solo hasta Image.
+  Medido el 24-oct-2026: 174/174 ficheros .cs leidos, 0 fallos, CaptureSource
+  aparecia en 3 -el spec y los dos captadores- y en ninguno de los dos que
+  escriben el JSON. Y en el dato servido: la unica panoramica capturada desde
+  que la 2.0.42 existe -6adbf4d7, del 23-oct 23:59 UTC, cuya sesion declara
+  sdkVersion 2.0.43- llego con los tres campos nulos, 1 de 1. El DTO del
+  Backend-SDK los acepta como opcionales desde el PR #153, mergeado el 21-oct
+  a las 01:32 UTC, y su procesador los persiste: el unico lado que faltaba era
+  este. Sin ellos no se puede decir que captador tomo cada imagen, que es lo
+  que hace falta para atribuir la discontinuidad vertical medida el 21-oct en
+  66 de 159 panoramicas.
+
 ## [2.0.43] - 2026-10
 
 ### Added

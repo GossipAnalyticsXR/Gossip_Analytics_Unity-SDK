@@ -92,7 +92,19 @@ SceneGuid = spec.SceneGuid,
 SceneVersion = spec.Version,
 Camera = new { Position = new { x = spec.PositionX, y = spec.PositionY, z = spec.PositionZ } },
 YawOffsetDeg = spec.YawOffsetDeg,
-Image = new { Format = "jpg", DataBase64 = imageBase64, Width = spec.ImageWidth, Height = spec.ImageHeight }
+Image = new { Format = "jpg", DataBase64 = imageBase64, Width = spec.ImageWidth, Height = spec.ImageHeight },
+// La procedencia y la ventana real de la captura. El spec las trae desde la 2.0.42
+// -HeatmapDwellPanoramaCapture sella "dwell" y sus seis caras a faceInterval,
+// HeatmapPanoramaAutoCapture sella "auto" y las seis en el mismo fotograma- pero
+// este sobre se escribe campo a campo y no las enumeraba, asi que se tiraban aqui.
+// Medido el 24-oct-2026: 174/174 ficheros .cs leidos, 0 fallos, CaptureSource solo
+// en el spec y los dos captadores. Y en el dato: la unica panoramica capturada
+// desde que existe la 2.0.42 -6adbf4d7, del 23-oct, con sdkVersion 2.0.43 en su
+// sesion- llego con los tres campos nulos. El DTO del Backend-SDK los acepta
+// opcionales desde el PR #153 y el procesador los persiste: faltaba este lado.
+CaptureSource = spec.CaptureSource,
+CaptureStartUtc = spec.CaptureStartUtc,
+CaptureEndUtc = spec.CaptureEndUtc
 };
 return JsonConvert.SerializeObject(envelope);
 });
