@@ -102,6 +102,12 @@ foreach (var rend in sceneRenderers)
         hidden.Add(rend);
     }
 }
+// Las seis caras, dentro del mismo fotograma: no hay yield en el bucle, asi que
+// entre la primera y la sexta no corre un Update y la escena no avanza. Repartirlas
+// una por fotograma dejaba 67 ms de escena a 90 Hz dentro de una sola foto, y en el
+// captador por goteo, que repartia a 0,5 s, eso se midio el 24-oct-2026 partiendo un
+// organo en la frontera 1536: 148 filas de 1.060 contra 0 en la columna de control.
+// El unico yield de este metodo esta al final, fuera del bucle.
 bool[] prevEnabled = new bool[hidden.Count];
 for (int f = 0; f < 6; f++)
 {
@@ -130,12 +136,12 @@ if ((UnityEngine.Object)rend == null) continue;
 rend.enabled = prevEnabled[i];
 }
 
-yield return null;
 }
 cam.targetTexture = null;
 Object.Destroy(faceTex);
 Object.Destroy(faceRT);
 Object.Destroy(camObj);
+yield break;
 }
 
 private async UniTaskVoid CaptureAndUploadAsync(Vector3 capturePos, GossipEquirect.FaceBasis[] bases, Color32[][] faceColors, GossipSDK.Core.Gossip gossip)

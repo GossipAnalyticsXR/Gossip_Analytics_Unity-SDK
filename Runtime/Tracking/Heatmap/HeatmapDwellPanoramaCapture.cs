@@ -23,7 +23,6 @@ namespace GossipSDK.Heatmaps
         [SerializeField] private float dwellStillRadius = 0.5f;
         [SerializeField] private float newZoneRadius = 1.5f;
         [SerializeField] private float abortRadius = 0.75f;
-        [SerializeField] private float faceInterval = 0.5f;
         [SerializeField] private int maxZonesPerSession = 10;
 
         [Header("Capture quality (dwell captures; the setup baseline uses its own settings)")]
@@ -34,8 +33,8 @@ namespace GossipSDK.Heatmaps
         // hasta 8,9x con el zoom al maximo. A 4096x2048 son 11,38 px/grado: 1,78x.
         //
         // No es un pico de memoria nuevo: HeatmapPanoramaAutoCapture ya captura a
-        // faceSize 2048 y 4096x2048 una vez por sesion, y lo hace mas agresivo todavia
-        // (sus 6 caras van una por fotograma, mientras estas van con faceInterval 0,5 s).
+        // faceSize 2048 y 4096x2048 una vez por sesion. Los dos captadores sacan sus
+        // seis caras dentro del mismo fotograma: ver el comentario de TickCapture.
         //
         // Coste de guardado medido sobre los ficheros reales: 145 KB -> 408 KB por captura.
         // Las 53 panoramicas de esa escena en tres semanas pasan de ~10,0 MB a ~21,6 MB.
@@ -73,7 +72,6 @@ namespace GossipSDK.Heatmaps
         private GossipEquirect.FaceBasis[] faceBases;
         private Color32[][] faceColors;
         private int nextFace;
-        private float faceTimer;
         private System.DateTime captureStartedUtc;
         private List<Renderer> hiddenRenderers;
 
@@ -131,11 +129,9 @@ namespace GossipSDK.Heatmaps
         private void StartCapture(Vector3 anchor)
         {
             isCapturing = true;
-            captureStartedUtc = System.DateTime.UtcNow;
             hasDwellAnchor = false;
             captureAnchor = anchor;
             nextFace = 0;
-            faceTimer = 0f;
             faceColors = new Color32[6][];
             faceBases = GossipEquirect.BuildFaceBases(0f);
 
@@ -175,14 +171,29 @@ namespace GossipSDK.Heatmaps
                 return;
             }
 
-            faceTimer += Time.deltaTime;
-            if (faceTimer < faceInterval) return;
-            faceTimer = 0f;
+            // Las seis caras salen del MISMO fotograma. Entre la primera y la sexta no
+            // corre un Update, asi que la escena no avanza y no hay nada que pueda
+            // desalinearse en las cuatro fronteras de cara.
+            //
+            // Antes se repartian a faceInterval, 0,5 s por defecto: tres segundos de
+            // escena metidos en una sola foto. Medido el 24-oct-2026 sobre la captura de
+            // las 15:24:10 a las 15:24:13, cuya ventana de 3,101 s declara el propio
+            // sobre desde la 2.0.44: en la columna de la frontera 1536, 148 filas de
+            // 1.060 con salto de color mayor que 40, y las 148 dentro del organo que
+            // gira, filas 851 a 999. En una columna de control a 135 px, 0 de 1.060. El
+            // pedestal, quieto, cercano y cruzando esa misma columna, sale entero. Lo
+            // que se partia era lo que se movia, no la geometria.
+            //
+            // La ventana que queda ya no es tiempo de escena: es solo lo que tardan los
+            // seis Render y sus ReadPixels, con cero Update entre medias.
+            captureStartedUtc = System.DateTime.UtcNow;
+            while (nextFace < 6)
+            {
+                RenderFace(nextFace);
+                nextFace++;
+            }
 
-            RenderFace(nextFace);
-            nextFace++;
-
-            if (nextFace >= 6) FinishCapture();
+            FinishCapture();
         }
 
 private void RenderFace(int f)
@@ -267,8 +278,9 @@ private void FinishCapture()
             var spec = HeatmapPanoramaSpec.CreateForCurrentScene(capturedPos, 0f, equirectW, equirectH);
             spec.PlayerID = gossip.CurrentPlayerId;
             spec.SessionID = gossip.CurrentSessionId;
-            // La ventana real: seis caras a faceInterval, no un instante. Se sella aqui
-            // para que el dato diga cuanto duro y que componente la tomo.
+            // La ventana ya no es tiempo de escena: las seis caras salen de un unico
+            // fotograma. Se sella igual porque el dato dice que componente la tomo, y
+            // porque una ventana larga significaria que alguien volvio a repartirlas.
             spec.CaptureSource = "dwell";
             spec.CaptureStartUtc = captureStartedUtc.ToString("o");
             spec.CaptureEndUtc = System.DateTime.UtcNow.ToString("o");

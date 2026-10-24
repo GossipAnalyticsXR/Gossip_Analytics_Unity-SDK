@@ -1,3 +1,28 @@
+## [2.0.45] - 2026-10
+
+### Fixed
+- Una panoramica vuelve a ser un instante. Los dos captadores sacaban sus seis caras
+  en momentos distintos -el de goteo una cada faceInterval, 0,5 s por defecto; el
+  automatico una por fotograma- y lo que se moviera en ese rato salia dos veces y
+  descuadrado en las cuatro fronteras de cara. Ahora las seis se renderizan dentro del
+  mismo Update: entre la primera y la sexta no corre un fotograma, asi que la escena no
+  avanza. Fuera faceInterval y su temporizador, que ya no ajustaban nada.
+
+  Medido el 24-oct-2026 sobre la captura de las 15:24:10 a las 15:24:13, cuya ventana
+  de 3,101 s declara el propio sobre desde la 2.0.44: en la columna de la frontera
+  1536, 148 filas de 1.060 con salto de color mayor que 40, y las 148 dentro del organo
+  que gira, filas 851 a 999; en una columna de control a 135 px, 0 de 1.060. El
+  pedestal, quieto, cercano y cruzando esa misma columna, salia entero. Por eso la
+  causa era el tiempo entre caras y no el mapeo, y GossipEquirect no se toca.
+
+  La ventana que queda ya no es tiempo de escena: es lo que tardan los seis Render con
+  sus ReadPixels, y ese numero lo publica el sobre.
+
+### Removed
+- Tres clases de A11y salen del Runtime: A11yActionEvent, A11yOperableAnalyzer e
+  InteractionToA11yAdapter, con sus .meta. El borrado entro en main en otro cambio y su
+  motivo no esta registrado aqui; se declara para que la version lo nombre.
+
 ## [2.0.44] - 2026-10
 
 ### Fixed
