@@ -124,45 +124,14 @@ namespace GossipSDK.Tracking.A11y
         /// </summary>
         private const float ToleranciaDeAjuste = 1.01f;
 
-        private bool _medicionPendiente;
+        // ---------- ciclo ----------
 
-        private void OnEnable()
-        {
-            SceneManager.sceneLoaded += AlCargarEscena;
-        }
-
-        private void OnDisable()
-        {
-            SceneManager.sceneLoaded -= AlCargarEscena;
-        }
-
-        private void Start()
-        {
-            // La escena que ya estaba cargada cuando aparecio este componente
-            // puede no disparar sceneLoaded. Si las dos vias caen en el mismo
-            // frame, el guardia de abajo deja una sola medicion.
-            StartCoroutine(MedirAlFinalDelFrame());
-        }
-
-        private void AlCargarEscena(Scene escena, LoadSceneMode modo)
-        {
-            StartCoroutine(MedirAlFinalDelFrame());
-        }
-
-        private IEnumerator MedirAlFinalDelFrame()
-        {
-            if (_medicionPendiente)
-                yield break;
-
-            // Al final del frame ya existe la interfaz que la escena instancia
-            // en su propio Start, y los layouts ya estan resueltos: antes, el
-            // tamano preferido de un texto todavia no significa nada.
-            _medicionPendiente = true;
-            yield return new WaitForEndOfFrame();
-            _medicionPendiente = false;
-
-            Evaluate();
-        }
+        // ACC-111. El disparador ya no vive aqui. Las tres pasadas las llama
+        // A11yPassScheduler, en el mismo frame y dos segundos despues de que la
+        // escena cargue: en el frame de carga la interfaz de la escena todavia no
+        // existe. Medido el 25-oct-2026 en Hospital, sesion 11ac70ac -- la pasada
+        // de geometria conto UN Graphic en toda la escena mientras el contraste y
+        // la narracion contaban siete textos.
 
         public void Evaluate()
         {

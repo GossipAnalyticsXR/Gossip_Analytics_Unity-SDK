@@ -14,44 +14,14 @@ namespace GossipSDK.Tracking.A11y
         // del Instrumentation Manager lo engancha al GossipManager, y GossipManager.Awake
         // llama a DontDestroyOnLoad. Midiendo solo en Start() eso era UNA medicion por
         // arranque de la app: P1 describia la primera escena y ninguna mas.
-        private bool _medicionPendiente;
+        // ---------- ciclo ----------
 
-        private void OnEnable()
-        {
-            SceneManager.sceneLoaded += AlCargarEscena;
-        }
-
-        private void OnDisable()
-        {
-            SceneManager.sceneLoaded -= AlCargarEscena;
-        }
-
-        private void Start()
-        {
-            // La escena que ya estaba cargada cuando aparecio este componente puede no
-            // disparar sceneLoaded, asi que se mide tambien aqui. Si las dos vias caen
-            // en el mismo frame, el guardia de abajo deja una sola medicion.
-            StartCoroutine(MedirAlFinalDelFrame());
-        }
-
-        private void AlCargarEscena(Scene escena, LoadSceneMode modo)
-        {
-            StartCoroutine(MedirAlFinalDelFrame());
-        }
-
-        private IEnumerator MedirAlFinalDelFrame()
-        {
-            if (_medicionPendiente)
-                yield break;
-
-            // Al final del frame ya existe la interfaz que la escena instancia en su
-            // propio Start. Medir antes dejaba fuera dialogos, listas y tooltips.
-            _medicionPendiente = true;
-            yield return new WaitForEndOfFrame();
-            _medicionPendiente = false;
-
-            Evaluate();
-        }
+        // ACC-111. El disparador ya no vive aqui. Las tres pasadas las llama
+        // A11yPassScheduler, en el mismo frame y dos segundos despues de que la
+        // escena cargue: en el frame de carga la interfaz de la escena todavia no
+        // existe. Medido el 25-oct-2026 en Hospital, sesion 11ac70ac -- la pasada
+        // de geometria conto UN Graphic en toda la escena mientras el contraste y
+        // la narracion contaban siete textos.
 
         public void Evaluate()
         {

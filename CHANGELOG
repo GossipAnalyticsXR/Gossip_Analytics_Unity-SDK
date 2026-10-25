@@ -1,3 +1,26 @@
+## [2.0.47] - 2026-10
+
+### Fixed
+- Las tres pasadas de accesibilidad median antes de que existiera la pantalla. Cada una
+  disparaba sola al final del frame de carga de la escena, y en ese frame la interfaz que
+  la escena instancia en su propio Start todavia no esta. Medido en la sesion 11ac70ac,
+  escena Hospital: contraste conto 7 textos no decorativos, narracion 7, y geometria un
+  solo Graphic -`alt_text_coverage` 0/1- sin un texto que contar. `text_fit_coverage` y
+  `text_headroom_coverage` emitieron bien, sus filas llegaron a las 20:09:44.978 y
+  20:09:45.068, pero no habia nada que contar.
+- Desde esta version las tres las dispara `A11yPassScheduler`: `WaitForEndOfFrame` mas dos
+  segundos, una sola vez por escena, y despues `Evaluate()` de las tres en el mismo frame.
+  Los trackers conservan su `Evaluate()` publico y pierden su disparador propio, asi que el
+  reloj es la unica via: se monta con los trackers automaticos, no desde la ventana del
+  Instrumentation Manager, porque sin el ninguna de las tres mide.
+- Una sola emision por escena, no dos: el filtro del upsert de `a11y_check` lleva
+  `timestampUtc` dentro, asi que una segunda emision no actualiza la fila, crea otra, y el
+  backend suma las dos.
+- Sin medicion en gafas todavia: la primera sesion que corra con esta version es la que
+  dira si `alt_text_coverage` en Hospital deja de ser 0/1 y su denominador se parece a los
+  siete textos que ven contraste y narracion, con las tres pasadas llevando el mismo
+  `sceneId`.
+
 ## [2.0.46] - 2026-10
 
 ### Added

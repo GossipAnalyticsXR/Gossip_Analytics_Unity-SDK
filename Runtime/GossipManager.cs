@@ -363,6 +363,11 @@ go.AddComponent<GossipSDK.Heatmaps.HeatmapPanoramaAutoCapture>();
             Ensure(typeof(TextNarrationCoverageTracker),        autoTrackersHost);
             Ensure(typeof(A11yGeometryPassTracker),             autoTrackersHost);
             Ensure(typeof(A11yContrastPassTracker),             autoTrackersHost);
+
+            // ACC-111. El reloj de las tres. Desde hoy las pasadas no tienen
+            // disparador propio, asi que si este no esta, ninguna mide. Por eso
+            // va aqui y no en la ventana del Instrumentation Manager.
+            Ensure(typeof(A11yPassScheduler),                   autoTrackersHost);
             Ensure(typeof(MicPermissionComponent), autoTrackersHost);
             Ensure(typeof(SceneInventoryComponent),             autoTrackersHost);
 
