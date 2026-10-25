@@ -1,3 +1,25 @@
+## [2.0.46] - 2026-10
+
+### Added
+- Robust estrena sus dos medidas de texto, y las dos salen de la pasada de geometria
+  que ya recorria la pantalla: ni un barrido nuevo, ni un componente que el cliente
+  tenga que poner. `text_fit_coverage` cuenta los bloques que CABEN en su caja,
+  comparando el alto preferido del texto con el de su RectTransform;
+  `text_headroom_coverage` cuenta los que SEGUIRIAN cabiendo con el cuerpo al doble,
+  que es lo que pide 1.4.4 con su 200 % sin perdida de contenido. Las dos claves
+  nombran lo conforme aunque sus cards nombren el defecto, porque el veredicto aprueba
+  con numerador mayor o igual que denominador: al reves aprobaria la pantalla mas rota.
+- El factor del alto de la holgura no es dos. Si quien parte el texto es el ancho de la
+  caja, al doblar el cuerpo cada glifo mide el doble Y en cada linea caben la mitad, asi
+  que el numero de lineas se dobla tambien y el alto se va a cuatro veces. Se distingue
+  con lo que ya se leia: mas lineas pintadas que saltos escritos significa que el ancho
+  esta partiendo el texto.
+- Las dos cuentan ANTES del filtro de vision, como la alternativa de P2 y al contrario
+  que la legibilidad de P4: un texto recortado lo esta mire quien mire. Ninguno de los
+  siete contadores que ya existian en esa pasada cambia.
+- Sin medicion en gafas todavia: las dos claves se estrenan con esta version, asi que la
+  primera sesion que corra con ella es la que llenara las dos cards.
+
 ## [2.0.45] - 2026-10
 
 ### Fixed

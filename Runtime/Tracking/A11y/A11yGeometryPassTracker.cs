@@ -76,6 +76,29 @@ namespace GossipSDK.Tracking.A11y
         public const string ClaveDeAlternativa = "alt_text_coverage";
 
         /// <summary>
+        /// R6. Bloques de texto que CABEN en su caja, sobre los que tienen caja
+        /// con medida. El rotulo de la card nombra el defecto -- Text already
+        /// clipped -- y la clave nombra lo conforme, porque `veredictoDe` aprueba
+        /// con numerador mayor o igual que denominador: al reves aprobaria la
+        /// pantalla mas rota. La regla esta escrita en el registro de ACC-41.
+        ///
+        /// No pasa por el tronco de vision. Un texto recortado lo esta mire quien
+        /// mire, igual que una imagen necesita descripcion mire quien mire: va por
+        /// donde va P2, no por donde va P4.
+        /// </summary>
+        public const string ClaveDeAjuste = "text_fit_coverage";
+
+        /// <summary>
+        /// R5. Bloques de texto que SIGUEN cabiendo si el cuerpo se va al doble,
+        /// sobre los que tienen caja con medida. La cifra -- 200 % sin perdida de
+        /// contenido -- la fija 1.4.4 y vive en el registro de ACC-41, no aqui.
+        ///
+        /// Va por donde va R6: la holgura de una caja no depende de hacia donde
+        /// mirase la persona.
+        /// </summary>
+        public const string ClaveDeHolgura = "text_headroom_coverage";
+
+        /// <summary>
         /// La guia de subtitulos de Meta: dos filas como mucho, y unos 32
         /// caracteres por fila. Lo que se comprueba es el PRESUPUESTO -filas
         /// por caracteres- y no el reparto fila a fila, porque el texto de
@@ -91,6 +114,15 @@ namespace GossipSDK.Tracking.A11y
         public const int MaximoDeCaracteresPorFila = 32;
 
         private const string AmbitoDeEscena = "scene";
+
+        /// <summary>
+        /// R6. El margen de redondeo del ajuste. El alto preferido lo calcula el
+        /// componente de texto y el de la caja sale del RectTransform: con un `>`
+        /// pelado, un bloque que cabe justo se marcaria como recortado por ruido
+        /// de coma flotante. Un recorte de verdad se lleva al menos una linea, que
+        /// es mucho mas que este 1 %.
+        /// </summary>
+        private const float ToleranciaDeAjuste = 1.01f;
 
         private bool _medicionPendiente;
 
@@ -286,6 +318,16 @@ namespace GossipSDK.Tracking.A11y
             int noTextoVisibles = 0;
             int noTextoDescritos = 0;
 
+            // R6. Tambien propios: aqui el denominador son los bloques de texto
+            // con una caja de alto y ancho conocidos, mirase quien mirase.
+            int conCaja = 0;
+            int ajustados = 0;
+
+            // R5. Mismo barrido y misma poblacion que R6, contada aparte: una
+            // cosa es caber hoy y otra seguir cabiendo al doble de cuerpo.
+            int conMedidaDeHolgura = 0;
+            int conHolgura = 0;
+
             foreach (var grafico in graficos)
             {
                 if ((Object)grafico == null) continue;
@@ -327,6 +369,30 @@ namespace GossipSDK.Tracking.A11y
                 var rect = grafico.rectTransform;
                 if ((Object)rect == null) continue;
 
+                // La lectura sube de sitio para que R6 pueda contar antes del
+                // filtro de vision. Las guardas se quedan abajo, donde estaban:
+                // asi `enCamara`, `medibles` y `conformes` cuentan exactamente lo
+                // mismo que antes de esto.
+                TextReading lectura;
+                var leido = A11yTextReader.TryRead(grafico, out lectura);
+
+                if (leido && lectura.HasPreferredSize)
+                {
+                    var cabe = CabeEnSuCaja(lectura, rect);
+                    if (cabe.HasValue)
+                    {
+                        conCaja++;
+                        if (cabe.Value) ajustados++;
+                    }
+
+                    var holgura = HayHuecoAlDoble(lectura, rect);
+                    if (holgura.HasValue)
+                    {
+                        conMedidaDeHolgura++;
+                        if (holgura.Value) conHolgura++;
+                    }
+                }
+
                 rect.GetWorldCorners(esquinas);
                 var caja = new Bounds(esquinas[0], Vector3.zero);
                 for (int i = 1; i < 4; i++) caja.Encapsulate(esquinas[i]);
@@ -339,8 +405,7 @@ namespace GossipSDK.Tracking.A11y
                 if (!GeometryUtility.TestPlanesAABB(planos, caja)) continue;
                 enCamara++;
 
-                TextReading lectura;
-                if (!A11yTextReader.TryRead(grafico, out lectura)) continue;
+                if (!leido) continue;
                 if (!lectura.HasPreferredSize) continue;
                 if (!lectura.HasLineCount || lectura.LineCount <= 0) continue;
 
@@ -362,6 +427,102 @@ namespace GossipSDK.Tracking.A11y
             Emitir(ClaveDeTexto, conformes, medibles, true);
             Emitir(ClaveDeTextosMedidos, medibles, enCamara, false);
             Emitir(ClaveDeAlternativa, noTextoDescritos, noTextoVisibles, true);
+            Emitir(ClaveDeAjuste, ajustados, conCaja, true);
+            Emitir(ClaveDeHolgura, conHolgura, conMedidaDeHolgura, true);
+        }
+
+        /// <summary>
+        /// R6. Un bloque CABE si lo que el texto pide no supera su caja. Se
+        /// compara en coordenadas LOCALES -- el preferido y el rect estan en las
+        /// mismas --, asi que la escala no entra: una caja el doble de grande con
+        /// su texto el doble de grande sigue cabiendo igual.
+        ///
+        /// El ancho solo se mira cuando el texto ocupa UNA linea. En cuanto hay
+        /// dos, el ancho preferido ya es el de la caja, porque es la caja la que
+        /// partio el texto: compararlos seria preguntar dos veces lo mismo.
+        ///
+        /// Devuelve null cuando la caja no tiene medida, y entonces el bloque no
+        /// entra al denominador: sin caja no hay nada que desbordar.
+        /// </summary>
+        private static bool? CabeEnSuCaja(TextReading lectura, RectTransform rect)
+        {
+            var caja = rect.rect;
+            if (caja.height <= 0f || caja.width <= 0f) return null;
+
+            if (lectura.PreferredHeight > caja.height * ToleranciaDeAjuste)
+            {
+                return false;
+            }
+
+            if (
+                lectura.HasLineCount
+                && lectura.LineCount == 1
+                && lectura.PreferredWidth > caja.width * ToleranciaDeAjuste
+            )
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// R5. Un bloque tiene holgura si SIGUE cabiendo con el cuerpo al doble.
+        /// 1.4.4 pide 200 % sin perdida de contenido, y ese 200 % lo fija el
+        /// registro de ACC-41; aqui solo se aplica.
+        ///
+        /// El factor del alto no es siempre dos. Si quien parte el texto es el
+        /// ancho de la caja, al doblar el cuerpo cada glifo mide el doble, en
+        /// cada linea caben la mitad, y el numero de lineas se dobla tambien: el
+        /// alto se va a CUATRO veces, no a dos. Si las lineas son saltos escritos
+        /// a mano, el texto no se reparte y el alto solo se dobla.
+        ///
+        /// La diferencia se decide con lo que ya se leyo: si hay mas lineas que
+        /// saltos escritos, el ancho esta partiendo el texto.
+        /// </summary>
+        private static bool? HayHuecoAlDoble(TextReading lectura, RectTransform rect)
+        {
+            var caja = rect.rect;
+            if (caja.height <= 0f || caja.width <= 0f) return null;
+            if (!lectura.HasLineCount || lectura.LineCount <= 0) return null;
+
+            var escritas = lectura.HasText ? LineasEscritas(lectura.Text) : 1;
+            var loParteElAncho = lectura.LineCount > escritas;
+            var factor = loParteElAncho ? 4f : 2f;
+
+            if (lectura.PreferredHeight * factor > caja.height * ToleranciaDeAjuste)
+            {
+                return false;
+            }
+
+            // Si el ancho no esta partiendo el texto, la linea mas larga tambien
+            // se dobla y tiene que seguir entrando.
+            if (
+                !loParteElAncho
+                && lectura.PreferredWidth * 2f > caja.width * ToleranciaDeAjuste
+            )
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Las lineas que trae escritas el propio texto. Un texto sin saltos es
+        /// una linea escrita, aunque en pantalla se reparta en seis.
+        /// </summary>
+        private static int LineasEscritas(string texto)
+        {
+            if (string.IsNullOrEmpty(texto)) return 1;
+
+            var saltos = 1;
+            for (int i = 0; i < texto.Length; i++)
+            {
+                if (texto[i] == '\n') saltos++;
+            }
+
+            return saltos;
         }
 
         // ---------- U1 ----------
