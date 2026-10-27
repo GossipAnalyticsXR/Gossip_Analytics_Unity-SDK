@@ -1,3 +1,33 @@
+## [2.0.52] - 2026-10
+
+### Fixed
+- R5 tiraba el bloque entero cuando no habia recuento de lineas, y eso no tiene
+  respaldo normativo. WCAG 2.2 1.4.4 exceptua "captions and images of text"
+  nada mas; "texto que todavia no se ha dibujado" no es ninguna de las dos. Era
+  una limitacion nuestra -- textInfo.lineCount vale 0 mientras TMP no haya hecho
+  su layout -- disfrazada de exencion.
+- Medido el 27-oct-2026: UNA fila de R5 con poblacion en cinco meses y dieciseis
+  filas, y esa fue 0/1. En Editor y en visor de hoy, 0/0 las dos.
+- Sin recuento no se sabe si el ancho parte el texto, asi que se juzga con el
+  CASO PEOR, factor 4. Si cabe al cuadruple, cabe seguro y el aprobado se
+  sostiene. Si NO cabe, no se afirma el fallo: seria suspender con el mas duro de
+  los dos supuestos. Ese bloque queda indeterminado y fuera del denominador.
+
+### Added
+- text_headroom_measurable_coverage, la sonda de cobertura de R5. Numerador: los
+  bloques sobre los que R5 pudo pronunciarse. Denominador: los que tienen caja
+  con medida, la misma poblacion que R6 y la que la card declara. Sin ella, un
+  bloque indeterminado desaparece en silencio y R5 publica un 0/0 que se lee
+  como "no habia nada que medir" cuando dice "no pude decidirlo".
+- Es el mismo papel que ya tienen target_box_coverage y text_measurable_coverage,
+  que el propio fichero llama "el denominador del denominador".
+- WCAG2ICT, para software no web, pide medir hasta donde llegue la plataforma:
+  "up to the text sizing capabilities of the platform". Lo que no se puede
+  afirmar no se publica ni como aprobado ni como suspenso.
+
+### Changed
+- R6 no se toca, y es el criterio de aceptacion: text_fit_coverage tiene que
+  seguir dando los mismos numeros que en la 2.0.51. P4, P2, O1 y O5 tampoco.
 ## [2.0.51] - 2026-10
 
 ### Fixed

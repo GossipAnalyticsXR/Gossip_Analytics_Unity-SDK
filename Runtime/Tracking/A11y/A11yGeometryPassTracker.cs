@@ -99,6 +99,18 @@ namespace GossipSDK.Tracking.A11y
         public const string ClaveDeHolgura = "text_headroom_coverage";
 
         /// <summary>
+        /// ACC-118. Sonda de cobertura de R5, y por el mismo motivo que las
+        /// otras dos: sin ella, un bloque que la pasada no supo decidir
+        /// desaparece en silencio y R5 publica un 0/0 que se lee como "no habia
+        /// nada que medir" cuando dice "no pude decidirlo".
+        ///
+        /// Numerador: los bloques sobre los que R5 pudo pronunciarse.
+        /// Denominador: los que tienen caja con medida, que es la poblacion que
+        /// la card declara y la misma de R6.
+        /// </summary>
+        public const string ClaveDeHolguraMedible = "text_headroom_measurable_coverage";
+
+        /// <summary>
         /// La guia de subtitulos de Meta: dos filas como mucho, y unos 32
         /// caracteres por fila. Lo que se comprueba es el PRESUPUESTO -filas
         /// por caracteres- y no el reparto fila a fila, porque el texto de
@@ -340,6 +352,7 @@ namespace GossipSDK.Tracking.A11y
 
             Emitir(ClaveDeAjuste, ajustados, conCaja, true);
             Emitir(ClaveDeHolgura, conHolgura, conMedidaDeHolgura, true);
+            Emitir(ClaveDeHolguraMedible, conMedidaDeHolgura, conCaja, false);
         }
 
         // ---------- P4 ----------
@@ -497,7 +510,34 @@ namespace GossipSDK.Tracking.A11y
         {
             var caja = rect.rect;
             if (caja.height <= 0f || caja.width <= 0f) return null;
-            if (!lectura.HasLineCount || lectura.LineCount <= 0) return null;
+
+            // ACC-118. Aqui habia un `if (!lectura.HasLineCount ...) return null;`
+            // que tiraba el bloque entero. No tiene respaldo normativo: 1.4.4
+            // solo exceptua subtitulos e imagenes de texto, y "texto que todavia
+            // no se ha dibujado" no es ninguna de las dos. Era una limitacion
+            // nuestra -- `textInfo.lineCount` vale 0 mientras TMP no haya hecho su
+            // layout -- disfrazada de exencion.
+            //
+            // Medido el 27-oct-2026: UNA fila de R5 con poblacion en cinco meses y
+            // dieciseis filas, y esa fue 0/1. En Editor y en visor, 0/0.
+            //
+            // Sin recuento no se sabe si el ancho parte el texto, asi que se juzga
+            // con el CASO PEOR, factor 4. Si cabe al cuadruple, cabe seguro y el
+            // aprobado se sostiene. Si NO cabe, no se afirma el fallo: seria
+            // suspender con el mas duro de los dos supuestos. Ese bloque queda
+            // indeterminado, fuera del denominador, y lo cuenta la sonda de
+            // cobertura. WCAG2ICT pide medir "up to the text sizing capabilities of
+            // the platform" para software no web; lo que no se puede afirmar no se
+            // publica ni como aprobado ni como suspenso.
+            if (!lectura.HasLineCount || lectura.LineCount <= 0)
+            {
+                if (lectura.PreferredHeight * 4f <= caja.height * ToleranciaDeAjuste)
+                {
+                    return true;
+                }
+
+                return null;
+            }
 
             var escritas = lectura.HasText ? LineasEscritas(lectura.Text) : 1;
             var loParteElAncho = lectura.LineCount > escritas;
