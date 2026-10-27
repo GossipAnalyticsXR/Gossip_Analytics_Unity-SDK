@@ -1,3 +1,20 @@
+## [2.0.50] - 2026-10
+
+### Removed
+- Fuera las dos trazas temporales de ACC-114, que entraron en la 2.0.48 y ya han
+  dicho lo que tenian que decir. Dejarlas significaba 16 lineas por escena en la
+  consola de cualquier integrador con EnableDebug.
+- Lo que midieron, para que quede: con el WaitForEndOfFrame delante, la traza
+  INCONDICIONAL de Evaluar() no imprimio ni una sola vez. Quitado en la 2.0.49,
+  salen las dieciseis claves en el mismo instante -- medido el 27-oct-2026 en
+  Hospital, 14:07:42 -- y llegan 16 filas por sesion a la base, en dos de tres
+  sesiones: la tercera cerro antes de que saliera la tanda de envio.
+- Se queda el comentario de `EsperaDeAsentado`, que no es una traza: es el
+  registro de por que se quito esa espera y de como se midio.
+- Sigue abierto, y no lo arregla esta version: la pasada de geometria cuenta CERO
+  textos donde contraste y narracion cuentan siete, asi que P4, R5 y R6 no tienen
+  poblacion. Sus target_* si cuentan doce, o sea que la pasada corre. Es otra
+  causa y pide su propia medicion.
 ## [2.0.49] - 2026-10
 
 ### Fixed

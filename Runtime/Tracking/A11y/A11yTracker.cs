@@ -113,17 +113,6 @@ namespace GossipSDK.Tracking.A11y
                 TimestampUtc = DateTime.UtcNow.ToString("o")
             };
 
-            // ACC-114, TEMPORAL. Sale en la 2.0.49. Si el reloj llama y aqui no
-            // entra nada, el corte esta entre Evaluate() y esta linea.
-            if (Gossip.Instance?.Settings?.EnableDebug == true)
-            {
-                UnityEngine.Debug.Log(
-                    "[Gossip][ACC-114] Cap " + kind + " " + metricKey
-                    + " " + numerator + "/" + denominator
-                    + " scope=" + scope
-                );
-            }
-
             CapSession(data);
         }
     }

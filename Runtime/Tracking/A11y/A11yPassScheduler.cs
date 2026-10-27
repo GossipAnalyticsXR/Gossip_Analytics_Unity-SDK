@@ -91,23 +91,6 @@ namespace GossipSDK.Tracking.A11y
             var contraste = FindObjectOfType<A11yContrastPassTracker>();
             var narracion = FindObjectOfType<TextNarrationCoverageTracker>();
 
-            // ACC-114, TEMPORAL. Sale en la 2.0.49.
-            //
-            // En el Editor no llega ni una fila de accesibilidad mientras el resto
-            // del SDK emite con normalidad, y ninguna de las llamadas deja rastro:
-            // todas pasan por `?.`, asi que un null no lanza ni escribe nada.
-            // Este log va SIN condicion a proposito. La sospecha principal es que
-            // `Gossip.Instance` todavia no existe cuando el reloj dispara, y
-            // condicionarlo a `Settings.EnableDebug` lo dejaria mudo justo en el
-            // caso que quiero ver.
-            UnityEngine.Debug.Log(
-                "[Gossip][ACC-114] Evaluar escena=" + SceneManager.GetActiveScene().name
-                + " instancia=" + (GossipSDK.Core.Gossip.Instance != null)
-                + " geometria=" + ((Object)geometria != null)
-                + " contraste=" + ((Object)contraste != null)
-                + " narracion=" + ((Object)narracion != null)
-            );
-
             if ((Object)geometria != null) geometria.Evaluate();
             if ((Object)contraste != null) contraste.Evaluate();
             if ((Object)narracion != null) narracion.Evaluate();
