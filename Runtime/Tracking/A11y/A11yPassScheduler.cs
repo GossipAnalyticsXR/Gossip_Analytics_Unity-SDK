@@ -29,9 +29,17 @@ namespace GossipSDK.Tracking.A11y
     public class A11yPassScheduler : MonoBehaviour
     {
         /// <summary>
-        /// Lo que se espera despues del final del frame. Dos segundos: lo que tarda
-        /// en existir una interfaz que la escena instancia en su propio Start, y lo
-        /// bastante poco para que una sesion de un minuto llegue a emitir.
+        /// Lo que se espera antes de medir. Dos segundos: lo que tarda en existir
+        /// una interfaz que la escena instancia en su propio Start, y lo bastante
+        /// poco para que una sesion de un minuto llegue a emitir.
+        ///
+        /// ACC-114. Hasta la 2.0.48 delante de esta espera habia un
+        /// WaitForEndOfFrame, resto de cuando cada pasada media al final del frame
+        /// en que cargaba la escena. No aportaba -- el asentado lo cubren los dos
+        /// segundos -- y era el unico punto donde esta corrutina podia quedarse
+        /// colgada sin decir nada: en el Editor con Unity 6000.4.1f1 la traza
+        /// incondicional de Evaluar() no imprimio ni una vez, con el componente
+        /// montado, habilitado y los tres medidores presentes en la escena.
         /// </summary>
         public const float EsperaDeAsentado = 2f;
 
@@ -66,7 +74,6 @@ namespace GossipSDK.Tracking.A11y
                 yield break;
 
             _medicionPendiente = true;
-            yield return new WaitForEndOfFrame();
             yield return new WaitForSeconds(EsperaDeAsentado);
             _medicionPendiente = false;
 
