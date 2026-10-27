@@ -138,6 +138,12 @@ namespace GossipSDK.Tracking.A11y
             MedirDianas();
             MedirSubtitulos();
 
+            // R5 y R6 no necesitan camara: la holgura de una caja no depende
+            // de donde mire nadie. Viajaban dentro de MedirTextos y heredaban
+            // su guarda, asi que una escena sin Camera.main las dejaba sin
+            // emitir sin que nada lo dijera.
+            MedirCajasDeTexto();
+
             // O1 no necesita camara: su cifra esta dada a una distancia fija,
             // asi que es un tamano. P4 si la necesita, y sin camara NO se
             // emite: una fila con distancia inventada es peor que ninguna.
@@ -265,6 +271,77 @@ namespace GossipSDK.Tracking.A11y
             return true;
         }
 
+        // ---------- R5 y R6 ----------
+
+        /// <summary>
+        /// ACC-116. R5 y R6 tienen barrido propio, y con Include.
+        ///
+        /// Sus comentarios ya decian que no son metricas de sesion -- "un texto
+        /// recortado lo esta mire quien mire", "la holgura de una caja no depende
+        /// de hacia donde mirase la persona" --, pero compartian bucle con P4,
+        /// que SI lo es, y heredaban su Exclude sin que nadie lo decidiera: la
+        /// cabecera de este fichero fijo esa regla cuando solo emitia O1 y P4, y
+        /// R5 y R6 llegaron despues. La decision del 4-oct-2026 que dejo a P4 y
+        /// P6 con Exclude no las nombra.
+        ///
+        /// Medido el 27-oct-2026 en Hospital: text_fit_coverage 0/0 y
+        /// text_headroom_coverage 0/0 mientras narracion contaba SIETE textos,
+        /// porque los siete rotulos de la escena nacen desactivados y aparecen
+        /// al interactuar. Es el mismo caso que llevo a P1 a Include el 4-oct.
+        ///
+        /// Barrido propio y no un filtro dentro del de P4: asi el bucle de P4,
+        /// P2 y O1 se queda como estaba y que no se movio se VE, no hay que
+        /// demostrarlo. El coste es un segundo FindObjectsByType cada dos
+        /// segundos por escena, que es lo que vale no tocar tres metricas que
+        /// ya estan validadas.
+        /// </summary>
+        private void MedirCajasDeTexto()
+        {
+            var graficos = FindObjectsByType<Graphic>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None
+            );
+
+            int conCaja = 0;
+            int ajustados = 0;
+            int conMedidaDeHolgura = 0;
+            int conHolgura = 0;
+
+            foreach (var grafico in graficos)
+            {
+                if ((Object)grafico == null) continue;
+                if (!A11yTextReader.IsTextComponent(grafico)) continue;
+
+                // Misma exclusion que P1 y P4: lo decorativo no se juzga.
+                var etiqueta = grafico.GetComponent<GossipA11yLabel>();
+                if ((Object)etiqueta != null && etiqueta.decorative) continue;
+
+                var rect = grafico.rectTransform;
+                if ((Object)rect == null) continue;
+
+                TextReading lectura;
+                if (!A11yTextReader.TryRead(grafico, out lectura)) continue;
+                if (!lectura.HasPreferredSize) continue;
+
+                var cabe = CabeEnSuCaja(lectura, rect);
+                if (cabe.HasValue)
+                {
+                    conCaja++;
+                    if (cabe.Value) ajustados++;
+                }
+
+                var holgura = HayHuecoAlDoble(lectura, rect);
+                if (holgura.HasValue)
+                {
+                    conMedidaDeHolgura++;
+                    if (holgura.Value) conHolgura++;
+                }
+            }
+
+            Emitir(ClaveDeAjuste, ajustados, conCaja, true);
+            Emitir(ClaveDeHolgura, conHolgura, conMedidaDeHolgura, true);
+        }
+
         // ---------- P4 ----------
 
         private void MedirTextos(Camera camara)
@@ -286,16 +363,6 @@ namespace GossipSDK.Tracking.A11y
             // texto, son los graficos no textuales de la pantalla.
             int noTextoVisibles = 0;
             int noTextoDescritos = 0;
-
-            // R6. Tambien propios: aqui el denominador son los bloques de texto
-            // con una caja de alto y ancho conocidos, mirase quien mirase.
-            int conCaja = 0;
-            int ajustados = 0;
-
-            // R5. Mismo barrido y misma poblacion que R6, contada aparte: una
-            // cosa es caber hoy y otra seguir cabiendo al doble de cuerpo.
-            int conMedidaDeHolgura = 0;
-            int conHolgura = 0;
 
             foreach (var grafico in graficos)
             {
@@ -338,29 +405,8 @@ namespace GossipSDK.Tracking.A11y
                 var rect = grafico.rectTransform;
                 if ((Object)rect == null) continue;
 
-                // La lectura sube de sitio para que R6 pueda contar antes del
-                // filtro de vision. Las guardas se quedan abajo, donde estaban:
-                // asi `enCamara`, `medibles` y `conformes` cuentan exactamente lo
-                // mismo que antes de esto.
                 TextReading lectura;
                 var leido = A11yTextReader.TryRead(grafico, out lectura);
-
-                if (leido && lectura.HasPreferredSize)
-                {
-                    var cabe = CabeEnSuCaja(lectura, rect);
-                    if (cabe.HasValue)
-                    {
-                        conCaja++;
-                        if (cabe.Value) ajustados++;
-                    }
-
-                    var holgura = HayHuecoAlDoble(lectura, rect);
-                    if (holgura.HasValue)
-                    {
-                        conMedidaDeHolgura++;
-                        if (holgura.Value) conHolgura++;
-                    }
-                }
 
                 rect.GetWorldCorners(esquinas);
                 var caja = new Bounds(esquinas[0], Vector3.zero);
@@ -396,8 +442,6 @@ namespace GossipSDK.Tracking.A11y
             Emitir(ClaveDeTexto, conformes, medibles, true);
             Emitir(ClaveDeTextosMedidos, medibles, enCamara, false);
             Emitir(ClaveDeAlternativa, noTextoDescritos, noTextoVisibles, true);
-            Emitir(ClaveDeAjuste, ajustados, conCaja, true);
-            Emitir(ClaveDeHolgura, conHolgura, conMedidaDeHolgura, true);
         }
 
         /// <summary>

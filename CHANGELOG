@@ -1,3 +1,30 @@
+## [2.0.51] - 2026-10
+
+### Fixed
+- R5 y R6 median sobre cero en cuanto la interfaz nacia desactivada. Compartian
+  bucle con P4 y heredaban su `FindObjectsInactive.Exclude` sin que nadie lo
+  hubiera decidido para ellas: la cabecera de A11yGeometryPassTracker fijo esa
+  regla cuando el fichero solo emitia O1 y P4, R5 y R6 llegaron despues, y la
+  decision del 4-oct-2026 que dejo a P4 y P6 con Exclude no las nombra.
+- Sus propios comentarios ya decian lo contrario: "un texto recortado lo esta
+  mire quien mire" y "la holgura de una caja no depende de hacia donde mirase la
+  persona". Son propiedades de la interfaz autorada, como P1, no de la sesion.
+- Medido el 27-oct-2026 en Hospital: text_fit_coverage 0/0 y
+  text_headroom_coverage 0/0 mientras narracion contaba SIETE textos en esa misma
+  escena y ese mismo instante. Los siete rotulos nacen desactivados y aparecen al
+  interactuar: es el mismo caso que llevo a P1 a Include.
+- Ahora tienen su propio barrido, con Include, en MedirCajasDeTexto. Barrido
+  propio y no un filtro dentro del de P4, para que el bucle de P4, P2 y O1 se
+  quede intacto y que no se movio se VEA en el diff. El coste es un segundo
+  FindObjectsByType cada dos segundos por escena.
+- Y dejan de depender de la camara. Viajaban dentro de MedirTextos, que solo
+  corre si hay Camera.main; una caja de texto no necesita camara para saber si
+  su contenido cabe. Una escena sin camara las dejaba sin emitir en silencio.
+
+### Changed
+- P4, P2 y O1 no cambian. Es el criterio de aceptacion de esta version: misma
+  sesion antes y despues, mismos numeros en esas tres, y R5 y R6 con denominador
+  mayor que cero.
 ## [2.0.50] - 2026-10
 
 ### Removed
