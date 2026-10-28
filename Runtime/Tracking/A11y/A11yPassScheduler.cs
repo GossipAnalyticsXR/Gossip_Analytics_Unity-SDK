@@ -45,6 +45,32 @@ namespace GossipSDK.Tracking.A11y
 
         private bool _medicionPendiente;
 
+        /// <summary>
+        /// ACC-120. Cada cuanto se vuelve a mirar la escena para P4 y P2. Un
+        /// segundo sobra para lo que hay que cazar: medido el 28-oct-2026 en
+        /// gafas, el panel de organos se enciende en el segundo 11 y el quiz en
+        /// el 23, y se quedan puestos. Lo que no cabe es muestrear por frame.
+        /// </summary>
+        public const float IntervaloDeMuestreo = 1f;
+
+        /// <summary>
+        /// La parte del tiempo de reloj que este medidor puede gastarse en mirar
+        /// la escena. NO es una medicion: es una decision de producto, el 1 por
+        /// ciento que Daniel fijo el 28-oct-2026.
+        ///
+        /// El barrido cuesta lo que cuesta la escena del cliente, y eso no lo
+        /// sabemos. En la escena medida -- 14 graficos -- son 0,37 ms de media y
+        /// 1,68 ms el primero, o sea 0,037 por ciento a un muestreo por segundo.
+        /// Una escena de 500 graficos costaria el orden de 13 ms, y entonces
+        /// esta guarda espacia sola a 1,3 s en vez de comerse un frame. Un
+        /// umbral fijo en milisegundos seria un numero inventado sobre escenas
+        /// que no hemos medido; una fraccion del reloj sale del propio coste.
+        /// </summary>
+        public const float PresupuestoDeCpu = 0.01f;
+
+        private float _esperaDeMuestreo = IntervaloDeMuestreo;
+        private Coroutine _muestreo;
+
         private void OnEnable()
         {
             SceneManager.sceneLoaded += AlCargarEscena;
@@ -53,6 +79,22 @@ namespace GossipSDK.Tracking.A11y
         private void OnDisable()
         {
             SceneManager.sceneLoaded -= AlCargarEscena;
+            EmitirAcumulado();
+        }
+
+        /// <summary>
+        /// El molde del PR #107. En Quest OnApplicationQuit NO corre al cerrar y
+        /// OnApplicationPause si, asi que la emision cuelga de las tres. En el
+        /// tracker es idempotente, que es lo que hace seguro llamarla de mas.
+        /// </summary>
+        private void OnApplicationQuit()
+        {
+            EmitirAcumulado();
+        }
+
+        private void OnApplicationPause(bool pausado)
+        {
+            if (pausado) EmitirAcumulado();
         }
 
         private void Start()
@@ -65,6 +107,10 @@ namespace GossipSDK.Tracking.A11y
 
         private void AlCargarEscena(Scene escena, LoadSceneMode modo)
         {
+            // La escena que se va se cierra aqui: lo acumulado es suyo y se emite
+            // antes de que la nueva empiece a contar.
+            EmitirAcumulado();
+
             StartCoroutine(MedirCuandoAsiente());
         }
 
@@ -78,6 +124,43 @@ namespace GossipSDK.Tracking.A11y
             _medicionPendiente = false;
 
             Evaluar();
+
+            if (_muestreo != null) StopCoroutine(_muestreo);
+            _muestreo = StartCoroutine(MuestrearHastaElFinal());
+        }
+
+        /// <summary>
+        /// El muestreo de P4 y P2. WaitForSecondsRealtime y no WaitForSeconds: si
+        /// la app pone timeScale a 0 -- una pausa, un menu -- el texto se sigue
+        /// viendo, asi que el medidor no puede pararse con el juego.
+        /// </summary>
+        private IEnumerator MuestrearHastaElFinal()
+        {
+            while (true)
+            {
+                yield return new WaitForSecondsRealtime(_esperaDeMuestreo);
+
+                var geometria = FindObjectOfType<A11yGeometryPassTracker>();
+                if ((Object)geometria == null) continue;
+
+                var coste = geometria.MuestrearTextos();
+                _esperaDeMuestreo = Mathf.Max(
+                    IntervaloDeMuestreo,
+                    coste / PresupuestoDeCpu
+                );
+            }
+        }
+
+        private void EmitirAcumulado()
+        {
+            if (_muestreo != null)
+            {
+                StopCoroutine(_muestreo);
+                _muestreo = null;
+            }
+
+            var geometria = FindObjectOfType<A11yGeometryPassTracker>();
+            if ((Object)geometria != null) geometria.EmitirTextos();
         }
 
         /// <summary>

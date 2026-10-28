@@ -151,7 +151,7 @@ namespace GossipSDK.Tracking.A11y
             MedirSubtitulos();
 
             // R5 y R6 no necesitan camara: la holgura de una caja no depende
-            // de donde mire nadie. Viajaban dentro de MedirTextos y heredaban
+            // de donde mire nadie. Viajaban dentro de MuestrearTextos y heredaban
             // su guarda, asi que una escena sin Camera.main las dejaba sin
             // emitir sin que nada lo dijera.
             MedirCajasDeTexto();
@@ -162,7 +162,7 @@ namespace GossipSDK.Tracking.A11y
             var camara = Camera.main;
             if ((Object)camara != null)
             {
-                MedirTextos(camara);
+                MuestrearTextos(camara);
             }
         }
 
@@ -357,7 +357,85 @@ namespace GossipSDK.Tracking.A11y
 
         // ---------- P4 ----------
 
-        private void MedirTextos(Camera camara)
+        // ---------- P4 y P2: acumuladores de sesion ----------
+
+        /// <summary>
+        /// ACC-120. P4 y P2 salen del unico bloque que depende de la camara, y
+        /// medir un instante no vale para ellos: medido el 28-oct-2026 en gafas,
+        /// a los 2 s la escena tiene 14 graficos y UNO vivo, cero textos; los 7
+        /// textos del censo se encienden en los segundos 11 y 23, al coger un
+        /// organo y al abrir el quiz, y los 7 entran en camara. Con una sola foto
+        /// P4 emitia 0 de 0 para siempre.
+        ///
+        /// Se acumula por identidad del componente, no por muestreo: un texto
+        /// visto en treinta barridos cuenta UNA vez. Eso no es un detalle, es la
+        /// condicion para que el denominador siga siendo -textos- y no
+        /// -observaciones de texto-, porque el backend suma numeradores y
+        /// denominadores de todas las filas de una clave.
+        /// </summary>
+        private readonly HashSet<int> _textoEnCamara = new HashSet<int>();
+        private readonly HashSet<int> _textoMedible = new HashSet<int>();
+        private readonly Dictionary<int, bool> _textoConforme =
+            new Dictionary<int, bool>();
+
+        /// <summary>
+        /// P2 no filtra por tronco de vision, asi que su poblacion es -graficos
+        /// no textuales que estuvieron vivos alguna vez-. La etiqueta es un campo
+        /// del componente y no cambia durante la sesion, asi que -descrito alguna
+        /// vez- y -descrito siempre- son el mismo conjunto.
+        /// </summary>
+        private readonly HashSet<int> _noTextoVivo = new HashSet<int>();
+        private readonly HashSet<int> _noTextoDescrito = new HashSet<int>();
+
+        private bool _hayMuestras;
+
+        /// <summary>
+        /// Un muestreo. Devuelve lo que costo, en segundos, para que el reloj
+        /// pueda espaciarse solo si en una escena grande sale caro. Sin camara no
+        /// muestrea y devuelve 0: una fila con distancia inventada es peor que no
+        /// tener fila.
+        /// </summary>
+        public float MuestrearTextos()
+        {
+            var camara = Camera.main;
+            if ((Object)camara == null) return 0f;
+
+            var inicio = Time.realtimeSinceStartup;
+            MuestrearTextos(camara);
+            return Time.realtimeSinceStartup - inicio;
+        }
+
+        /// <summary>
+        /// Cierra la escena: emite P4 y P2 con lo acumulado y vacia. Es
+        /// IDEMPOTENTE a proposito -- la llaman el cambio de escena, OnDisable,
+        /// OnApplicationQuit y OnApplicationPause, y en Quest varias pueden caer
+        /// casi juntas --, asi que sin muestras no emite nada y dos llamadas
+        /// seguidas dejan UNA fila por clave, no dos. Dos filas no darian error:
+        /// las sumaria el backend y el denominador saldria del doble.
+        /// </summary>
+        public void EmitirTextos()
+        {
+            if (!_hayMuestras) return;
+
+            int conformes = 0;
+            foreach (var par in _textoConforme)
+            {
+                if (par.Value) conformes++;
+            }
+
+            Emitir(ClaveDeTexto, conformes, _textoMedible.Count, true);
+            Emitir(ClaveDeTextosMedidos, _textoMedible.Count, _textoEnCamara.Count, false);
+            Emitir(ClaveDeAlternativa, _noTextoDescrito.Count, _noTextoVivo.Count, true);
+
+            _textoEnCamara.Clear();
+            _textoMedible.Clear();
+            _textoConforme.Clear();
+            _noTextoVivo.Clear();
+            _noTextoDescrito.Clear();
+            _hayMuestras = false;
+        }
+
+        private void MuestrearTextos(Camera camara)
         {
             var graficos = FindObjectsByType<Graphic>(
                 FindObjectsInactive.Exclude,
@@ -368,14 +446,10 @@ namespace GossipSDK.Tracking.A11y
             var esquinas = new Vector3[4];
             var ojo = camara.transform.position;
 
-            int enCamara = 0;
-            int medibles = 0;
-            int conformes = 0;
-
-            // P2. Contadores propios: el denominador de alternativas no es el de
-            // texto, son los graficos no textuales de la pantalla.
-            int noTextoVisibles = 0;
-            int noTextoDescritos = 0;
+            // ACC-120. Los contadores ya no son locales de una pasada: viven en
+            // los acumuladores de arriba, porque P4 y P2 se emiten una vez por
+            // escena con lo visto en toda la sesion, no con lo visto a los 2 s.
+            _hayMuestras = true;
 
             foreach (var grafico in graficos)
             {
@@ -393,7 +467,7 @@ namespace GossipSDK.Tracking.A11y
                 // estuviera la cabeza en ese frame.
                 if (!A11yTextReader.IsTextComponent(grafico))
                 {
-                    noTextoVisibles++;
+                    _noTextoVivo.Add(grafico.GetInstanceID());
 
                     var descripcion = grafico.GetComponent<GossipA11yLabel>();
                     if (
@@ -404,7 +478,7 @@ namespace GossipSDK.Tracking.A11y
                         )
                     )
                     {
-                        noTextoDescritos++;
+                        _noTextoDescrito.Add(grafico.GetInstanceID());
                     }
 
                     continue;
@@ -417,6 +491,8 @@ namespace GossipSDK.Tracking.A11y
 
                 var rect = grafico.rectTransform;
                 if ((Object)rect == null) continue;
+
+                var id = grafico.GetInstanceID();
 
                 TextReading lectura;
                 var leido = A11yTextReader.TryRead(grafico, out lectura);
@@ -431,7 +507,7 @@ namespace GossipSDK.Tracking.A11y
                 // mirase la persona en ese instante. Esta escrito en el
                 // catalogo y es la regla, no un efecto secundario.
                 if (!GeometryUtility.TestPlanesAABB(planos, caja)) continue;
-                enCamara++;
+                _textoEnCamara.Add(id);
 
                 if (!leido) continue;
                 if (!lectura.HasPreferredSize) continue;
@@ -448,13 +524,20 @@ namespace GossipSDK.Tracking.A11y
                 var distancia = Vector3.Distance(ojo, caja.center);
                 if (distancia <= 0f) continue;
 
-                medibles++;
-                if (A11yGeometry.TextoCumple(altoDeLinea, distancia)) conformes++;
+                _textoMedible.Add(id);
+
+                // CASO PEOR. Un texto cuenta como conforme solo si lo fue TODAS
+                // las veces que se le vio: si en algun muestreo quedo demasiado
+                // lejos o demasiado pequeno, deja de contar. Mismo criterio que
+                // ACC-118 uso para R5.
+                var cumple = A11yGeometry.TextoCumple(altoDeLinea, distancia);
+                bool anterior;
+                _textoConforme[id] = _textoConforme.TryGetValue(id, out anterior)
+                    ? anterior && cumple
+                    : cumple;
             }
 
-            Emitir(ClaveDeTexto, conformes, medibles, true);
-            Emitir(ClaveDeTextosMedidos, medibles, enCamara, false);
-            Emitir(ClaveDeAlternativa, noTextoDescritos, noTextoVisibles, true);
+            // ACC-120. Aqui ya no se emite: lo hace EmitirTextos al cerrar la escena.
         }
 
         /// <summary>

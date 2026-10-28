@@ -1,3 +1,43 @@
+## [2.0.53] - 2026-10
+
+### Fixed
+- P4 y P2 median el instante de carga, no la sesion. Salen del unico bloque de
+  la pasada que depende de la camara, y la pasada mide una vez, 2 s despues de
+  cargar la escena. Medido el 28-oct-2026 en visor, escena Hospital, 91 barridos
+  en 90 s: a los 2 s la escena tiene 14 graficos y UNO vivo, cero textos.
+- Los SIETE textos del censo se encienden en los segundos 11 y 23 -- al coger un
+  organo y al abrir el quiz -- y los siete llegan a entrar en camara. P4 emitia
+  0 de 0 por construccion, no por falta de datos.
+- P2 iba en el mismo bucle y veia UNO de los siete graficos no textuales.
+
+### Added
+- Muestreo de sesion para P4 y P2. MuestrearTextos acumula POR IDENTIDAD de
+  componente: un texto visto en treinta barridos cuenta una vez. Esa es la
+  condicion para que el denominador siga siendo "textos" y no "observaciones de
+  texto", porque el dashboard suma numeradores y denominadores de todas las
+  filas de una clave.
+- Caso peor para P4: un texto cuenta como conforme solo si lo fue todas las
+  veces que se le vio. Mismo criterio que la 2.0.52 fijo para R5.
+- EmitirTextos cierra la escena con UNA fila por clave y es idempotente: cuelga
+  del cambio de escena, OnDisable, OnApplicationQuit y OnApplicationPause,
+  porque en Quest el tercero no corre al cerrar. Dos llamadas seguidas no
+  duplican la fila, y eso importa mas que el valor: dos filas no darian error,
+  las sumaria el dashboard.
+- Guarda de coste autorreferencial en el reloj. El barrido costo 0,37 ms de
+  media y 1,68 ms el primero sobre una escena de 14 graficos, o sea 0,037 % del
+  reloj a un muestreo por segundo, pero el coste crece con el tamano de la
+  escena del cliente, que no hemos medido. La espera siguiente sale de
+  max(1 s, coste / 0,01): una escena de 500 graficos pasaria sola a 1,3 s en vez
+  de comerse un frame. Un umbral fijo en milisegundos seria un numero inventado
+  sobre escenas que no conocemos; una fraccion del reloj sale del propio coste.
+  Ese 1 % es una decision de producto, no una medicion, y asi queda anotado.
+
+### Changed
+- El muestreo usa WaitForSecondsRealtime: una pausa con timeScale a 0 no apaga
+  el medidor mientras el texto se sigue viendo.
+- R5, R6, O1, O5 y U1 no cambian. Es el criterio de aceptacion de esta version:
+  misma sesion antes y despues, mismos numeros en esas cinco, una sola fila por
+  escena y clave, y P4 con denominador mayor que cero.
 ## [2.0.52] - 2026-10
 
 ### Fixed
@@ -55,6 +95,10 @@
 - P4, P2 y O1 no cambian. Es el criterio de aceptacion de esta version: misma
   sesion antes y despues, mismos numeros en esas tres, y R5 y R6 con denominador
   mayor que cero.
+- CORREGIDO EL 28-oct-2026. La frase de arriba prometia R5 y R6 con denominador
+  mayor que cero, y solo lo cumplio R6: en la sesion de la 2.0.51 R6 salio 4/4 y
+  R5 siguio en 0/0, porque sin recuento de lineas no se pronunciaba. Lo arreglo
+  la 2.0.52, con el caso peor y su sonda de cobertura.
 ## [2.0.50] - 2026-10
 
 ### Removed
