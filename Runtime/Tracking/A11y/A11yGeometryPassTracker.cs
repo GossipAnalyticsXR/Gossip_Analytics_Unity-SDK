@@ -158,6 +158,11 @@ namespace GossipSDK.Tracking.A11y
             _noTextoDescrito.Clear();
             _hayMuestras = false;
             _selloDeLaEscena = System.DateTime.UtcNow.ToString("o");
+            _ultimoConformes = -1;
+            _ultimoMedibles = -1;
+            _ultimoEnCamara = -1;
+            _ultimoDescritos = -1;
+            _ultimoNoTextoVivo = -1;
 
             MedirDianas();
             MedirSubtitulos();
@@ -406,6 +411,23 @@ namespace GossipSDK.Tracking.A11y
         /// </summary>
         private string _selloDeLaEscena;
 
+        /// <summary>
+        /// ACC-127. Lo ultimo que se envio, para no mandar dos veces el mismo
+        /// valor. Los acumuladores solo CRECEN -- un id entra en el conjunto y no
+        /// sale, y _textoConforme solo va de true a false --, asi que el numero de
+        /// valores distintos de una escena esta acotado por sus textos y no por su
+        /// duracion. Medido en Hospital: los siete textos se encienden en los
+        /// segundos 11 y 23, o sea DOS valores nuevos en 90 s. El reloj de 10 s
+        /// que esto sustituye mandaba nueve fotos para decir dos cosas.
+        ///
+        /// Arrancan a -1 y no a 0 para que la primera foto de cada escena salga
+        /// siempre: un 0 de 0 medido es un valor y tiene que viajar.
+        /// </summary>
+        private int _ultimoConformes = -1;
+        private int _ultimoMedibles = -1;
+        private int _ultimoEnCamara = -1;
+        private int _ultimoDescritos = -1;
+        private int _ultimoNoTextoVivo = -1;
         private bool _hayMuestras;
 
         /// <summary>
@@ -442,12 +464,15 @@ namespace GossipSDK.Tracking.A11y
         }
 
         /// <summary>
-        /// Cierra la escena: emite P4 y P2 con lo acumulado y vacia. Es
-        /// IDEMPOTENTE a proposito -- la llaman el cambio de escena, OnDisable,
-        /// OnApplicationQuit y OnApplicationPause, y en Quest varias pueden caer
-        /// casi juntas --, asi que sin muestras no emite nada y dos llamadas
-        /// seguidas dejan UNA fila por clave, no dos. Dos filas no darian error:
-        /// las sumaria el backend y el denominador saldria del doble.
+        /// Emite P4 y P2 con lo acumulado. NO vacia: de eso se encarga Evaluate
+        /// al abrir la escena siguiente.
+        ///
+        /// IDEMPOTENTE a proposito -- la llaman el muestreo, el cambio de escena,
+        /// OnDisable, OnApplicationQuit y OnApplicationPause, y en Quest varias
+        /// pueden caer casi juntas --, asi que sin muestras no emite nada, y si
+        /// las cifras no cambiaron desde el ultimo envio tampoco. Dos filas no
+        /// darian error: las sumaria el backend y el denominador saldria del
+        /// doble.
         /// </summary>
         public void EmitirTextos()
         {
@@ -459,13 +484,28 @@ namespace GossipSDK.Tracking.A11y
                 if (par.Value) conformes++;
             }
 
+            // ACC-127. Reenvio por cambio y no por reloj: con las cinco cifras
+            // iguales a las ultimas enviadas, este envio seria un payload
+            // identico a la fila que ya esta en el backend.
+            if (conformes == _ultimoConformes
+                && _textoMedible.Count == _ultimoMedibles
+                && _textoEnCamara.Count == _ultimoEnCamara
+                && _noTextoDescrito.Count == _ultimoDescritos
+                && _noTextoVivo.Count == _ultimoNoTextoVivo) return;
+
+            _ultimoConformes = conformes;
+            _ultimoMedibles = _textoMedible.Count;
+            _ultimoEnCamara = _textoEnCamara.Count;
+            _ultimoDescritos = _noTextoDescrito.Count;
+            _ultimoNoTextoVivo = _noTextoVivo.Count;
+
             Emitir(ClaveDeTexto, conformes, _textoMedible.Count, true, _selloDeLaEscena);
             Emitir(ClaveDeTextosMedidos, _textoMedible.Count, _textoEnCamara.Count, false, _selloDeLaEscena);
             Emitir(ClaveDeAlternativa, _noTextoDescrito.Count, _noTextoVivo.Count, true, _selloDeLaEscena);
 
-            // NO se vacia. Esta foto se reenvia cada pocos segundos con el mismo
-            // sello, asi que cada envio sustituye al anterior y el acumulado
-            // sigue creciendo. Vaciar aqui haria que el segundo envio mandase
+            // NO se vacia. Esta foto se reenvia con el mismo sello cada vez que
+            // cambia, asi que cada envio sustituye al anterior y el acumulado
+            // sigue creciendo. Vaciar aqui haria que el envio siguiente mandase
             // ceros y borrase lo que ya se habia medido.
             //
             // Quien vacia es Evaluate, al abrir la escena siguiente.

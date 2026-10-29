@@ -68,24 +68,6 @@ namespace GossipSDK.Tracking.A11y
         /// </summary>
         public const float PresupuestoDeCpu = 0.01f;
 
-        /// <summary>
-        /// ACC-126. Cada cuanto sale de nuevo la foto acumulada de P4 y P2. No es
-        /// el intervalo de muestreo: mirar la escena cuesta 0,37 ms de media y
-        /// enviar no, asi que se separan. Cada reenvio lleva el sello de la escena
-        /// -- el instante en que asento --, y el ingest hace upsert por
-        /// (sesion, clave, escena, sello), asi que el envio nuevo SOBREESCRIBE al
-        /// anterior en vez de sumar una fila: el denominador de P4 sigue siendo el
-        /// numero de textos de la escena, no su multiplo.
-        ///
-        /// Por que existe: medido el 28-oct-2026, 1 de 2 corridas con gafas perdio
-        /// su fila de P4. La unica emision salia en el cierre y el POST se muere
-        /// con el proceso. Con esto el cierre deja de ser el unico momento en que
-        /// la metrica puede salvarse.
-        /// </summary>
-        public const float IntervaloDeReenvio = 10f;
-
-        private float _ultimoReenvio;
-
         private float _esperaDeMuestreo = IntervaloDeMuestreo;
         private Coroutine _muestreo;
 
@@ -112,7 +94,8 @@ namespace GossipSDK.Tracking.A11y
 
         private void OnApplicationPause(bool pausado)
         {
-            if (pausado) EmitirAcumulado();
+            // DK-3a. GUARDA y no para -- ver EmitirSinParar.
+            if (pausado) EmitirSinParar();
         }
 
         private void Start()
@@ -144,11 +127,6 @@ namespace GossipSDK.Tracking.A11y
             Evaluar();
 
             if (_muestreo != null) StopCoroutine(_muestreo);
-            // ACC-126. Un reenvio en la primera muestra: la corrida que se
-            // pierde es la corta, asi que la foto tiene que existir en el
-            // segundo 1 y no en el 10.
-            _ultimoReenvio = Time.realtimeSinceStartup - IntervaloDeReenvio;
-
             _muestreo = StartCoroutine(MuestrearHastaElFinal());
         }
 
@@ -172,11 +150,11 @@ namespace GossipSDK.Tracking.A11y
                     coste / PresupuestoDeCpu
                 );
 
-                if (Time.realtimeSinceStartup - _ultimoReenvio >= IntervaloDeReenvio)
-                {
-                    _ultimoReenvio = Time.realtimeSinceStartup;
-                    geometria.EmitirTextos();
-                }
+                // ACC-127. Se emite en CADA muestra y el tracker decide: si las
+                // cifras no cambiaron desde el ultimo envio, no manda nada. El
+                // reloj de reenvio no existe porque lo que mueve el dato es un
+                // texto nuevo, no el tiempo.
+                geometria.EmitirTextos();
             }
         }
 
@@ -188,6 +166,26 @@ namespace GossipSDK.Tracking.A11y
                 _muestreo = null;
             }
 
+            EmitirSinParar();
+        }
+
+        /// <summary>
+        /// DK-3a. La pausa tiene que GUARDAR, no parar. EmitirAcumulado para la
+        /// corrutina porque sus otros tres llamadores son terminales -- el cambio
+        /// de escena, OnDisable y Quit --, pero OnApplicationPause(true) VUELVE:
+        /// en Quest te quitas el visor y te lo vuelves a poner. Medido el
+        /// 29-oct-2026 leyendo el codigo: al reanudar nadie rearrancaba _muestreo,
+        /// asi que P4 y P2 dejaban de muestrear el resto de la escena.
+        ///
+        /// Y rearrancar no es la salida: la unica via que monta la corrutina es
+        /// MedirCuandoAsiente, que llama a Evaluar(), que vacia los acumuladores
+        /// y vuelve a sellar -- o sea una SEGUNDA fila para la misma escena en vez
+        /// de la misma. Asi que la pausa no para: guarda y deja el reloj puesto.
+        /// Unity suspende la corrutina con la app y la reanuda sola, y como la
+        /// espera es WaitForSecondsRealtime, al volver ya ha vencido y dispara.
+        /// </summary>
+        private void EmitirSinParar()
+        {
             var geometria = FindObjectOfType<A11yGeometryPassTracker>();
             if ((Object)geometria != null) geometria.EmitirTextos();
         }

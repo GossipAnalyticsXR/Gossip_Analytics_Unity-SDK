@@ -1,3 +1,34 @@
+## [2.0.55] - 2026-10
+
+### Changed
+- El reenvio de P4 y P2 es POR CAMBIO y no por reloj. La 2.0.54 reenviaba cada
+  10 s, y ese 10 no salia de ninguna medicion. Los acumuladores solo crecen -- un
+  id entra en el conjunto y no sale, y la conformidad solo va de true a false --,
+  asi que el numero de valores distintos de una escena lo fijan sus textos y no su
+  duracion. Medido en Hospital: los siete textos se encienden en los segundos 11 y
+  23, o sea DOS valores nuevos en 90 s. El reloj de 10 s mandaba nueve fotos para
+  decir dos cosas; ahora EmitirTextos guarda las cinco cifras que mando y no vuelve
+  a mandar un valor identico.
+- Peor caso acotado contra la carga que el SDK ya tiene: una escena que encendiera
+  un texto nuevo cada segundo daria 3 eventos/s, y EnsureTrackers monta en cada
+  carga de escena mas de 23 eventos/s de suelo -- PositionTracker a 0,15 s,
+  RotationAndVelocity a 0,2 s, PlayerMovementHeatmap a 0,25 s, UserBalance,
+  UserPosture y HandController a 0,5 s, DistanceTracker y RealityModeMonitor a 1 s.
+  O sea el 12,7 % de lo que ya se emite, y acotado por la cadencia de muestreo, que
+  se auto-espacia con el presupuesto del 1 % de reloj.
+
+### Fixed
+- La pausa paraba el medidor y la reanudacion no lo rearrancaba. OnApplicationPause
+  con true llamaba a EmitirAcumulado, que hace StopCoroutine del muestreo, y al
+  volver nadie lo montaba otra vez: en Quest eso es quitarse el visor y volvertelo a
+  poner, y P4 y P2 dejaban de medir el resto de la escena. Parar es correcto para
+  los otros tres llamadores -- cambio de escena, OnDisable y OnApplicationQuit --
+  porque son terminales; la pausa vuelve. Ahora la pausa GUARDA sin parar.
+- Rearrancar no era la salida y por eso no se hizo: la unica via que monta la
+  corrutina es MedirCuandoAsiente, que llama a Evaluar, que vacia los acumuladores y
+  vuelve a sellar la escena, o sea una SEGUNDA fila para la misma escena en vez de
+  la misma. Se separo el guardar del parar en EmitirSinParar.
+
 ## [2.0.54] - 2026-10
 
 ### Fixed
