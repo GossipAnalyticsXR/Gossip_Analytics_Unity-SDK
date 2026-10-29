@@ -72,10 +72,11 @@ namespace GossipSDK.Tracking.A11y
             int numerator,
             int denominator,
             string scope,
-            MetaData meta
+            MetaData meta,
+            string timestampUtc = null
         )
         {
-            Cap(KindCheck, metricKey, numerator, denominator, scope, meta);
+            Cap(KindCheck, metricKey, numerator, denominator, scope, meta, timestampUtc);
         }
 
         /// <summary>
@@ -87,10 +88,11 @@ namespace GossipSDK.Tracking.A11y
             int numerator,
             int denominator,
             string scope,
-            MetaData meta
+            MetaData meta,
+            string timestampUtc = null
         )
         {
-            Cap(KindSignal, metricKey, numerator, denominator, scope, meta);
+            Cap(KindSignal, metricKey, numerator, denominator, scope, meta, timestampUtc);
         }
 
         private void Cap(
@@ -99,7 +101,8 @@ namespace GossipSDK.Tracking.A11y
             int numerator,
             int denominator,
             string scope,
-            MetaData meta
+            MetaData meta,
+            string timestampUtc = null
         )
         {
             var data = new EntityData
@@ -110,7 +113,7 @@ namespace GossipSDK.Tracking.A11y
                 Denominator = denominator,
                 Scope = scope,
                 Meta = meta,
-                TimestampUtc = DateTime.UtcNow.ToString("o")
+                TimestampUtc = timestampUtc ?? DateTime.UtcNow.ToString("o")
             };
 
             CapSession(data);

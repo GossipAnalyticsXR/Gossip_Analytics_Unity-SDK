@@ -68,6 +68,24 @@ namespace GossipSDK.Tracking.A11y
         /// </summary>
         public const float PresupuestoDeCpu = 0.01f;
 
+        /// <summary>
+        /// ACC-126. Cada cuanto sale de nuevo la foto acumulada de P4 y P2. No es
+        /// el intervalo de muestreo: mirar la escena cuesta 0,37 ms de media y
+        /// enviar no, asi que se separan. Cada reenvio lleva el sello de la escena
+        /// -- el instante en que asento --, y el ingest hace upsert por
+        /// (sesion, clave, escena, sello), asi que el envio nuevo SOBREESCRIBE al
+        /// anterior en vez de sumar una fila: el denominador de P4 sigue siendo el
+        /// numero de textos de la escena, no su multiplo.
+        ///
+        /// Por que existe: medido el 28-oct-2026, 1 de 2 corridas con gafas perdio
+        /// su fila de P4. La unica emision salia en el cierre y el POST se muere
+        /// con el proceso. Con esto el cierre deja de ser el unico momento en que
+        /// la metrica puede salvarse.
+        /// </summary>
+        public const float IntervaloDeReenvio = 10f;
+
+        private float _ultimoReenvio;
+
         private float _esperaDeMuestreo = IntervaloDeMuestreo;
         private Coroutine _muestreo;
 
@@ -120,12 +138,17 @@ namespace GossipSDK.Tracking.A11y
                 yield break;
 
             _medicionPendiente = true;
-            yield return new WaitForSeconds(EsperaDeAsentado);
+            yield return new WaitForSecondsRealtime(EsperaDeAsentado);
             _medicionPendiente = false;
 
             Evaluar();
 
             if (_muestreo != null) StopCoroutine(_muestreo);
+            // ACC-126. Un reenvio en la primera muestra: la corrida que se
+            // pierde es la corta, asi que la foto tiene que existir en el
+            // segundo 1 y no en el 10.
+            _ultimoReenvio = Time.realtimeSinceStartup - IntervaloDeReenvio;
+
             _muestreo = StartCoroutine(MuestrearHastaElFinal());
         }
 
@@ -148,6 +171,12 @@ namespace GossipSDK.Tracking.A11y
                     IntervaloDeMuestreo,
                     coste / PresupuestoDeCpu
                 );
+
+                if (Time.realtimeSinceStartup - _ultimoReenvio >= IntervaloDeReenvio)
+                {
+                    _ultimoReenvio = Time.realtimeSinceStartup;
+                    geometria.EmitirTextos();
+                }
             }
         }
 

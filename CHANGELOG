@@ -1,3 +1,29 @@
+## [2.0.54] - 2026-10
+
+### Fixed
+- P4 y P2 solo salian en el cierre de la escena, y el POST se muere con el
+  proceso: medido el 28-oct-2026 en visor, 1 de 2 corridas perdio su fila de P4.
+  Ahora la foto acumulada se reenvia cada 10 s con el sello de la escena -- el
+  instante en que asento --, el mismo en todos los envios de esa escena. La clave
+  unica del ingest incluye timestampUtc y el processor hace upsert, asi que el
+  envio nuevo SOBREESCRIBE la fila en vez de anadir otra: el denominador de P4
+  sigue siendo el numero de textos de la escena, no su multiplo. El primer
+  reenvio cae en la primera muestra, porque la corrida que se pierde es la corta.
+- La espera de asentado usaba WaitForSeconds, o sea el reloj del juego. Una app
+  que pone timeScale a 0 -- una pausa, un menu -- dejaba la pasada de a11y sin
+  disparar aunque el texto se siguiera viendo. Ahora es WaitForSecondsRealtime,
+  igual que el muestreo.
+- El A11yGeometryPassTracker no emitia al desactivarse. Es un medidor con estado,
+  y GossipManager respeta la instancia que el integrador ya tuviera colgada de la
+  escena, asi que al apagarse se perdia lo acumulado. Ahora OnDisable llama a
+  EmitirTextos, que es idempotente a proposito.
+
+### Changed
+- CapCheck, CapSignal y Cap aceptan un timestampUtc opcional. Sin el siguen
+  poniendo DateTime.UtcNow, asi que ninguna otra metrica cambia de comportamiento.
+- EmitirTextos ya no vacia los acumuladores: los vacia Evaluate al sellar la
+  escena nueva. Antes vaciaba porque solo se la llamaba una vez.
+
 ## [2.0.53] - 2026-10
 
 ### Fixed

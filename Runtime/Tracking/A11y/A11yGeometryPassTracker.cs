@@ -147,6 +147,18 @@ namespace GossipSDK.Tracking.A11y
 
         public void Evaluate()
         {
+            // ACC-126. Cada escena abre su propia foto: se vacia lo de la
+            // anterior y se acuna el sello con el que viajaran TODOS los
+            // reenvios de esta. El sello fijo es lo que hace que el backend
+            // sobrescriba la fila en vez de sumar otra.
+            _textoEnCamara.Clear();
+            _textoMedible.Clear();
+            _textoConforme.Clear();
+            _noTextoVivo.Clear();
+            _noTextoDescrito.Clear();
+            _hayMuestras = false;
+            _selloDeLaEscena = System.DateTime.UtcNow.ToString("o");
+
             MedirDianas();
             MedirSubtitulos();
 
@@ -386,6 +398,13 @@ namespace GossipSDK.Tracking.A11y
         /// </summary>
         private readonly HashSet<int> _noTextoVivo = new HashSet<int>();
         private readonly HashSet<int> _noTextoDescrito = new HashSet<int>();
+        /// <summary>
+        /// ACC-126. El sello de hora de la escena en curso. Todas las fotos de
+        /// P4 y P2 viajan con EL MISMO, para que la clave unica del backend
+        /// -- appId, sessionID, metricKey, scope, sceneId, timestampUtc -- sea
+        /// la misma y la fila se ACTUALICE en vez de sumarse otra.
+        /// </summary>
+        private string _selloDeLaEscena;
 
         private bool _hayMuestras;
 
@@ -406,6 +425,23 @@ namespace GossipSDK.Tracking.A11y
         }
 
         /// <summary>
+        /// ACC-121. El cierre de la ultima escena. EmitirTextos cuelga del reloj
+        /// -- cambio de escena, OnDisable, quit y pause --, pero ese reloj vive
+        /// en el host persistente y este tracker puede no vivir ahi: Ensure
+        /// respeta una instancia que el integrador haya colgado de un objeto de
+        /// escena, GossipManager.cs:290-295, y entonces la descarga de esa escena
+        /// se lleva los acumuladores antes de que el reloj pueda pedirlos, porque
+        /// sceneLoaded corre DESPUES de la descarga.
+        ///
+        /// Emitiendo aqui, el estado se vacia donde muere, viva donde viva. Y no
+        /// duplica: EmitirTextos no emite si no hay muestras.
+        /// </summary>
+        private void OnDisable()
+        {
+            EmitirTextos();
+        }
+
+        /// <summary>
         /// Cierra la escena: emite P4 y P2 con lo acumulado y vacia. Es
         /// IDEMPOTENTE a proposito -- la llaman el cambio de escena, OnDisable,
         /// OnApplicationQuit y OnApplicationPause, y en Quest varias pueden caer
@@ -423,16 +459,16 @@ namespace GossipSDK.Tracking.A11y
                 if (par.Value) conformes++;
             }
 
-            Emitir(ClaveDeTexto, conformes, _textoMedible.Count, true);
-            Emitir(ClaveDeTextosMedidos, _textoMedible.Count, _textoEnCamara.Count, false);
-            Emitir(ClaveDeAlternativa, _noTextoDescrito.Count, _noTextoVivo.Count, true);
+            Emitir(ClaveDeTexto, conformes, _textoMedible.Count, true, _selloDeLaEscena);
+            Emitir(ClaveDeTextosMedidos, _textoMedible.Count, _textoEnCamara.Count, false, _selloDeLaEscena);
+            Emitir(ClaveDeAlternativa, _noTextoDescrito.Count, _noTextoVivo.Count, true, _selloDeLaEscena);
 
-            _textoEnCamara.Clear();
-            _textoMedible.Clear();
-            _textoConforme.Clear();
-            _noTextoVivo.Clear();
-            _noTextoDescrito.Clear();
-            _hayMuestras = false;
+            // NO se vacia. Esta foto se reenvia cada pocos segundos con el mismo
+            // sello, asi que cada envio sustituye al anterior y el acumulado
+            // sigue creciendo. Vaciar aqui haria que el segundo envio mandase
+            // ceros y borrase lo que ya se habia medido.
+            //
+            // Quien vacia es Evaluate, al abrir la escena siguiente.
         }
 
         private void MuestrearTextos(Camera camara)
@@ -738,7 +774,7 @@ namespace GossipSDK.Tracking.A11y
 
         // ---------- emision ----------
 
-        private void Emitir(string clave, int numerador, int denominador, bool esCheck)
+        private void Emitir(string clave, int numerador, int denominador, bool esCheck, string sello = null)
         {
             var instancia = Gossip.Instance;
             if ((Object)instancia == null) return;
@@ -750,11 +786,11 @@ namespace GossipSDK.Tracking.A11y
 
             if (esCheck)
             {
-                tracker.CapCheck(clave, numerador, denominador, AmbitoDeEscena, meta);
+                tracker.CapCheck(clave, numerador, denominador, AmbitoDeEscena, meta, sello);
             }
             else
             {
-                tracker.CapSignal(clave, numerador, denominador, AmbitoDeEscena, meta);
+                tracker.CapSignal(clave, numerador, denominador, AmbitoDeEscena, meta, sello);
             }
         }
 
