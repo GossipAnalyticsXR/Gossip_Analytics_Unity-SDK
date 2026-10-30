@@ -1,3 +1,20 @@
+## [2.0.57] - 2026-10
+
+### Removed
+- Las tres senales de contraste de no-texto salen del SDK: `nontext_contrast_coverage`,
+  `nontext_measurable_coverage` y `nontext_face_coverage`. El diagnostico que entro en
+  la 2.0.56 cerro la pregunta: num 0 / den 8, o sea `conCara` 0 de 8, y 0 medibles de
+  476 controles en los tres entornos vivos. La puerta es `PrimeraCaraSolida`, que exige
+  un `Image` de uGUI habilitado, sin sprite y opaco: un instrumento web aplicado a una
+  escena 3D, y no tiene arreglo de una linea. La card de contraste de no-texto se
+  retiro del dashboard el 30-10, asi que esas tres claves no las leia nadie.
+- Con ellas salen `MedirNoTexto`, `PrimeraCaraSolida` -- que era `public static`, o sea
+  superficie publica, sin un solo llamador en el repo privado ni en el espejo -- y el
+  `using` de `GossipSDK.Components`, huerfano al irse el bloque: de los 26 tipos de ese
+  namespace solo uno se usaba en el fichero. Barrido de llamadores antes de tocar: 172
+  de 172 ficheros .cs, 0 fallos, y `A11yContrastTests.cs` no los referencia. El fichero
+  pasa de 393 a 308 lineas. `MedirTexto` y `text_contrast_coverage` quedan intactos.
+
 ## [2.0.56] - 2026-10
 
 ### Added

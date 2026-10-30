@@ -3,7 +3,6 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using GossipSDK.A11y;
-using GossipSDK.Components;
 using GossipSDK.Core;
 
 namespace GossipSDK.Tracking.A11y
@@ -28,9 +27,6 @@ namespace GossipSDK.Tracking.A11y
         /// <summary>P3. Textos que llegan a su ratio contra el fondo resuelto.</summary>
         public const string ClaveDeTexto = "text_contrast_coverage";
 
-        /// <summary>P6. Elementos no textuales de un control que llegan a 3:1.</summary>
-        public const string ClaveDeNoTexto = "nontext_contrast_coverage";
-
         /// <summary>
         /// ACC-49, primera mitad: de todos los textos de la escena, cuantos
         /// tienen DETRAS una superficie opaca que esta pasada sepa encontrar.
@@ -48,20 +44,6 @@ namespace GossipSDK.Tracking.A11y
         /// </summary>
         public const string ClaveDeFondoSolido = "text_background_solid_coverage";
 
-        /// <summary>Senal: controles cuyo contraste se pudo calcular.</summary>
-        public const string ClaveDeNoTextoMedible = "nontext_measurable_coverage";
-
-        /// <summary>Senal: controles con una cara solida que leer.
-        ///
-        /// Parte en dos lo que ClaveDeNoTextoMedible resuelve de golpe, igual
-        /// que ClaveDeFondoHallado lo parte para el texto. Medido el
-        /// 30-10-2026 en las tres bases vivas: 0 medibles de 476 controles
-        /// encontrados, y 139 de 139 en el camino de texto. Con solo los dos
-        /// extremos publicados no se sabe cual de las dos puertas se cierra:
-        /// si no hay Image sin sprite que leer, o si lo hay y no tiene fondo
-        /// opaco detras. Cada respuesta lleva a un arreglo distinto.</summary>
-        public const string ClaveDeCaraNoTexto = "nontext_face_coverage";
-
         private const string AmbitoDeEscena = "scene";
 
         // ---------- ciclo ----------
@@ -76,7 +58,6 @@ namespace GossipSDK.Tracking.A11y
         public void Evaluate()
         {
             MedirTexto();
-            MedirNoTexto();
         }
 
         // ---------- el resolver de fondo ----------
@@ -217,9 +198,9 @@ namespace GossipSDK.Tracking.A11y
         /// estaban desactivados en el frame de la carga, asi que P3 emitio 0/0 y la
         /// sonda de ACC-49 se quedo sin denominador que leer.
         ///
-        /// MedirNoTexto -- P6 -- se queda con Exclude unas lineas mas abajo, y no es
-        /// una incoherencia: ahi la poblacion son los controles que habia, y un
-        /// control desactivado no es un control que el usuario pudiera usar.
+        /// Y ya no hay con que compararlo: MedirNoTexto -- P6 --, que usaba Exclude
+        /// porque su poblacion eran controles y no textos, salio del SDK cuando la
+        /// card se retiro por no poder medir: 0 medibles de 476 controles.
         ///
         /// Lo que esto le cuesta a la lectura: un texto que nunca se dibujo puede no
         /// tener layout resuelto. A P3 le da igual -- solo lee colores y jerarquia --,
@@ -286,72 +267,6 @@ namespace GossipSDK.Tracking.A11y
             Emitir(ClaveDeTexto, conformes, medibles, true);
             Emitir(ClaveDeFondoHallado, conFondo, considerados, false);
             Emitir(ClaveDeFondoSolido, medibles, conFondo, false);
-        }
-
-        // ---------- P6 ----------
-
-        /// <summary>
-        /// La poblacion de 1.4.11 son los COMPONENTES DE INTERFAZ, no todo lo
-        /// que se dibuja: un adorno sin funcion no tiene que contrastar con
-        /// nada. Aqui eso son los objetos que ya llevan InteractableComponent,
-        /// que es la misma poblacion que mide O1.
-        /// </summary>
-        private void MedirNoTexto()
-        {
-            var controles = FindObjectsByType<InteractableComponent>(
-                FindObjectsInactive.Exclude,
-                FindObjectsSortMode.None
-            );
-
-            var encontrados = 0;
-            var conCara = 0;
-            var medibles = 0;
-            var conformes = 0;
-
-            foreach (var control in controles)
-            {
-                if ((Object)control == null) continue;
-                encontrados++;
-
-                var cara = PrimeraCaraSolida(control.gameObject);
-                if ((Object)cara == null) continue;
-                conCara++;
-
-                var fondo = ResolverFondo(cara);
-                if (!fondo.Hallado || !fondo.ColorConocido) continue;
-
-                medibles++;
-
-                var c = cara.color;
-                var ratio = A11yContrast.Ratio(c.r, c.g, c.b, fondo.R, fondo.G, fondo.B);
-                if (A11yContrast.NoTextoCumple(ratio)) conformes++;
-            }
-
-            Emitir(ClaveDeNoTexto, conformes, medibles, true);
-            Emitir(ClaveDeNoTextoMedible, medibles, encontrados, false);
-            Emitir(ClaveDeCaraNoTexto, conCara, encontrados, false);
-        }
-
-        /// <summary>
-        /// El primer Image activo, opaco y sin sprite del control o de sus
-        /// hijos. Sin sprite por el mismo motivo que en el fondo: con una
-        /// textura encima, el color del componente es un tinte y no lo que se
-        /// ve. Los hijos inactivos quedan fuera, como en toda esta seccion.
-        /// </summary>
-        public static Image PrimeraCaraSolida(GameObject go)
-        {
-            if ((Object)go == null) return null;
-
-            foreach (var imagen in go.GetComponentsInChildren<Image>(false))
-            {
-                if ((Object)imagen == null) continue;
-                if (!imagen.enabled) continue;
-                if ((Object)imagen.sprite != null) continue;
-                if (!A11yContrast.EsOpaca(imagen.color.a)) continue;
-                return imagen;
-            }
-
-            return null;
         }
 
         // ---------- emision ----------
