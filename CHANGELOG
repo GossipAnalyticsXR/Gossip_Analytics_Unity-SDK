@@ -1,3 +1,30 @@
+## [2.0.56] - 2026-10
+
+### Added
+- Una senal nueva de contraste de no-texto, `nontext_face_coverage`: los controles
+  con una cara solida que leer sobre los encontrados. `MedirNoTexto` tiene DOS
+  puertas -- `PrimeraCaraSolida` y `ResolverFondo` -- y publicaba solo los extremos,
+  asi que un denominador en cero no decia cual se cerraba. Medido el 30-10 en los
+  tres entornos vivos: 0 medibles de 476 controles encontrados -56 en beta, 395 en
+  dev, 25 en prod- contra 139 de 139 en el camino de texto, que si publica su
+  intermedio. La clave no esta en el mapa del dashboard, asi que no pinta ninguna
+  card: se consulta y ya.
+
+### Fixed
+- El bucle de instantaneas de `MultiplayerTrackerComponent` mide en reloj real.
+  Usaba `WaitForSeconds`, y lo que mide -la sala, el tipo de partida y cuantos
+  jugadores hay- vive en la red: los pares no se pausan cuando la app pone
+  `timeScale` a 0, asi que con el juego en pausa el contador se quedaba quieto
+  mientras la partida seguia. Ahora es `WaitForSecondsRealtime`.
+- El pestillo de la medicion de accesibilidad ya no sobrevive al apagado.
+  `_medicionPendiente` se pone a true y solo se quita DESPUES de la espera de
+  asentado, asi que si el componente se desactivaba dentro de esa ventana Unity
+  mataba la corrutina y el flag se quedaba puesto. Al reactivarse, `Start()` ya no
+  corre y cada `MedirCuandoAsiente` hace `yield break`: el reloj se callaba PARA
+  SIEMPRE, sin `Evaluar` y sin muestreo. `OnDisable` lo baja antes de soltar el
+  componente. El guardia se queda ancho a proposito: tambien cubre la transicion
+  rapida de escena, donde un guardia de frame sellaria dos veces la misma escena.
+
 ## [2.0.55] - 2026-10
 
 ### Changed

@@ -42,6 +42,22 @@ namespace GossipSDK.Core.Connection
                 var gossip = Gossip.Instance;
                 if (!ValidateSession(gossip)) { callback?.Invoke(false); return; }
 
+                // El id de sesion se lee AQUI, en el hilo principal. Dentro del hilo de
+                // fondo Gossip.CurrentSessionId es un global que SessionManager puede
+                // haber cambiado ya: al arrancar cierra la sesion huerfana cambiandolo
+                // dos veces, y el sobre saldria con la sesion SIGUIENTE. Medido el
+                // 18-oct-2026 en Hospital: cinco sesiones empiezan con una a tres
+                // muestras fechadas tres segundos despues del ultimo punto de la sesion
+                // anterior, y su duracion pasa de minutos a horas.
+                //
+                // Es la misma regla que SceneIdentity ya deja escrita para el GUID, y la
+                // que GenericSocketConnection.CapSession ya aplica al bufer de tracking.
+                // Los cinco envios de este fichero entran en un hilo de fondo, asi que
+                // los cinco capturan el id antes de entrar.
+                //
+                // El playerID no se captura: no cambia dentro de una ejecucion, porque
+                // SessionManager llama a SetCurrentIds siempre con el mismo.
+                string sessionIdActual = gossip.CurrentSessionId;
                 string json = await UniTask.RunOnThreadPool(() =>
                 {
                     string imageBase64 = Convert.ToBase64String(png);
@@ -49,7 +65,7 @@ namespace GossipSDK.Core.Connection
                     {
                         EventType = "HeatmapSceneImageTracker",
                         PlayerID = gossip.CurrentPlayerId,
-                        SessionID = gossip.CurrentSessionId,
+                        SessionID = sessionIdActual,
                         sceneUser = spec.SceneName,
                         TimestampUtc = DateTime.UtcNow.ToString("o"),
                         SceneName = spec.SceneName,
@@ -78,6 +94,8 @@ if (spec == null || jpg == null || jpg.Length == 0) { callback?.Invoke(false); r
 var gossip = Gossip.Instance;
 if (!ValidateSession(gossip)) { callback?.Invoke(false); return; }
 
+// El id se lee en el hilo principal, no dentro del pool. Ver UploadHeatmapScene.
+string sessionIdActual = gossip.CurrentSessionId;
 string json = await UniTask.RunOnThreadPool(() =>
 {
 string imageBase64 = Convert.ToBase64String(jpg);
@@ -85,7 +103,7 @@ var envelope = new
 {
 EventType = "HeatmapPanoramaTracker",
 PlayerID = gossip.CurrentPlayerId,
-SessionID = gossip.CurrentSessionId,
+SessionID = sessionIdActual,
 TimestampUtc = DateTime.UtcNow.ToString("o"),
 SceneName = spec.SceneName,
 SceneGuid = spec.SceneGuid,
@@ -138,6 +156,8 @@ callback?.Invoke(false);
                 var objName = interactedObject.name;
                 var appVersion = Application.version;
 
+                // El id se lee en el hilo principal, no dentro del pool. Ver UploadHeatmapScene.
+                string sessionIdActual = gossip.CurrentSessionId;
                 string json = await UniTask.RunOnThreadPool(() =>
                 {
                     string base64 = Convert.ToBase64String(png);
@@ -145,7 +165,7 @@ callback?.Invoke(false);
                     {
                         EventType = "InteractionImageTracker",
                         PlayerID = gossip.CurrentPlayerId,
-                        SessionID = gossip.CurrentSessionId,
+                        SessionID = sessionIdActual,
                         TimestampUtc = DateTime.UtcNow.ToString("o"),
                         SceneName = sceneName,
                         SceneGuid = sceneGuid,
@@ -188,6 +208,8 @@ public async UniTask UploadEyeGazeImage(Ray gazeRay, RaycastHit hit, float fixat
                 Vector3 hitPoint = hit.point;
                 var appVersion = Application.version;
 
+                // El id se lee en el hilo principal, no dentro del pool. Ver UploadHeatmapScene.
+                string sessionIdActual = gossip.CurrentSessionId;
                 string json = await UniTask.RunOnThreadPool(() =>
                 {
                     string base64 = Convert.ToBase64String(png);
@@ -196,7 +218,7 @@ public async UniTask UploadEyeGazeImage(Ray gazeRay, RaycastHit hit, float fixat
                     {
                         EventType = "EyeGazeImageTracker",
                         PlayerID = gossip.CurrentPlayerId,
-                        SessionID = gossip.CurrentSessionId,
+                        SessionID = sessionIdActual,
                         TimestampUtc = DateTime.UtcNow.ToString("o"),
                         SceneName = sceneName,
                         SceneGuid = sceneGuid,
@@ -251,13 +273,15 @@ public async UniTask UploadEyeGazeImage(Ray gazeRay, RaycastHit hit, float fixat
                     return;
                 }
 
+                // El id se lee en el hilo principal, no dentro del pool. Ver UploadHeatmapScene.
+                string sessionIdActual = gossip.CurrentSessionId;
                 string json = await UniTask.RunOnThreadPool(() =>
                 {
                     return JsonConvert.SerializeObject(new
                     {
                         EventType = "AudioReactionTracker",
                         PlayerID = gossip.CurrentPlayerId,
-                        SessionID = gossip.CurrentSessionId,
+                        SessionID = sessionIdActual,
                         SceneName = data.SceneName,
                         SceneGuid = data.SceneGuid,
                         TimestampUtc = data.TimestampUtc,

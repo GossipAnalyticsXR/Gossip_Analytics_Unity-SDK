@@ -58,7 +58,12 @@ namespace GossipSDK.Components
             while (true)
             {
                 CaptureSnapshot();
-                yield return new WaitForSeconds(snapshotIntervalSeconds);
+                // WaitForSecondsRealtime y no WaitForSeconds: lo que esto mide -- la sala, el
+                // tipo de partida y cuantos jugadores hay -- vive en la red, y los pares no se
+                // pausan cuando la app pone timeScale a 0. Con el reloj escalado una pausa deja
+                // un hueco de snapshots que se lee como "no habia multijugador" en vez de como
+                // "estaba en pausa". Mismo motivo que la espera de asentado de a11y en el #229.
+                yield return new WaitForSecondsRealtime(snapshotIntervalSeconds);
             }
         }
 

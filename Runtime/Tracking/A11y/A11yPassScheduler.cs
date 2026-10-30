@@ -80,6 +80,20 @@ namespace GossipSDK.Tracking.A11y
         {
             SceneManager.sceneLoaded -= AlCargarEscena;
             EmitirAcumulado();
+
+            // DK-3b. El pestillo: _medicionPendiente se pone a true y solo se quita
+            // DESPUES de la espera de asentado, asi que si el componente se desactiva
+            // dentro de esa ventana Unity mata la corrutina y el flag se queda puesto.
+            // Al reactivarse Start() ya no corre, y cada MedirCuandoAsiente hace
+            // yield break: el reloj se calla PARA SIEMPRE, sin Evaluar y sin muestreo.
+            //
+            // Y el guardia se queda ancho a proposito, aunque el comentario de Start
+            // solo hable del mismo frame: tambien cubre la transicion rapida de escena.
+            // Si la B carga antes de que venza la espera de la A, un guardia de frame
+            // programaria dos mediciones y Evaluar sellaria DOS veces la misma escena
+            // -- dos filas y el denominador al doble, justo lo que ACC-126 evito. Lo
+            // que se arregla no es su ancho, es que sobreviviera al apagado.
+            _medicionPendiente = false;
         }
 
         /// <summary>

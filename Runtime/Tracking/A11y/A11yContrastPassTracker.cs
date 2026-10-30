@@ -51,6 +51,17 @@ namespace GossipSDK.Tracking.A11y
         /// <summary>Senal: controles cuyo contraste se pudo calcular.</summary>
         public const string ClaveDeNoTextoMedible = "nontext_measurable_coverage";
 
+        /// <summary>Senal: controles con una cara solida que leer.
+        ///
+        /// Parte en dos lo que ClaveDeNoTextoMedible resuelve de golpe, igual
+        /// que ClaveDeFondoHallado lo parte para el texto. Medido el
+        /// 30-10-2026 en las tres bases vivas: 0 medibles de 476 controles
+        /// encontrados, y 139 de 139 en el camino de texto. Con solo los dos
+        /// extremos publicados no se sabe cual de las dos puertas se cierra:
+        /// si no hay Image sin sprite que leer, o si lo hay y no tiene fondo
+        /// opaco detras. Cada respuesta lleva a un arreglo distinto.</summary>
+        public const string ClaveDeCaraNoTexto = "nontext_face_coverage";
+
         private const string AmbitoDeEscena = "scene";
 
         // ---------- ciclo ----------
@@ -293,6 +304,7 @@ namespace GossipSDK.Tracking.A11y
             );
 
             var encontrados = 0;
+            var conCara = 0;
             var medibles = 0;
             var conformes = 0;
 
@@ -303,6 +315,7 @@ namespace GossipSDK.Tracking.A11y
 
                 var cara = PrimeraCaraSolida(control.gameObject);
                 if ((Object)cara == null) continue;
+                conCara++;
 
                 var fondo = ResolverFondo(cara);
                 if (!fondo.Hallado || !fondo.ColorConocido) continue;
@@ -316,6 +329,7 @@ namespace GossipSDK.Tracking.A11y
 
             Emitir(ClaveDeNoTexto, conformes, medibles, true);
             Emitir(ClaveDeNoTextoMedible, medibles, encontrados, false);
+            Emitir(ClaveDeCaraNoTexto, conCara, encontrados, false);
         }
 
         /// <summary>
