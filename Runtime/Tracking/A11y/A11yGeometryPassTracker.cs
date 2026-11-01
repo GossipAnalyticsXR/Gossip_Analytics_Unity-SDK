@@ -688,8 +688,49 @@ namespace GossipSDK.Tracking.A11y
             // cobertura. WCAG2ICT pide medir "up to the text sizing capabilities of
             // the platform" para software no web; lo que no se puede afirmar no se
             // publica ni como aprobado ni como suspenso.
-            if (!lectura.HasLineCount || lectura.LineCount <= 0)
+            bool loParteElAncho;
+            if (lectura.HasLineCount && lectura.LineCount > 0)
             {
+                var escritas = lectura.HasText ? LineasEscritas(lectura.Text) : 1;
+                loParteElAncho = lectura.LineCount > escritas;
+            }
+            else if (lectura.HasWrapping)
+            {
+                // El recuento solo servia para una cosa: saber si el ancho esta
+                // partiendo el texto. Con el wrapping declarado eso se deduce sin
+                // layout -- si el texto no entra en una linea, el ancho lo parte --
+                // y este bloque juzga con el mismo factor que el de abajo en vez
+                // de quedarse fuera del denominador.
+                //
+                // Medido el 1-nov-2026: de los cinco textos que R6 pudo juzgar,
+                // solo UNO tenia recuento. El holder del recuento es `textInfo` en
+                // TMP y vale null mientras TMP no haya generado el texto -- un
+                // objeto apagado no genera nunca --, mientras que `preferredWidth`
+                // y `preferredHeight` si se calculan a demanda. De ahi que R6
+                // midiera cinco y R5 uno.
+                //
+                // El tamano preferido esta garantizado: el llamador descarta el
+                // bloque sin el antes de preguntar.
+                // La pregunta no es si parte AHORA, es si partira AL DOBLE, que es
+                // lo que el factor describe. Y sin ToleranciaDeAjuste, que es el
+                // margen de redondeo del AJUSTE y aqui no se comprueba si cabe.
+                //
+                // Las dos cosas las levanto la revision del PR y las dos tenian
+                // razon. Con `pw > ancho * tolerancia` un texto que se pasa por
+                // menos del 1 % quedaba como no partido, el factor caia a 2 y la
+                // comprobacion de ancho al doble de abajo devolvia un SUSPENSO
+                // FALSO: caja 100x200 con preferido 100,5x40 aprobaba antes de
+                // este PR y suspendia despues. Y con `pw > ancho` seguian cayendo
+                // los que no parten hoy pero partiran al doble -- preferido 80 en
+                // una caja de 100 --, que tambien aprobaban antes.
+                loParteElAncho =
+                    lectura.Wrapping && lectura.PreferredWidth * 2f > caja.width;
+            }
+            else
+            {
+                // Sin recuento y sin wrapping legible queda el caso peor de antes,
+                // factor 4: si cabe al cuadruple se aprueba, y si no, no se afirma
+                // el fallo y el bloque sigue indeterminado.
                 if (lectura.PreferredHeight * 4f <= caja.height * ToleranciaDeAjuste)
                 {
                     return true;
@@ -698,8 +739,6 @@ namespace GossipSDK.Tracking.A11y
                 return null;
             }
 
-            var escritas = lectura.HasText ? LineasEscritas(lectura.Text) : 1;
-            var loParteElAncho = lectura.LineCount > escritas;
             var factor = loParteElAncho ? 4f : 2f;
 
             if (lectura.PreferredHeight * factor > caja.height * ToleranciaDeAjuste)

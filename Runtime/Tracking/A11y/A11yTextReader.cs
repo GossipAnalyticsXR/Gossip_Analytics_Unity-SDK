@@ -31,6 +31,9 @@ namespace GossipSDK.Tracking.A11y
 
         public bool HasLineCount;
         public int LineCount;
+
+        public bool HasWrapping;
+        public bool Wrapping;
     }
 
     /// <summary>
@@ -105,6 +108,7 @@ namespace GossipSDK.Tracking.A11y
             public Miembro PreferredHeight;
             public Miembro LineHolder;
             public Miembro LineCount;
+        public Miembro Wrapping;
         }
 
         private static readonly Dictionary<Type, Plan> Plans = new Dictionary<Type, Plan>();
@@ -209,6 +213,13 @@ namespace GossipSDK.Tracking.A11y
                 reading.HasLineCount = true;
                 reading.LineCount = lines;
             }
+
+            bool wrapping;
+            if (TryBool(plan.Wrapping, component, out wrapping))
+            {
+                reading.HasWrapping = true;
+                reading.Wrapping = wrapping;
+            }
         }
 
         private static Plan PlanFor(Type type)
@@ -236,6 +247,11 @@ namespace GossipSDK.Tracking.A11y
             {
                 plan.LineCount = Find(plan.LineHolder.Tipo, "lineCount");
             }
+
+            // Solo TMP lo declara. El Text de uGUI usa `horizontalOverflow`, que es
+            // un enum y no un bool, asi que ahi este miembro no se encuentra y R5
+            // se queda con el caso peor de siempre. Sin regresion.
+            plan.Wrapping = Find(type, "enableWordWrapping");
 
             lock (Plans)
             {
@@ -354,6 +370,18 @@ namespace GossipSDK.Tracking.A11y
                 }
             }
 
+            return true;
+        }
+
+        private static bool TryBool(Miembro prop, object target, out bool value)
+        {
+            value = false;
+
+            object raw;
+            if (!TryValue(prop, target, out raw)) return false;
+            if (!(raw is bool)) return false;
+
+            value = (bool)raw;
             return true;
         }
 

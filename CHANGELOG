@@ -1,3 +1,18 @@
+## [2.0.59] - 2026-11
+
+### Fixed
+- R5 ya puede juzgar los bloques de texto que TMP no ha generado. La holgura al doble necesitaba
+  el recuento de lineas para saber si el ancho esta partiendo el texto, y ese recuento se lee a
+  traves de `textInfo`, que vale null mientras TMP no haya dibujado -- un objeto apagado no dibuja
+  nunca --, mientras que `preferredWidth` y `preferredHeight` si se calculan a demanda. Medido el
+  1-nov-2026: de los cinco bloques que R6 pudo juzgar, solo UNO tenia recuento, asi que R5
+  publicaba sobre uno y los otros cuatro quedaban fuera del denominador por el caso peor de la
+  2.0.52. Ahora, cuando el componente declara su wrapping, el reparto por ancho se deduce sin
+  layout: si el texto no entra en una linea, el ancho lo parte. El lector de texto gana un miembro
+  reflexivo mas, `enableWordWrapping`; el `Text` de uGUI no lo declara -- usa un enum --, asi que
+  ahi se conserva el caso peor de siempre y no hay regresion. Ningun umbral nuevo y ninguna cifra
+  nueva en pantalla: lo que cambia es el denominador que R5 puede publicar.
+
 ## [2.0.58] - 2026-11
 
 ### Fixed
