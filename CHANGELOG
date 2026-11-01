@@ -1,3 +1,18 @@
+## [2.0.58] - 2026-11
+
+### Fixed
+- El inventario de escena ya manda el centro y el tamano de los objetos de UI. La caja
+  salia de los `Renderer` y, si no habia ninguno, de los `Collider`; la UI en espacio de
+  mundo no tiene ninguno de los dos -- la UI de Unity pinta con `CanvasRenderer`, que no
+  deriva de `Renderer` --, asi que esos objetos viajaban sin caja. Medido el 1-nov-2026
+  sobre una app con tres escenas: de ocho objetos instrumentados, los cuatro de UI llegaron
+  con el centro nulo en las tres escenas y los otros cuatro con el suyo, o sea la mitad del
+  inventario sin posicion, y es justo la mitad que 3.2.3 Consistent Navigation nombra: los
+  mecanismos. Un tercer respaldo lee las esquinas de mundo del `RectTransform`, y solo en
+  canvas de espacio de mundo: `GetWorldCorners` sobre un canvas de pantalla devuelve pixeles
+  y este campo va en metros. Lo que ya tenia `Renderer` o `Collider` no llega al respaldo
+  nuevo, asi que ninguna caja de las que hoy se publican cambia.
+
 ## [2.0.57] - 2026-10
 
 ### Removed

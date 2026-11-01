@@ -143,6 +143,41 @@ namespace GossipSDK.Components
                 }
             }
 
+            // Un objeto de UI no tiene Renderer -- la UI de Unity pinta con CanvasRenderer,
+            // que no deriva de Renderer -- ni suele tener Collider, asi que hasta aqui se
+            // iba sin caja. Medido el 1-nov-2026 sobre una app con tres escenas: de ocho
+            // objetos instrumentados, los cuatro de UI llegaron con el centro nulo en las
+            // tres escenas y los otros cuatro con el suyo, o sea la mitad del inventario
+            // sin posicion. Y es justo la mitad que 3.2.3 nombra: los mecanismos.
+            //
+            // Solo canvas en espacio de MUNDO. GetWorldCorners sobre un canvas de pantalla
+            // devuelve pixeles, y este campo va en metros: colarlos ahi no daria ningun
+            // error y romperia cualquier distancia que se calcule despues.
+            //
+            // Va ULTIMO a proposito: lo que ya tiene Renderer o Collider no llega hasta
+            // aqui, asi que ninguna caja de las que hoy se publican cambia.
+            if (!hay)
+            {
+                var esquinas = new Vector3[4];
+                foreach (var rt in go.GetComponentsInChildren<RectTransform>(true))
+                {
+                    if ((Object)rt == null) continue;
+
+                    // Con `true` tambien cuando el canvas esta desactivado: este inventario
+                    // incluye los objetos apagados a proposito.
+                    var lienzo = rt.GetComponentInParent<Canvas>(true);
+                    if ((Object)lienzo == null) continue;
+                    if (lienzo.renderMode != RenderMode.WorldSpace) continue;
+
+                    rt.GetWorldCorners(esquinas);
+                    for (var i = 0; i < 4; i++)
+                    {
+                        if (!hay) { caja = new Bounds(esquinas[i], Vector3.zero); hay = true; }
+                        else caja.Encapsulate(esquinas[i]);
+                    }
+                }
+            }
+
             if (!hay) return false;
             centro = caja.center;
             tamano = caja.size;
