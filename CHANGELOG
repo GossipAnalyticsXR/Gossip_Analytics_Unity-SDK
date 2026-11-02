@@ -1,3 +1,21 @@
+## [2.0.60] - 2026-11
+
+### Added
+- O1 estrena la segunda via de su criterio. Hasta ahora una diana aprobaba solo por tamano, y la
+  norma que la card cita aprueba tambien por separacion: una diana pequena cumple si un circulo
+  del diametro minimo centrado en ella no toca a ninguna otra. Esa separacion ya se media para la
+  senal de espaciado y se tiraba al agregarla, asi que media norma estaba medida y sin usar. Ahora
+  se cruzan por diana y sale una clave nueva, `target_size_or_spacing_coverage`, con el mismo
+  denominador -- dianas con caja -- y el mismo minimo de 22,0 mm, que son 3 grados a 0,42 m.
+  Nada cambia de comportamiento: `target_size_coverage` se sigue emitiendo con la regla de siempre
+  y la senal de espaciado cuenta exactamente lo que contaba, asi que la clave nueva no hereda
+  ninguna serie y el dashboard no se queda sin dato mientras conviven. Medido el 1-nov-2026 en dos
+  entornos de una app con 315 y 80 dianas instrumentadas: cero suspenden por tamano y cero por
+  separacion, asi que las dos claves tienen que leer lo mismo hasta que aparezca la primera diana
+  pequena y despejada. La regla se simulo en seis casos antes de escribirla, incluidos los tres
+  que deben suspender: el borde es inclusivo, porque dos circulos de ese diametro dejan de tocarse
+  exactamente cuando sus centros se separan esa misma distancia.
+
 ## [2.0.59] - 2026-11
 
 ### Fixed

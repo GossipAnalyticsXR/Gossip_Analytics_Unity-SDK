@@ -35,6 +35,20 @@ namespace GossipSDK.Tracking.A11y
         /// <summary>O1. Dianas cuyo lado corto llega al minimo publicado.</summary>
         public const string ClaveDeDiana = "target_size_coverage";
 
+        /// <summary>
+        /// O1 con las DOS vias de WCAG 2.5.8: una diana aprueba si mide el
+        /// minimo publicado, o si su vecina mas cercana esta a ese mismo
+        /// minimo o mas -- la clausula de espaciado.
+        ///
+        /// Clave nueva y no un cambio de significado en ClaveDeDiana, porque el
+        /// backend SUMA sobre la ventana: mezclar dos reglas en la misma serie
+        /// daria un numero que no es de ninguna de las dos. La vieja se sigue
+        /// emitiendo para que la card no se quede muda mientras los clientes
+        /// suben build.
+        /// </summary>
+        public const string ClaveDeDianaOEspaciado =
+            "target_size_or_spacing_coverage";
+
         /// <summary>P4. Textos en camara que se leen a su distancia.</summary>
         public const string ClaveDeTexto = "text_legibility_coverage";
 
@@ -196,6 +210,7 @@ namespace GossipSDK.Tracking.A11y
             int conCaja = 0;
             int conformes = 0;
             var centros = new List<Vector3>();
+            var cumpleTamano = new List<bool>();
 
             foreach (var diana in dianas)
             {
@@ -209,10 +224,13 @@ namespace GossipSDK.Tracking.A11y
                 centros.Add(centro);
 
                 var lado = A11yGeometry.LadoMenorDeLaCaraMayor(tamano.x, tamano.y, tamano.z);
-                if (A11yGeometry.DianaCumple(lado)) conformes++;
+                var cumple = A11yGeometry.DianaCumple(lado);
+                cumpleTamano.Add(cumple);
+                if (cumple) conformes++;
             }
 
             Emitir(ClaveDeDiana, conformes, conCaja, true);
+            Emitir(ClaveDeDianaOEspaciado, ContarAlcanzables(centros, cumpleTamano), conCaja, true);
             Emitir(ClaveDeCajasMedidas, conCaja, encontradas, false);
 
             int separadas;
@@ -253,6 +271,46 @@ namespace GossipSDK.Tracking.A11y
             }
 
             return centros.Count;
+        }
+
+        /// <summary>
+        /// O1 con las dos vias. Una diana aprueba por tamano o, si no llega,
+        /// porque nadie esta lo bastante cerca: dos circulos de ese diametro
+        /// dejan de tocarse exactamente cuando sus centros se separan esa misma
+        /// distancia, que es como esta redactada la clausula de espaciado.
+        ///
+        /// Una diana sola cuenta como alcanzable, por lo mismo que no entra al
+        /// denominador de O5: sin vecina no hay separacion que incumplir.
+        ///
+        /// Bucle propio en vez de un parametro mas en ContarSeparadas, a
+        /// proposito: asi O5 sigue contando exactamente lo que contaba y este
+        /// cambio no puede moverla. El coste es una segunda pasada O(n2) por
+        /// carga de escena, no por frame.
+        /// </summary>
+        public static int ContarAlcanzables(List<Vector3> centros, List<bool> cumpleTamano)
+        {
+            if (centros == null || cumpleTamano == null) return 0;
+            if (centros.Count != cumpleTamano.Count) return 0;
+
+            var minimo = A11yGeometry.TamanoMinimoDeDiana();
+            var alcanzables = 0;
+
+            for (var i = 0; i < centros.Count; i++)
+            {
+                if (cumpleTamano[i]) { alcanzables++; continue; }
+
+                var masCerca = float.MaxValue;
+                for (var j = 0; j < centros.Count; j++)
+                {
+                    if (i == j) continue;
+                    var d = Vector3.Distance(centros[i], centros[j]);
+                    if (d < masCerca) masCerca = d;
+                }
+
+                if (masCerca >= minimo) alcanzables++;
+            }
+
+            return alcanzables;
         }
 
         /// <summary>
