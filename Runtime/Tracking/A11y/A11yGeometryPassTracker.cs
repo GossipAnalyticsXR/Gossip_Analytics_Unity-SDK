@@ -590,10 +590,11 @@ namespace GossipSDK.Tracking.A11y
                 if ((Object)grafico == null) continue;
                 // P2 va por aqui: lo que NO es texto es justo lo que esta rama
                 // descartaba. Sin barrido nuevo -- este `graficos` ya esta recorrido --
-                // y sin componente nuevo: se lee el MISMO GossipA11yLabel que ya leen
-                // P1, P4 y P3, no el GossipA11yAltText que vive en el paquete sin un
-                // solo lector. Pedir dos componentes para decir lo mismo seria trabajo
-                // del cliente a cambio de nada.
+                // y sin componente nuevo QUE PEDIR: se lee el MISMO GossipA11yLabel
+                // que ya leen P1, P4 y P3. Pedir dos componentes para decir lo mismo
+                // seria trabajo del cliente a cambio de nada, asi que el que se pide
+                // sigue siendo uno. GossipA11yAltText se acepta como RESPALDO -- ver
+                // abajo --, que no es lo mismo que pedirlo.
                 //
                 // NO se filtra por tronco de vision, al reves que el texto de abajo y a
                 // proposito: una imagen necesita descripcion mire quien mire hacia donde
@@ -603,17 +604,34 @@ namespace GossipSDK.Tracking.A11y
                 {
                     _noTextoVivo.Add(grafico.GetInstanceID());
 
-                    var descripcion = grafico.GetComponent<GossipA11yLabel>();
-                    if (
-                        (Object)descripcion != null
+                var descripcion = grafico.GetComponent<GossipA11yLabel>();
+                var descrito =
+                    (Object)descripcion != null
+                    && (
+                        descripcion.decorative
+                        || !string.IsNullOrWhiteSpace(descripcion.label)
+                    );
+
+                // Respaldo, no un segundo requisito. GossipA11yAltText viaja en el
+                // paquete con el nombre de esta metrica y los mismos dos campos -- su
+                // texto se llama `text` y no `label` --, y hasta hoy no lo leia nadie.
+                // Quien lo haya puesto ya hizo el trabajo de accesibilidad: no contarlo
+                // seria darle un 0 por haber elegido el fichero equivocado.
+                if (!descrito)
+                {
+                    var alterno = grafico.GetComponent<GossipA11yAltText>();
+                    descrito =
+                        (Object)alterno != null
                         && (
-                            descripcion.decorative
-                            || !string.IsNullOrWhiteSpace(descripcion.label)
-                        )
-                    )
-                    {
-                        _noTextoDescrito.Add(grafico.GetInstanceID());
-                    }
+                            alterno.decorative
+                            || !string.IsNullOrWhiteSpace(alterno.text)
+                        );
+                }
+
+                if (descrito)
+                {
+                    _noTextoDescrito.Add(grafico.GetInstanceID());
+                }
 
                     continue;
                 }

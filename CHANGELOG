@@ -1,3 +1,17 @@
+## [2.0.61] - 2026-11
+
+### Fixed
+- P2 ya cuenta a quien describio sus graficos con `GossipA11yAltText`. El paquete publica ese
+  componente con el nombre de la metrica y los mismos dos campos que `GossipA11yLabel` -- su
+  texto se llama `text` y no `label` --, y hasta ahora no lo leia nadie: una app que hubiera
+  descrito sus imagenes con el salia al 0 % con el trabajo hecho. Se sigue pidiendo UN componente,
+  `GossipA11yLabel`, porque pedir dos para decir lo mismo seria trabajo a cambio de nada; el otro
+  se acepta como RESPALDO cuando el primero no esta. Ocho casos simulados antes de escribirlo,
+  incluidos los tres que NO deben contar: etiqueta vacia sin respaldo, respaldo vacio y ninguno de
+  los dos. Nada mas cambia: P1, P3 y P4 siguen leyendo solo `GossipA11yLabel`, y el componente no
+  se borra del paquete porque es un MonoBehaviour y quitarlo dejaria referencias rotas en las
+  escenas de quien lo tenga puesto.
+
 ## [2.0.60] - 2026-11
 
 ### Added
