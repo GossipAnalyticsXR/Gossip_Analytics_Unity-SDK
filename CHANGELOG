@@ -1,3 +1,24 @@
+## [2.0.62] - 2026-11
+
+### Changed
+- **Las cinco fichas ajustables del Instrumentation Manager dicen que consigues y que tienes
+  que hacer, en vez de describir su mecanismo dos veces.** Antes la descripcion ya pedia la
+  llamada y la linea de debajo la repetia, y ninguna de las dos decia que pasa si no la haces.
+  Ahora son dos frases: resultado arriba y accion abajo, con su consecuencia -por ejemplo
+  `No data until you add NotifyAvatar() to your purchase code.`-. La ficha de Ad baja de 236 a
+  45 caracteres de descripcion. Todos los textos caben en 75 caracteres, asi que siguen en una
+  sola linea mientras la ventana mida 784 px o mas (medido: 9,77 px por caracter).
+
+### Added
+- **Cada ficha ajustable dice en que objeto vive y abre sus ajustes con un boton.** La ventana
+  reparte los trackers entre tres objetos distintos segun su `TrackerTarget` -el manager, el
+  objeto del jugador o la camara- y hasta ahora no decia en cual, asi que «configuralo en el
+  Inspector» obligaba a buscarlo. La linea nueva muestra `on <objeto>` y un boton
+  `Open settings` que selecciona el objeto, lo resalta y enfoca el Inspector. Con el tracker
+  apagado el boton queda deshabilitado y el texto dice `Turn it on to configure it`. El nombre
+  del objeto se lee al pintar, no de la cache, para que no quede desfasado si el cliente mueve
+  el componente.
+
 ## [2.0.61] - 2026-11
 
 ### Fixed

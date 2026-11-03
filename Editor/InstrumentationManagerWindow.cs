@@ -176,7 +176,7 @@ namespace GossipSDK.Editor
                 componentTypeName = "AudioReactionTrackerComponent",
                 clientAdjustable = true,
                 displayName = "Audio Reaction",
-                description = "Detects emotional audio reactions via microphone. Requires Microphone permission.",
+                description          = "Hears when players react out loud, and records a short clip.",
                 category = "XR",
                 target = TrackerTarget.Camera,
                 requiresConfiguration = true,
@@ -214,7 +214,7 @@ namespace GossipSDK.Editor
                 componentTypeName = "MultiplayerTrackerComponent",
                 clientAdjustable = true,
                 displayName = "Multiplayer",
-                description = "Tracks multiplayer room/match snapshots. Emits on start with empty room unless configured.",
+                description          = "See how many people share a room, and when.",
                 category = "Device",
                 target = TrackerTarget.AnyObject,
                 requiresConfiguration = false,
@@ -243,7 +243,7 @@ namespace GossipSDK.Editor
                 componentTypeName = "AvatarTrackerComponent",
                 clientAdjustable = true,
                 displayName = "Avatar",
-                description = "Tracks avatar selections and purchases. Configure in Inspector. Call NotifyAvatar() from your purchase code -- no parameters needed.",
+                description          = "See which avatars people choose and pay for.",
                 category = "Device",
                 target = TrackerTarget.AnyObject,
                 requiresConfiguration = false,
@@ -254,7 +254,7 @@ namespace GossipSDK.Editor
                 componentTypeName = "AccessoriesComponent",
                 clientAdjustable = true,
                 displayName = "Avatar Accessories",
-                description = "Tracks in-app item and accessory purchases. Configure in Inspector. Call ReportPurchased() from your purchase code -- no parameters needed.",
+                description          = "See which items and accessories people buy.",
                 category = "Device",
                 target = TrackerTarget.AnyObject,
                 requiresConfiguration = false,
@@ -275,7 +275,7 @@ namespace GossipSDK.Editor
                 componentTypeName    = "AdComponent",
                 clientAdjustable = true,
                 displayName          = "Ad",
-                description          = "Tracks ad impressions, interactions, rewards and session duration. Configure Ad ID, network and placement in Inspector. Call RecordImpression(), RecordInteraction() or RecordReward() from your ad SDK callbacks.",
+                description          = "See how your ads do: views, taps and rewards.",
                 category             = "Device",
                 target               = TrackerTarget.AnyObject,
                 requiresConfiguration = false,
@@ -339,10 +339,11 @@ namespace GossipSDK.Editor
         private static readonly Dictionary<string, (string chipLabel, string whyText)> s_chipInfo =
             new Dictionary<string, (string, string)>
             {
-                { "MultiplayerTrackerComponent", ("REVIEW", "Emits an empty room snapshot each session. Turn off for single-user apps.") },
-                { "AvatarTrackerComponent",      ("REVIEW", "Call NotifyAvatar() from your purchase flow.") },
-                { "AccessoriesComponent",        ("REVIEW", "Call ReportPurchased() from your purchase flow.") },
-                { "AdComponent",                 ("REVIEW", "Call RecordImpression()/RecordReward() from your ad SDK callbacks.") },
+                { "MultiplayerTrackerComponent",   ("REVIEW", "Single-player app? Turn it off. It logs an empty room each session.") },
+                { "AvatarTrackerComponent",        ("REVIEW", "No data until you add NotifyAvatar() to your purchase code.") },
+                { "AccessoriesComponent",          ("REVIEW", "No data until you add ReportPurchased() to your purchase code.") },
+                { "AdComponent",                   ("REVIEW", "No data until your ad code calls RecordImpression() and RecordReward().") },
+                { "AudioReactionTrackerComponent", ("REVIEW", "Needs microphone permission from the player.") },
             };
         private static Dictionary<string, Type> _trackerTypeCache = null;
         private static Type _cachedXROriginType;
@@ -1421,6 +1422,33 @@ namespace GossipSDK.Editor
                 EditorGUILayout.EndHorizontal();
                 if (_chipLabel != "AUTO" && !string.IsNullOrEmpty(_chipWhy))
                     EditorGUILayout.LabelField(_chipWhy, _wordWrapMiniLabel);
+                // Linea de ajustes: donde vive la ficha y como llegar a sus campos. Solo en las
+                // ajustables; las AUTO no tienen nada que tocar y se quedan como estaban.
+                // Va en su PROPIA linea, fuera del BeginHorizontal de arriba: ese es el bloque
+                // donde esta ventana ya se rompio por orden de llamadas (ver el pre-captura del
+                // chip). Aqui es pura adicion y el par Begin/End esta balanceado.
+                if (_chipLabel != "AUTO")
+                {
+                    EditorGUILayout.BeginHorizontal();
+                    // El nombre se lee al pintar, no de una cache: si el cliente mueve el
+                    // componente de objeto, la etiqueta no se queda un ciclo desfasada.
+                    string _hostTxt = isPresent
+                        ? "on " + existing.gameObject.name
+                        : "Turn it on to configure it";
+                    GUILayout.Label(_hostTxt, _wordWrapMiniLabel, GUILayout.ExpandWidth(false));
+                    GUILayout.FlexibleSpace();
+                    bool _guiAntesBtn = GUI.enabled;
+                    GUI.enabled = isPresent;
+                    if (GUILayout.Button("Open settings", EditorStyles.miniButton, GUILayout.Width(110)))
+                    {
+                        Selection.activeObject = existing.gameObject;
+                        EditorGUIUtility.PingObject(existing);
+                        var _insp = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.InspectorWindow");
+                        if (_insp != null) EditorWindow.GetWindow(_insp);
+                    }
+                    GUI.enabled = _guiAntesBtn;
+                    EditorGUILayout.EndHorizontal();
+                }
                 if (!isPresent && info.requiresConfiguration)
                 {
                     string hintA = !string.IsNullOrEmpty(info.preAddHint)
