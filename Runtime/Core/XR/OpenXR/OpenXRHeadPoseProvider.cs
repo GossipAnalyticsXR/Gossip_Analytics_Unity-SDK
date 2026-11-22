@@ -27,8 +27,33 @@ namespace GossipSDK.XR
 
             if (fallbackTransform != null)
             {
-                position = fallbackTransform.position;
-                rotation = fallbackTransform.rotation;
+                /*
+                 * EL FALLBACK DEVUELVE EL MISMO ESPACIO QUE EL DISPOSITIVO.
+                 *
+                 * El camino de arriba devuelve `devicePosition`, que esta en
+                 * espacio de TRACKING. Este devolvia `fallbackTransform.position`,
+                 * que es la camara en espacio de MUNDO: un mismo metodo con dos
+                 * sistemas de coordenadas segun la rama, y quien llama no puede
+                 * saber cual le toco.
+                 *
+                 * Esa mezcla ya costo un detector. HandControllerTrackingComponent
+                 * restaba la mano -tracking- de la cabeza -mundo- y el desfase del
+                 * rig entraba entero en el brazo horizontal: medido el 22-11-2026
+                 * en Quest 3, con el brazo levantado el campo daba 15.8 grados y
+                 * eran 53.8. Se arreglo en el PR #250; esto cierra la puerta por
+                 * la que entro, y HeadPose tiene tres consumidores -manos, balance
+                 * y mirada-.
+                 *
+                 * La camara cuelga de la raiz de tracking, asi que basta con
+                 * expresarla en el sistema de su padre.
+                 */
+                Transform rig = fallbackTransform.parent;
+                position = rig != null
+                    ? rig.InverseTransformPoint(fallbackTransform.position)
+                    : fallbackTransform.position;
+                rotation = rig != null
+                    ? Quaternion.Inverse(rig.rotation) * fallbackTransform.rotation
+                    : fallbackTransform.rotation;
                 return true;
             }
 

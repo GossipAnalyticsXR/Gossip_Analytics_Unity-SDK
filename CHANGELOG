@@ -1,3 +1,39 @@
+## [2.0.63] - 2026-11
+
+### Fixed
+- **HandElevation calculaba el angulo mezclando dos sistemas de coordenadas, y
+  por eso nunca veia el brazo levantado.** La pose de la mano viene de
+  InputDevices, en espacio de tracking, y la cabeza se leia de Camera.main, en
+  espacio de mundo: el desfase del rig entraba entero en el brazo horizontal y
+  el atan2 aplastaba el angulo contra cero. Medido el 22-11-2026 en Quest 3,
+  con el rig en (0.371, 0.000, 2.004) y 70 muestras en cuatro posturas: con el
+  brazo levantado el campo daba 15.8 grados y eran 53.8, y con los brazos
+  colgando daba -3.6 y eran -38.3. El eje Y coincidia por casualidad, porque
+  ese rig tenia offset vertical 0, y de ahi que el brazo bajando saliera bien y
+  el brazo subiendo no; en 265 sesiones del corpus el campo baja a -63 y nunca
+  pasa de +25. La cabeza se pide ahora al mismo proveedor que la mano, asi que
+  las dos poses estan en el mismo sistema y el resultado no depende de como
+  este montado el equipo.
+- **El fallback de HeadPose devolvia espacio de mundo mientras el camino normal
+  devolvia espacio de tracking.** Un mismo metodo con dos sistemas segun la
+  rama, y quien llamaba no podia saber cual le tocaba. Es la puerta por la que
+  entro el fallo anterior, y HeadPose tiene tres consumidores: manos,
+  UserBalanceTracker y EyeTracking. Ahora el fallback se expresa en el sistema
+  de su padre, y sin padre se devuelve igual que antes, que es el caso en que
+  mundo y tracking coinciden.
+- **Una pose sin tracking se registraba como muestra.** devicePosition sigue
+  devolviendo true cuando el mando se pierde, y entrega la ultima pose
+  conocida, congelada. Medido el 22-11-2026: la mano derecha se quedo clavada
+  en (1.95, 0.68, 1.97) durante cinco segundos y se grabaron diez muestras de
+  una mano que no estaba. Ahora se rechaza cuando el dispositivo dice que no
+  esta trackeado; si la plataforma no publica trackingState el comportamiento
+  no cambia, porque es preferible un dato de mas a quedarse sin manos.
+
+### Changed
+- Los valores de HandElevation anteriores a esta version no son comparables con
+  los posteriores: median otra cosa. El detector HandReachStrain queda sin
+  verificar hasta que haya datos de un build con esta version.
+
 ## [2.0.62] - 2026-11
 
 ### Changed
