@@ -374,6 +374,11 @@ namespace GossipSDK.Editor
                 win.AutoAddTrackers();
             } finally {
                 _isScanning = false;
+                // GetWindow no llama a OnEnable cuando la ventana ya estaba abierta, asi que
+                // el flag se quedaba armado y el siguiente OnEnable salia por su puerta
+                // temprana sin AutoDetectPlayer ni AutoAddTrackers. Se desarma aqui, que es
+                // donde consta que el trabajo ya esta hecho.
+                _dataPreloaded = false;
             }
         }
 
@@ -381,11 +386,15 @@ namespace GossipSDK.Editor
         private void OnEnable()
         {
             LoadOrCreateDataAsset();
+            // La suscripcion va ANTES de la salida temprana: con el flag armado esta linea no
+            // llegaba a ejecutarse y la ventana se quedaba sorda a los cambios de jerarquia.
+            // El -= previo evita una doble suscripcion si OnEnable corre dos veces.
+            EditorApplication.hierarchyChanged -= OnHierarchyChanged;
+            EditorApplication.hierarchyChanged += OnHierarchyChanged;
             if (_dataPreloaded) { _dataPreloaded = false; return; }
             ScanAllScenes();
             AutoDetectPlayer();
             AutoAddTrackers();
-            EditorApplication.hierarchyChanged += OnHierarchyChanged;
         }
 
         private void OnDisable()

@@ -1,3 +1,31 @@
+## [2.0.66] - 2026-11
+
+### Fixed
+- **El Instrumentation Manager se quedaba sin escuchar la jerarquia, y abrirlo
+  desde el menu lo dejaba sordo siempre.** Open() armaba _dataPreloaded antes de
+  GetWindow; si la ventana ya estaba abierta GetWindow no llama a OnEnable, asi
+  que el flag seguia armado y el siguiente OnEnable salia por su puerta temprana
+  sin ScanAllScenes, sin AutoDetectPlayer, sin AutoAddTrackers y sin suscribirse
+  a hierarchyChanged. Y la suscripcion tampoco ocurria en el camino normal:
+  cuando Open() crea la ventana, OnEnable tambien sale por ese return y Open() no
+  la suscribe, asi que ninguna de las dos vias dejaba la ventana escuchando los
+  cambios de escena. Ahora el flag se desarma en el finally de Open() y la
+  suscripcion va por encima del return, con un -= previo para no duplicarla.
+- **Desinstalar decia "removed" con la carpeta todavia en disco, y en Windows ese
+  era el caso normal, no el raro.** CleanPackageCache() era void y se tragaba el
+  fallo como un warning: el texto del dialogo se calculaba solo con el Status de
+  UPM. En Windows, Unity marca Library/PackageCache como solo lectura y
+  Directory.Delete(path, true) no limpia ese atributo -lanza
+  UnauthorizedAccessException-, y ademas el Editor tiene bloqueados los
+  ensamblados de esa carpeta; en macOS no se nota porque el unlink depende del
+  permiso del directorio y no del fichero. Consecuencia: una reinstalacion podia
+  reutilizar la copia vieja, que es justo lo que ese metodo existia para evitar.
+  Ahora devuelve bool, limpia el atributo ReadOnly antes de borrar, borra carpeta
+  a carpeta sin que un fallo aborte el resto, vuelve a contar al final y
+  distingue "no queda ninguna" de "no se pudo mirar" -un listado que falla ya no
+  cuenta como limpio-. El dialogo tiene tres estados y dice que borrar a mano
+  cuando queda algo.
+
 ## [2.0.65] - 2026-11
 
 ### Changed

@@ -566,14 +566,17 @@ private static void RunStep1_RemoveSceneComponents()
                     Debug.LogWarning("[GossipUninstaller] UPM could not remove com.gossip.core: " + motivo);
                 }
 
-                CleanPackageCache();
+                bool cacheClean = CleanPackageCache();
 
-                bool ok = request.Status != UnityEditor.PackageManager.StatusCode.Failure;
+                bool upmOk = request.Status != UnityEditor.PackageManager.StatusCode.Failure;
+                bool ok = upmOk && cacheClean;
                 EditorUtility.DisplayDialog(
                     ok ? "Gossip Analytics removed" : "Gossip Analytics - uninstall incomplete",
                     ok
                         ? "The SDK is uninstalled: components out of your scenes, assets deleted and the com.gossip.core package removed from the project. Your scenes and your scripts are untouched.\n\nUnity will recompile now; that takes a few seconds and is no longer up to us.\n\nIf any script of yours used the SDK, you will see compile errors until you remove it.\n\nWe hope to see you again soon."
-                        : "Components and assets were removed, but UPM could not remove the com.gossip.core package. Check the console for the reason and remove it by hand from the Package Manager.",
+                        : upmOk
+                            ? "Components, assets and the com.gossip.core package were removed, but Library/PackageCache still holds a com.gossip.core folder. Windows keeps those files read-only and locks them while the Editor is running. Close Unity and delete Library/PackageCache/com.gossip.core@* by hand, or a reinstall may reuse the old copy."
+                            : "Components and assets were removed, but UPM could not remove the com.gossip.core package. Check the console for the reason and remove it by hand from the Package Manager.",
                     "Close");
             };
             EditorApplication.update += poll;
@@ -583,25 +586,94 @@ private static void RunStep1_RemoveSceneComponents()
         // reutilizar la copia vieja: por eso se limpia. Si el dominio se recarga antes de
         // que esto corra no pasa nada, Unity poda las entradas sin referenciar en el
         // siguiente resolve.
-        private static void CleanPackageCache()
+        // Devuelve true solo si al terminar no queda ninguna carpeta com.gossip.core@* en
+        // PackageCache. Antes no devolvia nada y el fallo salia como un simple warning, asi
+        // que el dialogo final decia "removed" con la carpeta todavia en disco.
+        //
+        // En Windows Unity marca PackageCache como solo lectura y Directory.Delete NO limpia
+        // ese atributo: lanza UnauthorizedAccessException. Ademas el Editor tiene cargados los
+        // ensamblados de esa carpeta y Windows bloquea el fichero abierto. En macOS no pasa
+        // porque el unlink depende del permiso del directorio, no del fichero. Por eso aqui se
+        // quita el atributo antes de borrar y se MIDE el resultado en vez de suponerlo.
+        private static bool CleanPackageCache()
         {
+            string packageCache = null;
             try
             {
-                string projectRoot  = System.IO.Path.GetDirectoryName(Application.dataPath);
-                string packageCache = System.IO.Path.Combine(projectRoot, "Library", "PackageCache");
-                if (System.IO.Directory.Exists(packageCache))
-                {
-                    var gossipDirs = System.IO.Directory.GetDirectories(packageCache, "com.gossip.core@*");
-                    foreach (var dir in gossipDirs)
-                    {
-                        System.IO.Directory.Delete(dir, true);
-                        Debug.Log("[GossipUninstaller] Deleted PackageCache entry: " + dir);
-                    }
-                }
+                string projectRoot = System.IO.Path.GetDirectoryName(Application.dataPath);
+                packageCache = System.IO.Path.Combine(projectRoot, "Library", "PackageCache");
+                if (!System.IO.Directory.Exists(packageCache)) return true;
             }
             catch (Exception ex)
             {
-                Debug.LogWarning("[GossipUninstaller] Could not clean PackageCache: " + ex.Message);
+                Debug.LogWarning("[GossipUninstaller] Could not locate PackageCache: " + ex.Message);
+                return false;
+            }
+
+            var found = ListGossipCacheDirs(packageCache);
+            if (found == null) return false;
+
+            foreach (var dir in found)
+            {
+                try
+                {
+                    ClearReadOnlyRecursive(dir);
+                    System.IO.Directory.Delete(dir, true);
+                    Debug.Log("[GossipUninstaller] Deleted PackageCache entry: " + dir);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning("[GossipUninstaller] Could not delete " + dir + ": " + ex.Message);
+                }
+            }
+
+            var remaining = ListGossipCacheDirs(packageCache);
+            if (remaining == null)
+            {
+                Debug.LogWarning("[GossipUninstaller] Could not verify PackageCache after deleting. " +
+                    "Check Library/PackageCache/com.gossip.core@* by hand.");
+                return false;
+            }
+            if (remaining.Length > 0)
+            {
+                Debug.LogWarning("[GossipUninstaller] PackageCache still holds " + remaining.Length +
+                    " com.gossip.core folder(s). Close Unity and delete Library/PackageCache/com.gossip.core@* by hand.");
+            }
+            return remaining.Length == 0;
+        }
+
+        // Devuelve null cuando NO se pudo mirar, que no es lo mismo que "no queda ninguna":
+        // un array vacio aqui haria que la comprobacion final diera por limpio un directorio
+        // que nadie llego a leer, y el dialogo volveria a decir "removed" sin saberlo.
+        private static string[] ListGossipCacheDirs(string packageCache)
+        {
+            try
+            {
+                return System.IO.Directory.GetDirectories(packageCache, "com.gossip.core@*");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[GossipUninstaller] Could not list PackageCache: " + ex.Message);
+                return null;
+            }
+        }
+
+        // Windows: el atributo ReadOnly del fichero bloquea el borrado aunque el permiso del
+        // directorio lo permita. Se limpia fichero a fichero antes de llamar a Delete. Cada
+        // fallo individual se ignora a proposito: quien decide es el recuento final de
+        // CleanPackageCache, no esta pasada.
+        private static void ClearReadOnlyRecursive(string dir)
+        {
+            var info = new System.IO.DirectoryInfo(dir);
+            if (!info.Exists) return;
+            try { info.Attributes = System.IO.FileAttributes.Directory; } catch (Exception) { }
+            foreach (var sub in info.GetDirectories("*", System.IO.SearchOption.AllDirectories))
+            {
+                try { sub.Attributes = System.IO.FileAttributes.Directory; } catch (Exception) { }
+            }
+            foreach (var file in info.GetFiles("*", System.IO.SearchOption.AllDirectories))
+            {
+                try { file.Attributes = System.IO.FileAttributes.Normal; } catch (Exception) { }
             }
         }
     }
