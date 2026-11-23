@@ -189,8 +189,7 @@ namespace GossipSDK.Components
             if (!ShouldSendImage(hit, source))
                 return;
 
-            if (Gossip.Instance?.Settings?.SelectedEnvironment
-                == Core.Configuration.GossipSettings.Environment.Production)
+            if (Gossip.Instance?.Settings?.ImageCaptureAllowed == true)
             {
                 EyeGazeImageTracker.Track(gazeRay, hit, fixationTimer, source);
                 CacheImageState(hit);

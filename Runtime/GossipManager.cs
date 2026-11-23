@@ -219,7 +219,7 @@ private bool panoramaCreated;
         {
             if (Gossip == null || Gossip.Instance.Settings == null)
                 return;
-            if (Gossip.Instance.Settings.SelectedEnvironment != Core.Configuration.GossipSettings.Environment.Production)
+            if (!Gossip.Instance.Settings.ImageCaptureAllowed)
                 return;
 
             await UniTask.WaitUntil(() => Gossip != null && Gossip.IsSessionReady);

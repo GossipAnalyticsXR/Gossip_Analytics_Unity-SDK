@@ -12,8 +12,7 @@ namespace GossipSDK.Heatmaps
         public static void Track(GameObject interactedObject, string interactionType)
         {
             var g = Gossip.Instance; if (g == null || g.Settings == null) return;
-            if (g.Settings.SelectedEnvironment != Core.Configuration.GossipSettings.Environment.Production)
-                return;
+            if (!g.Settings.ImageCaptureAllowed) return;
 
             TrackAsync(interactedObject, interactionType).Forget();
         }

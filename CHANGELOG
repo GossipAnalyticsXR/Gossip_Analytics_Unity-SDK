@@ -1,3 +1,20 @@
+## [2.0.65] - 2026-11
+
+### Changed
+- **Las fotos de heatmap se toman en Beta y en Production, ya no solo en
+ Production.** La regla estaba escrita tres veces -EyeTrackingComponent,
+ InteractionImageTracker y GossipManager- y en las tres decia Production a
+ secas, asi que un equipo que probara en Beta no podia ver nunca la Eye view ni
+ Hand & Controller. Medido el 23-11-2026 contra los logs de ingesta del Service
+ A, 30 dias: HeatmapPanoramaTracker y HeatmapSceneImageTracker llegaban a diario
+ porque no pasan por esa condicion, y EyeGazeImageTracker e
+ InteractionImageTracker estaban a cero; en la base de Beta, de enero de 2025 a
+ esa fecha, 0 fotos de mirada y 0 de interaccion contra 25 panoramicas. Con el
+ APK en Production llegaron los primeros cuatro InteractionImageTracker a las
+ 18:18. La regla vive ahora en GossipSettings.ImageCaptureAllowed, que es
+ environment != Environment.Dev, y los tres sitios la consultan. En Dev se
+ siguen sin tomar.
+
 ## [2.0.64] - 2026-11
 
 ### Added

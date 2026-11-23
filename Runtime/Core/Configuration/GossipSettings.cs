@@ -18,6 +18,22 @@ namespace GossipSDK.Core.Configuration
 
         public Environment SelectedEnvironment => environment;
 
+        /// <summary>
+        /// Las fotos de heatmap -mirada, interaccion y captura de escena- se envian
+        /// en Beta y en Production, nunca en Dev.
+        ///
+        /// Hasta el 23-11-2026 la regla no existia como regla: estaba escrita tres
+        /// veces, una por cada sitio que la consulta -EyeTrackingComponent,
+        /// InteractionImageTracker y GossipManager- y en los tres decia Production
+        /// a secas. Medido ese dia contra los logs de ingesta del Service A, 30 dias:
+        /// en Beta no llegaba ni un EyeGazeImageTracker ni un InteractionImageTracker,
+        /// mientras las panoramicas, que no pasan por aqui, llegaban cada dia. Con el
+        /// APK en Production llegaron los primeros InteractionImageTracker a las 18:18.
+        ///
+        /// Vive aqui para que cambiar quien captura sea una linea y no tres.
+        /// </summary>
+        public bool ImageCaptureAllowed => environment != Environment.Dev;
+
         [HideInInspector] [SerializeField] private bool useHttpEndpoint = true;
         public bool UseHttpEndpoint => useHttpEndpoint;
 
