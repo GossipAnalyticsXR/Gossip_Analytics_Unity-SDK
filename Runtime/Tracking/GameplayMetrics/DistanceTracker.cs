@@ -17,6 +17,22 @@ namespace GossipSDK.Tracking.GameplayMetrics
         {
             public float DistanceMeters { get; set; }
 
+            /*
+             * UNA DISTANCIA A UN OBJETO SIN NOMBRE NO SE PUEDE USAR.
+             *
+             * Medido el 23-11-2026 sobre las tres bases: ObjPosX/Y/Z son 0 en los
+             * 17.824 documentos, y DistanceMeters coincide exactamente con el modulo
+             * de PlayerPos -2,4250459 contra 2,42504621, siete cifras, tres de tres-.
+             * O sea que el componente funciona y esta pegado a un objeto que esta en
+             * el origen del mundo: lo guardado es la distancia del jugador al origen.
+             *
+             * Eso NO es un fallo del SDK, es como queda instalado. Pero sin identidad
+             * del objeto no habia forma de verlo desde los datos, y hubo que deducirlo
+             * a mano. RotationTracker ya manda ObjectName; este no. Con el, el mismo
+             * diagnostico sale de una consulta.
+             */
+            public string ObjectName { get; set; }
+
             public float ObjPosX { get; set; }
             public float ObjPosY { get; set; }
             public float ObjPosZ { get; set; }
@@ -37,7 +53,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
         [Serializable]
         public class TrackerMessage : Message<EntityData> { }
 
-        public void RecordDistance (float meters, UnityEngine.Vector3 objectPosition, UnityEngine.Vector3 playerPosition)
+        public void RecordDistance (float meters, UnityEngine.Vector3 objectPosition, UnityEngine.Vector3 playerPosition, string objectName = null)
         {
             try
             {
@@ -45,6 +61,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
                 {
                     DistanceMeters = meters,
 
+                    ObjectName = objectName,
                     ObjPosX = objectPosition.x,
                     ObjPosY = objectPosition.y,
                     ObjPosZ = objectPosition.z,

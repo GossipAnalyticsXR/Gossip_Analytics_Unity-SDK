@@ -83,7 +83,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     MatchType = matchType ?? "",
                     Players = players ?? new List<PlayerInfo>(),
                     PlayerCount = players?.Count ?? 0,
-                    AveragePingMs = players != null && players.Count > 0 ? (double?)ComputeAveragePing(players) : null,
+                    AveragePingMs = ComputeAveragePing(players),
                     CountSource = string.IsNullOrEmpty(countSource) ? PlayerCountSources.Unknown : countSource,
                     TimestampUtc = DateTime.UtcNow.ToString("o")
                 };
@@ -98,8 +98,24 @@ namespace GossipSDK.Tracking.GameplayMetrics
             }
         }
 
-        private double ComputeAveragePing(List<PlayerInfo> players)
+        /*
+         * NADIE REPORTO PING NO ES CERO MILISEGUNDOS.
+         *
+         * Antes devolvia 0 cuando count era 0, y el llamador solo comprobaba
+         * que hubiera jugadores, no que alguno trajera ping. Resultado medido el
+         * 23-11-2026: AveragePingMs valia 0 en el 100% de los documentos de las
+         * tres bases -36 en gossip_beta, 265 en gossip_dev, 7 en gossip_prod,
+         * cero nulls- y se leia como una latencia perfecta.
+         *
+         * Ahora devuelve null cuando ningun PlayerInfo trae PingMs. El backend ya
+         * hacia '?? null' y el modelo ya era 'default: null', asi que ese lado no
+         * cambia: lo que cambia es que deja de llegarle un cero inventado.
+         */
+        private double? ComputeAveragePing(List<PlayerInfo> players)
         {
+            if (players == null)
+                return null;
+
             double sum = 0;
             int count = 0;
             foreach (var p in players)
@@ -110,7 +126,7 @@ namespace GossipSDK.Tracking.GameplayMetrics
                     count++;
                 }
             }
-            return count == 0 ? 0 : sum / count;
+            return count == 0 ? (double?)null : sum / count;
         }
     }
 }

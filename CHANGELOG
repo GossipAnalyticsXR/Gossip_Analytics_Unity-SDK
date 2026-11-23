@@ -1,3 +1,57 @@
+## [2.0.64] - 2026-11
+
+### Added
+- **La pose cruda de mano y cabeza, que es lo que se puede medir.** El evento
+  TrackingHandController lleva PosX/PosY/PosZ de la mano y HeadPosX/HeadPosY/
+  HeadPosZ de la cabeza, las dos en espacio de tracking. HandElevation no es una
+  medida sino una interpretacion: estima un hombro a partir de la cabeza y
+  devuelve un angulo. El fallo que arreglo la 2.0.63 estuvo 265 sesiones en
+  produccion y NO se podia comprobar con los datos guardados, porque lo guardado
+  era el angulo ya cocinado: hubo que reproducirlo con una sonda en el casco y
+  leer el logcat. Con las dos poses crudas el mismo fallo se ve desde Mongo sin
+  tocar un casco, y se pueden escribir detectores que piden distancia y no
+  angulo -alcance real, asimetria entre manos, mando posado por posicion-. La
+  cabeza va null si XRBootstrap.HeadPose no responde: un 0 ahi no se distingue de
+  una cabeza en el origen del rig.
+- **ObjectName en el EntityData de distancia.** Sin identidad del objeto, una
+  distancia no se puede usar. Medido el 23-11-2026 sobre las tres bases:
+  ObjPosX/Y/Z son 0 en los 17.824 documentos, y DistanceMeters coincide
+  exactamente con el modulo de PlayerPos -2.4250459 contra 2.42504621, siete
+  cifras, tres filas de dos bases distintas-. O sea que el componente funciona y
+  esta pegado a un objeto que esta en el origen del mundo: lo guardado era la
+  distancia del jugador al origen. Eso es como queda instalado y no un defecto
+  del SDK, pero sin el nombre no habia forma de verlo desde los datos.
+
+### Fixed
+- **El mando posado no es un brazo.** Un mando dejado en una mesa sigue
+  trackeado y quieto, y el SDK le atribuia al brazo del jugador la postura de un
+  objeto apoyado. Medido sobre el corpus entero con Pitch, que no lo toca el bug
+  de coordenadas de la 2.0.63, y rachas de tres muestras iguales: 7.730 muestras
+  en gossip_beta con un 24.8% posadas, 88.012 en gossip_dev con un 10.5% y 932 en
+  gossip_prod con un 11.1%. Y de las muestras de brazo alto eran posadas el
+  23.5%, el 26.8% y el 20.3%: una de cada cuatro muestras de brazo alto era un
+  objeto apoyado. Ahora se guarda la ultima pose aceptada de cada mano por
+  separado y se descarta la repetida.
+- **Nadie reporto ping no es cero milisegundos.** ComputeAveragePing devolvia 0
+  cuando ningun PlayerInfo traia PingMs, y el llamador solo comprobaba que
+  hubiera jugadores, no que alguno trajera ping. Medido el 23-11-2026:
+  AveragePingMs valia 0 en el 100% de los documentos de las tres bases -36 en
+  gossip_beta, 265 en gossip_dev, 7 en gossip_prod, cero nulls- y se leia como
+  una latencia perfecta. Ahora devuelve null. El backend ya hacia el ?? null y el
+  modelo ya era default null, asi que ese lado no cambia: deja de recibir un cero
+  inventado.
+
+### Changed
+- **Correccion del registro de la 2.0.63.** Su entrada "Una pose sin tracking se
+  registraba como muestra" atribuia el caso al trackingState del dispositivo, y
+  la propia prueba de verificacion lo refuto: el 23-11-2026, ya con esa
+  correccion instalada, el log decia track=Position, Rotation, Velocity,
+  AngularVelocity mientras la pose estaba congelada. O sea que el dispositivo NO
+  decia que no estaba trackeado. La medida de la pose clavada se sostiene; la
+  causa que se le atribuyo, no. El rechazo por trackingState sigue siendo valido
+  para un mando genuinamente perdido, pero no era lo que estaba pasando, y lo que
+  de verdad descarta ese caso es el filtro de pose repetida de esta version.
+
 ## [2.0.63] - 2026-11
 
 ### Fixed
