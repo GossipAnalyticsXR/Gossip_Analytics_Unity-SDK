@@ -18,6 +18,18 @@ namespace GossipSDK.Core
         //
         // No se lee de package.json en runtime a proposito: UnityEditor.PackageManager
         // no existe en un build, asi que no hay forma de resolverlo desde el paquete.
-        public const string SdkVersion = "2.0.66";
+        public const string SdkVersion = "2.0.67";
+        // Capa donde el SDK cuelga las cajas de mirada de la UI de mundo. La crea el
+        // editor (GossipAnalyticsSetup.AsegurarCapaDeMirada) al hacer Quick Setup, al abrir
+        // el Instrumentation Manager y en cada build, asi que al integrador no se le pide
+        // nada.
+        //
+        // Capa propia y no la del boton: la capa es del GameObject, no del collider, asi
+        // que mover el boton aqui le romperia el culling de la camara y el GraphicRaycaster,
+        // y una caja de fisica en la capa del objeto entraria en los raycast del juego
+        // -- XRRayInteractor, agarre, teleport -- y convertiria la analitica en un bug de
+        // jugabilidad. El rayo de mirada la ve igual porque EyeTrackingComponent:27
+        // raycastea con ~0.
+        public const string GazeLayerName = "GossipGaze";
     }
 }

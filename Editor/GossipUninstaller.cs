@@ -409,7 +409,7 @@ private static void RunStep1_RemoveSceneComponents()
         private static void RunStep2_DeleteAssets()
         {
             EditorUtility.DisplayProgressBar(
-                "Gossip Analytics â Uninstalling...",
+                "Gossip Analytics - Uninstalling...",
                 "Deleting Gossip assets...",
                 0.75f);
 
@@ -443,7 +443,7 @@ private static void RunStep1_RemoveSceneComponents()
                     }
                     else
                     {
-                        Debug.LogWarning($"GossipSDK Uninstaller: could not delete {path} — delete it manually.");
+                        Debug.LogWarning($"GossipSDK Uninstaller: could not delete {path} - delete it manually.");
                     }
                 }
             }

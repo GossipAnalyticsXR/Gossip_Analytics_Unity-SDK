@@ -84,7 +84,12 @@ namespace GossipSDK.Components
                     go.name,
                     Jerarquia.RutaDe(go.transform),
                     go.tag,
-                    "Interactable",
+                    // Kind. La marca de UI va aqui y no en un campo nuevo: medido el
+                    // 23-nov-2026, nadie lee Kind para decidir nada en los dos backends
+                    // (205/205 y 677/677 ficheros, 0 fallos), y el inventoryFilter de
+                    // heatmap.service.ts es appId + SceneName + AppVersion, asi que
+                    // cambiar el valor no saca ningun boton de instrumented.
+                    instrumentado.EsUiDeMundo ? "InteractableUI" : "Interactable",
                     nombreEscena,
                     version,
                     hayCaja ? centro.x : (float?)null,

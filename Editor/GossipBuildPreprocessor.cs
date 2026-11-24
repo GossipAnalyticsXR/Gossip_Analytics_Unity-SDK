@@ -12,6 +12,10 @@ namespace GossipSDK.Editor
 
         public void OnPreprocessBuild(BuildReport report)
         {
+            // La capa de las cajas de mirada de la UI de mundo. Va antes de cualquier
+            // return: el APK tiene que llevarla aunque el proyecto no tenga todavia un
+            // GossipSettings y aunque nadie haya abierto el Instrumentation Manager.
+            GossipAnalyticsSetup.AsegurarCapaDeMirada();
             var guids = AssetDatabase.FindAssets("t:GossipSettings");
             if (guids.Length == 0) return;
 

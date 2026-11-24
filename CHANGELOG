@@ -1,3 +1,45 @@
+## [2.0.67] - 2026-11
+
+### Added
+- **La mirada sobre la UI de un canvas de mundo ya se mide, y llega marcada como UI.**
+  La mirada se resuelve con un raycast de FISICA (`EyeTrackingComponent:126`) y un boton de
+  Unity UI no tiene collider -- el `GraphicRaycaster` lo resuelve por rect, no por fisica --
+  asi que el rayo le pasaba por encima. Medido el 23-nov-2026 en Hospital 1.1.5: los
+  cuatro botones del quiz llevan `RectTransform` + `CanvasRenderer` y ningun `Collider`, y una
+  mirada real sobre Answer A Button no aparecia en el dashboard. Ahora
+  `InteractableComponent` le cuelga una caja del tamano de su `rect`, solo cuando el canvas
+  es `WorldSpace`, y el inventario lo publica con `Kind = "InteractableUI"` para que el
+  dashboard pueda separar UI de objeto.
+- **La capa de esas cajas la crea el SDK, no el integrador.**
+  `GossipAnalyticsSetup.AsegurarCapaDeMirada()` escribe la primera ranura libre de
+  `TagManager.asset` con el mismo patron que `PackageChecker` ya usa para `ProjectSettings`,
+  y la llaman el Quick Setup, `AutoAddTrackers()` y `GossipBuildPreprocessor`, asi que el APK
+  la lleva aunque nadie haya abierto la ventana. Si las 24 ranuras del proyecto estan
+  ocupadas -- lo unico que el SDK no puede resolver solo -- sale como aviso en la lista
+  del Instrumentation Manager, no como un `LogWarning` en la consola, que no la mira nadie.
+
+### Notas de implementacion
+- La caja va en un **hijo** y no en el propio boton porque la capa es del GameObject, no
+  del collider: mover el boton a otra capa le romperia el culling de la camara y el
+  `GraphicRaycaster`. Y una caja de fisica en la capa del objeto entraria en los raycast
+  del juego -- XRRayInteractor, agarre, teleport -- y convertiria la analitica en un bug
+  de jugabilidad. El hijo se llama igual que el padre y copia su tag, asi que
+  `EyeTrackingComponent` no se toca y la fijacion viaja con el nombre del boton, que es
+  por donde cruza el backend.
+- `EyeTrackingComponent:27` raycastea con `~0`, asi que la mascara no hace falta tocarla.
+- El grosor de la caja sale del propio rect y no de un numero en metros: la escala de un
+  canvas de mundo suele ser de milesimas.
+- `Kind` no tiene hoy ningun consumidor que decida nada en los dos backends (205/205 y
+  677/677 ficheros, 0 fallos) y el `inventoryFilter` de `heatmap.service.ts` es `appId` +
+  `SceneName` + `AppVersion`, asi que el valor nuevo no saca ningun boton de
+  `instrumented`.
+
+### Pendiente
+- Que el dashboard separe UI de objeto necesita un segundo PR en Backend-Front: `isUi`
+  por spot a partir de `Kind`.
+- El evento de mirada sigue viajando sin ruta, asi que el cruce es por nombre: dos
+  objetos con el mismo nombre en la misma escena siguen siendo indistinguibles.
+
 ## [2.0.66] - 2026-11
 
 ### Fixed

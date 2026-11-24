@@ -248,6 +248,80 @@ namespace GossipSDK.Components
         {
             OnInteractInstant(string.IsNullOrEmpty(_uiLabel) ? "Press" : _uiLabel);
         }
+        /// <summary>
+        /// Verdadero cuando este interactuable es UI de Unity colgada de un canvas en
+        /// espacio de MUNDO. Se calcula al pedirlo y no se guarda en Awake a proposito:
+        /// SceneInventoryComponent pregunta desde otra corrutina y no hay orden
+        /// garantizado entre los dos.
+        /// </summary>
+        public bool EsUiDeMundo
+        {
+            get
+            {
+                var rt = transform as RectTransform;
+                if ((UnityEngine.Object)rt == null) return false;
+
+                var lienzo = rt.GetComponentInParent<Canvas>(true);
+                return (UnityEngine.Object)lienzo != null &&
+                       lienzo.renderMode == RenderMode.WorldSpace;
+            }
+        }
+
+        /// <summary>
+        /// Le cuelga al boton una caja de fisica del tamano de su rect, porque si no la
+        /// mirada sobre UI no se mide: EyeTrackingComponent:126 resuelve con un raycast
+        /// de FISICA y un boton de Unity UI no tiene collider -- el GraphicRaycaster lo
+        /// resuelve por rect, no por fisica -- asi que el rayo le pasa por encima.
+        /// Medido el 23-nov-2026 en Hospital 1.1.5: los cuatro botones del quiz llevan
+        /// RectTransform + CanvasRenderer y ningun Collider, y la mirada sobre
+        /// Answer A Button no aparecia.
+        ///
+        /// Solo en canvas de MUNDO, por el mismo motivo que SceneInventoryComponent:170:
+        /// en un canvas de pantalla el rect viene en pixeles y seria una caja de metros
+        /// absurda.
+        ///
+        /// La caja va en un HIJO y no en el propio boton porque la capa es del
+        /// GameObject, no del collider: mover el boton a otra capa le romperia el culling
+        /// de la camara y el GraphicRaycaster. El hijo se llama igual que el padre y copia
+        /// su tag para que la fijacion viaje con el nombre del boton, que es por donde
+        /// cruza el backend, que cruza por nombre y no por ruta.
+        /// </summary>
+        private void AsegurarCajaDeUi()
+        {
+            if (!EsUiDeMundo) return;
+
+            // Si ya hay fisica aqui dentro no se toca nada: o la puso el dev, o es
+            // nuestra caja de una entrada anterior.
+            if (GetComponentInChildren<Collider>(true) != null) return;
+
+            // La capa la crea el editor en el Quick Setup, al abrir el Instrumentation
+            // Manager y en cada build. Si no esta, no se cuela en la capa del objeto.
+            var capa = LayerMask.NameToLayer(Constants.GazeLayerName);
+            if (capa < 0) return;
+
+            var rt = (RectTransform)transform;
+            var r = rt.rect;
+            if (r.width <= 0f || r.height <= 0f) return;
+
+            // El grosor sale del propio rect y no de un numero en metros: la escala de un
+            // canvas de mundo suele ser de milesimas, y una constante fija daria una caja
+            // gorda en un canvas y plana en el siguiente.
+            var grosor = Mathf.Max(1f, Mathf.Min(r.width, r.height) * 0.1f);
+
+            var hijo = new GameObject(gameObject.name);
+            hijo.layer = capa;
+            hijo.tag = gameObject.tag;
+            hijo.transform.SetParent(rt, false);
+            hijo.transform.localPosition = new Vector3(r.center.x, r.center.y, 0f);
+            hijo.transform.localRotation = Quaternion.identity;
+            hijo.transform.localScale = Vector3.one;
+
+            // isTrigger: la caja solo tiene que salir en consultas, nunca empujar nada
+            // ni bloquear a un character controller.
+            var caja = hijo.AddComponent<BoxCollider>();
+            caja.size = new Vector3(r.width, r.height, grosor);
+            caja.isTrigger = true;
+        }
 
         // Cuenta los interactores que SI son una interaccion de usuario. Un socket sosteniendo
         // el objeto no lo es: esta seleccionado desde el frame 0, y por eso cada arranque de la
@@ -319,6 +393,9 @@ namespace GossipSDK.Components
 
         private void Awake()
         {
+            // Antes del return de registerHeatmapHit: la caja de la UI no tiene nada que
+            // ver con el heatmap y se perderia en todo objeto que lo lleve apagado.
+            AsegurarCajaDeUi();
             if (!registerHeatmapHit) return;
 
             string scene = SceneManager.GetActiveScene().name;

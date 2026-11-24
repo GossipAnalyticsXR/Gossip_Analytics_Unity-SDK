@@ -1107,6 +1107,9 @@ namespace GossipSDK.Editor
         // --- Auto-add trackers on open ---
         private void AutoAddTrackers()
         {
+            // La capa de las cajas de mirada de la UI de mundo, igual que aqui mismo se
+            // ponen los trackers: al integrador no se le pide nada.
+            GossipAnalyticsSetup.AsegurarCapaDeMirada();
             // ACC-63: el catalogo tambien respeta el interruptor. Hasta hoy
             // EnsureTrackers() consultaba GossipSettings antes de anadir nada y
             // este bucle no, asi que apagar un tracker duraba hasta la siguiente
@@ -1748,6 +1751,18 @@ namespace GossipSDK.Editor
                 }
             }
             catch { }
+            // 5. La capa de mirada de la UI de mundo no se pudo crear
+
+            // Lo unico de esta pieza que el SDK no puede resolver solo. Avisa AQUI, en la
+            // lista que se pinta en la ventana, y no con un LogWarning en la consola, que
+            // no la mira nadie.
+            if (GossipAnalyticsSetup.AsegurarCapaDeMirada() < 0)
+            {
+                _cachedHealthWarnings.Add(
+                    "⚠ Layers: all 24 project layers are in use, so the gaze layer " +
+                    "could not be created. Gaze on world-space UI will not be measured " +
+                    "until one layer slot is free.");
+            }
         }
 
         private void DrawSceneHealthCheck()

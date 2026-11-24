@@ -4,12 +4,53 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
 using GossipSDK;
+using GossipSDK.Core;
 using GossipSDK.Core.Configuration;
 
 namespace GossipSDK.Editor
 {
     public static class GossipAnalyticsSetup
     {
+                /// <summary>
+                /// Crea la capa donde el SDK cuelga las cajas de mirada de la UI de mundo
+                /// (InteractableComponent.AsegurarCajaDeUi). Devuelve su indice, o -1 si
+                /// las 24 ranuras del proyecto estan ocupadas, que es lo unico que el SDK
+                /// no puede resolver solo: eso lo pinta el Instrumentation Manager como
+                /// aviso en su lista, no en la consola.
+                ///
+                /// Corre aqui, en GossipBuildPreprocessor y en AutoAddTrackers, para que al
+                /// integrador no se le pida nada y el APK la lleve aunque nunca haya abierto
+                /// la ventana.
+                /// </summary>
+                public static int AsegurarCapaDeMirada()
+                {
+                    var existente = LayerMask.NameToLayer(Constants.GazeLayerName);
+                    if (existente >= 0) return existente;
+
+                    // Mismo patron que PackageChecker.AutoFixActiveInputHandling, que ya
+                    // escribe en ProjectSettings desde el editor.
+                    var assets = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset");
+                    if (assets == null || assets.Length == 0) return -1;
+
+                    var so = new SerializedObject(assets[0]);
+                    var capas = so.FindProperty("layers");
+                    if (capas == null || !capas.isArray) return -1;
+
+                    // Unity reserva de la 0 a la 7. De la 8 a la 31 son del proyecto.
+                    var tope = Mathf.Min(32, capas.arraySize);
+                    for (var i = 8; i < tope; i++)
+                    {
+                        var ranura = capas.GetArrayElementAtIndex(i);
+                        if (ranura == null || !string.IsNullOrEmpty(ranura.stringValue)) continue;
+
+                        ranura.stringValue = Constants.GazeLayerName;
+                        so.ApplyModifiedProperties();
+                        AssetDatabase.SaveAssets();
+                        return i;
+                    }
+
+                    return -1;
+                }
                 [MenuItem("Window/Gossip Analytics/1 — Quick Setup", false, 1)]
                 public static void RunQuickSetup()
                 {
@@ -22,6 +63,10 @@ namespace GossipSDK.Editor
                                         "Unity is still compiling. Wait until it finishes, then run Quick Setup again.", "OK");
                                     return;
                                 }
+                                // La capa de las cajas de mirada de la UI de mundo. Se crea
+                                // aqui, en cada build y al abrir el Instrumentation Manager:
+                                // al integrador no se le pide nada.
+                                AsegurarCapaDeMirada();
 
                                 GossipManager manager = null;
 
