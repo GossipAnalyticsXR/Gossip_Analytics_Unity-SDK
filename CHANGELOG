@@ -1,3 +1,32 @@
+## [2.0.68] - 2026-11
+
+### Fixed
+- **La card Multiplayer and One Player salia 0 y 0 aunque hubiera sesiones.**
+  `NetworkPlayerCountResolver` metia en el mismo cajon dos cosas distintas: que haya una
+  capa de red que no sabemos leer -el caso que la regla 2 protege a proposito, porque en
+  Netcode y en Mirror un cliente puro no ve la lista- y que no haya NINGUNA capa de red
+  instalada. Las dos devolvian Unknown, `SessionManager.ResolveSessionType()` devolvia null,
+  el backend excluye los vacios al agrupar y los dos contadores salian a cero.
+
+  Medido el 24-11-2026 en App VR / Beta contra `/api/users/get-software-metrics`, con
+  `x-vercel-cache: MISS` en las tres llamadas: 7 dias, 30 dias y 3 meses dan los mismos
+  numeros -2 sesiones, `multiplayer` 0, `singlePlayer` 0 y `measuredSessions` **0 de 2**-, y
+  la serie por dia da 0 del 14 al 22, **2 el 23-nov** y 0 el 24. O sea que las sesiones
+  llegaban y ninguna traia `sessionType`.
+
+  Ahora, cuando no aparece ninguno de los diez marcadores de red que el resolver conoce
+  -Photon PUN, Photon Realtime, Fusion, Netcode for GameObjects, Netcode for Entities,
+  Mirror, FishNet, Normcore, Nakama y Colyseus- y el integrador no registro una sonda propia,
+  se devuelve 1 jugador medido en vez de callarse. Una app sin capa de red es de un jugador,
+  y eso no es la heuristica que se retiro en la 2.0.8 -contar GameObjects con el tag Player-:
+  el ensamblado sencillamente no existe en el proceso.
+
+  `CountSource` no gana ningun valor nuevo: estas sesiones salen como `network-auto`, que ya
+  existia, asi que no hay contrato nuevo con el backend. Limite conocido y escrito en el
+  codigo: una capa propietaria que no este en la lista y cuyo integrador no llame a
+  `Register()` se reportaria como de un jugador; para eso estan `Register(Probe)` y
+  `SetSessionType()`.
+
 ## [2.0.67] - 2026-11
 
 ### Added

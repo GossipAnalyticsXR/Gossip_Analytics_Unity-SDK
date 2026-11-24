@@ -83,6 +83,15 @@ namespace GossipSDK.Core.Utilities
             if (ngo.Known)
                 return ngo;
 
+            // Si el integrador registro una sonda propia, hay red aunque no la sepamos leer:
+            // ese es el caso de la regla 2 y se queda en Unknown.
+            if (_custom.Count == 0)
+            {
+                NetworkPlayerCount none = Run(ProbeNoNetworkingLibrary);
+                if (none.Known)
+                    return none;
+            }
+
             return NetworkPlayerCount.Unknown();
         }
 
@@ -97,6 +106,52 @@ namespace GossipSDK.Core.Utilities
                 // Ver regla 1: una sonda rota devuelve Unknown, no revienta al integrador.
                 return NetworkPlayerCount.Unknown();
             }
+        }
+
+        /// <summary>
+        /// No haber ninguna capa de red instalada NO es lo mismo que haberla y no saber
+        /// leerla, y hasta hoy las dos cosas caian en Unknown. Una app sin Photon ni Netcode
+        /// es de un jugador, y eso no es una suposicion como la que se retiro en la 2.0.8: el
+        /// ensamblado no existe en el proceso.
+        ///
+        /// El empate vaciaba la card Multiplayer and One Player. ResolveSessionType devolvia
+        /// null, el backend excluye los vacios al agrupar, y la card salia 0 y 0 aunque
+        /// hubiera sesiones. Medido el 24-11-2026 en App VR / Beta: 2 sesiones el 23-nov y
+        /// measuredSessions 0 de 2.
+        ///
+        /// CountSource no gana ningun valor nuevo: estas sesiones salen como network-auto,
+        /// que ya existia. "no-network" se queda dentro del SDK como diagnostico.
+        /// </summary>
+        /// Marcadores de capa de red. Basta que UNO exista para que no afirmemos nada: hay
+        /// red aunque no sepamos leer su lista, que es la regla 2.
+        ///
+        /// Limite honesto: esta lista no puede ser exhaustiva. Una capa propietaria que no
+        /// este aqui y cuyo integrador no haya llamado a Register() se reportaria como de un
+        /// jugador. Para eso existen Register(Probe) y SetSessionType(), y por eso la lista
+        /// cubre los stacks de mercado en vez de solo los dos que el SDK sabe leer.
+        private static readonly string[] _networkMarkers =
+        {
+            "Photon.Pun.PhotonNetwork",
+            "Photon.Realtime.LoadBalancingClient",
+            "Fusion.NetworkRunner",
+            "Unity.Netcode.NetworkManager",
+            "Unity.NetCode.NetworkStreamReceiveSystem",
+            "Mirror.NetworkManager",
+            "FishNet.InstanceFinder",
+            "Normal.Realtime.Realtime",
+            "Nakama.Client",
+            "Colyseus.ColyseusClient"
+        };
+
+        private static NetworkPlayerCount ProbeNoNetworkingLibrary()
+        {
+            for (int i = 0; i < _networkMarkers.Length; i++)
+            {
+                if (ReflectionUtil.FindTypeByFullName(_networkMarkers[i]) != null)
+                    return NetworkPlayerCount.Unknown();
+            }
+
+            return NetworkPlayerCount.From(1, "no-network");
         }
 
         /// <summary>
