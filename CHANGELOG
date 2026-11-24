@@ -1,3 +1,21 @@
+## [2.0.69] - 2026-11
+
+### Added
+- **El occluder dice como se llama y si es la sala.** `HeatmapOccluder` viajaba
+  solo con centro y tamano, asi que el dashboard recibia la caja del propio
+  edificio mezclada con las de los objetos y no podia distinguirlas. Medido el
+  24-nov en Hospital, en Production y en Development: esa caja tapaba 33 de 171
+  pares camara-marca, y como el marco de escena se acolcha, la misma caja vale
+  el 36,7 % del marco en una escena y el 5,88 % en otra, asi que cualquier regla
+  de tamano aguas abajo es fragil. Ahora el SDK manda `name` y `isEnvironment`,
+  y lo decide donde se sabe: una caja es entorno si NO pertenece a un objeto
+  instrumentado y contiene la cabeza del jugador en el momento de la captura.
+  Una sala te contiene, un pulmon no. El guardia de instrumentado esta medido:
+  la regla de camara-dentro a secas perdia 24 de 171 ocultaciones legitimas, las
+  de organos que el usuario se habia acercado a la cara.
+  Las capturas ya grabadas no llevan los campos y no se pueden rellenar hacia
+  atras, asi que el dashboard mantiene su propia regla para el historico.
+
 ## [2.0.68] - 2026-11
 
 ### Fixed

@@ -18,7 +18,7 @@ namespace GossipSDK.Core
         //
         // No se lee de package.json en runtime a proposito: UnityEditor.PackageManager
         // no existe en un build, asi que no hay forma de resolverlo desde el paquete.
-        public const string SdkVersion = "2.0.68";
+        public const string SdkVersion = "2.0.69";
         // Capa donde el SDK cuelga las cajas de mirada de la UI de mundo. La crea el
         // editor (GossipAnalyticsSetup.AsegurarCapaDeMirada) al hacer Quick Setup, al abrir
         // el Instrumentation Manager y en cada build, asi que al integrador no se le pide
