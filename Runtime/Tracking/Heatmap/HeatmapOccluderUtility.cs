@@ -9,7 +9,7 @@ namespace GossipSDK.Heatmaps
         public float cx, cy, cz;   // world-space center
         public float sx, sy, sz;   // full size (world AABB)
         public string name;        // nombre del Renderer, para poder diagnosticar
-        public bool isEnvironment; // el SDK dice que es sala o entorno, no un objeto
+        public bool instrumented; // pertenece a un objeto con InteractableComponent
     }
 
     public static class HeatmapOccluderUtility
@@ -20,22 +20,17 @@ namespace GossipSDK.Heatmaps
         {
             var renderers = Object.FindObjectsOfType<Renderer>(); // mismo estilo que HeatmapSceneBoundsUtility
             var list = new System.Collections.Generic.List<HeatmapOccluder>();
-            // Medido el 24-nov-2026 en Hospital, en Production y en Development: la
-            // caja del propio edificio llegaba aqui como un occluder mas, el dashboard
-            // no podia distinguirla porque solo recibia centro y tamano, y tapaba 33
-            // de 171 pares camara-marca.
+            // El occluder viaja SIN veredicto: solo con hechos, su nombre y si
+            // pertenece a un objeto instrumentado. Quien decide si una caja es la
+            // sala es el dashboard, y no por gusto.
             //
-            // La unica senal que separa una sala de un objeto sin depender de umbrales
-            // de tamano es que el jugador este DENTRO de ella: una sala te contiene, un
-            // pulmon no. Se mide en la captura, al arrancar la escena, cuando todavia
-            // no ha agarrado nada.
-            //
-            // El guardia de instrumentado va por si se captura mas tarde: medido, la
-            // regla de camara-dentro a secas perdia 24 de 171 ocultaciones legitimas,
-            // todas de organos que el usuario se habia acercado a la cara.
-            var cabeza = Camera.main;
-            bool hayCabeza = (UnityEngine.Object)cabeza != null;
-            Vector3 posCabeza = hayCabeza ? cabeza.transform.position : Vector3.zero;
+            // Medido el 25-nov-2026 en Hospital: la caja del edificio contiene 20
+            // de las 27 posiciones de captura de la sesion, y las cajas de objetos
+            // contienen 0. Separacion perfecta. Pero en el instante en que se arma
+            // esta lista -medio segundo tras cargar la escena- la unica posicion
+            // que existe es el spawn, y en esta escena cae en z 2,004 con el
+            // edificio empezando en z 2,5: fuera. Decidirlo aqui daba falso en las
+            // seis cajas. El dato que falta es temporal y aqui todavia no existe.
             foreach (var r in renderers)
             {
                 if ((UnityEngine.Object)r == null) continue;
@@ -45,12 +40,11 @@ namespace GossipSDK.Heatmaps
                 if (maxDim < minSize) continue;          // salta diminutos
                 if (IsGroundLike(r, s)) continue;        // salta piso/ground/plane
                 bool instrumentado = r.GetComponentInParent<InteractableComponent>() != null;
-                bool entorno = !instrumentado && hayCabeza && b.Contains(posCabeza);
                 list.Add(new HeatmapOccluder {
                     cx = b.center.x, cy = b.center.y, cz = b.center.z,
                     sx = s.x, sy = s.y, sz = s.z,
                     name = r.gameObject.name,
-                    isEnvironment = entorno
+                    instrumented = instrumentado
                 });
             }
             list.Sort((a, bb) => (bb.sx * bb.sy * bb.sz).CompareTo(a.sx * a.sy * a.sz));

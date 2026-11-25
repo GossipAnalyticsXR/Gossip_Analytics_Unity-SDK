@@ -1,3 +1,19 @@
+## [2.0.70] - 2026-11
+
+### Changed
+- **El occluder manda hechos, no veredictos.** La 2.0.69 mandaba `isEnvironment`,
+  un juicio del propio SDK: la caja no esta instrumentada y contiene la cabeza del
+  jugador. Medido el 25-nov en Hospital, ese juicio no funciona, y no por la
+  formula sino por el momento: la lista se arma medio segundo tras cargar la
+  escena, cuando la unica posicion que existe es el spawn, y ahi cae en z 2,004
+  con el edificio empezando en z 2,5. Fuera por medio metro, asi que daba falso en
+  las seis cajas.
+  A lo largo de la sesion el dato si separa: la caja del edificio contiene 20 de
+  las 27 posiciones de captura y las de objetos contienen 0. Pero eso solo se sabe
+  despues, no aqui. Asi que `isEnvironment` desaparece y en su sitio viaja
+  `instrumented`, el hecho que el SDK si conoce con certeza, y el dashboard decide
+  con todas las posiciones. Se mantiene `name`.
+
 ## [2.0.69] - 2026-11
 
 ### Added
